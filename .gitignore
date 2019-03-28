@@ -45,3 +45,7 @@ cpp/python/librmm_cffi/librmm_cffi.py
 
 ## Doxygen
 cpp/doxygen/html
+
+#Java 
+target
+*.log
