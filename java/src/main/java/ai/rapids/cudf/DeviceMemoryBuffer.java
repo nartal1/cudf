@@ -21,7 +21,7 @@ package ai.rapids.cudf;
 /**
  * This class represents a Address held in the GPU
  */
-public class DeviceMemoryBuffer extends MemoryBuffer {
+class DeviceMemoryBuffer extends MemoryBuffer {
 
     /**
      * Private constructor

@@ -21,7 +21,7 @@ package ai.rapids.cudf;
 /**
  * Abstract class for representing the Memory Buffer
  */
-public abstract class MemoryBuffer implements AutoCloseable {
+abstract class MemoryBuffer implements AutoCloseable {
     protected final long address;
     protected final long length;
 

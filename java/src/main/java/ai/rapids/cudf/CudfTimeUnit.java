@@ -21,7 +21,7 @@ package ai.rapids.cudf;
  * There are time types in cudf. Those time types can have different resolutions.
  * The types included are nanosecond, microsecond, millisecond, and second.
  */
-public enum CudfTimeUnit {
+enum CudfTimeUnit {
     NONE(0), // default (undefined)
     SECONDS(1),    // seconds
     MILLISECONDS(2),   // milliseconds
@@ -34,7 +34,7 @@ public enum CudfTimeUnit {
         this.value = value;
     }
 
-    public int getValue() {
+    int getValue() {
         return value;
     }
 }

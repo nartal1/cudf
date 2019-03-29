@@ -89,6 +89,7 @@ public abstract class ColumnVector implements AutoCloseable {
         }
         if (cudfColumn != null) {
             cudfColumn.close();
+            cudfColumn = null;
         }
     }
 

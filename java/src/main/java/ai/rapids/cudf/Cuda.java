@@ -18,7 +18,7 @@ package ai.rapids.cudf;
 public class Cuda {
 
     // Defined in driver_types.h in cuda library.
-    public static final int cudaCpuDeviceId = -1;
+    static final int CPU_DEVICE_ID = -1;
 
     /**
      * Mapping: cudaMemGetInfo(size_t *free, size_t *total)
@@ -26,10 +26,8 @@ public class Cuda {
     public static native CudaMemInfo memGetInfo() throws CudaException;
 
     /**
-     * Copies count bytes from the memory area pointed to by src to the memory area pointed to by dst,
-     * where kind is one of cudaMemcpyHostToHost, cudaMemcpyHostToDevice, cudaMemcpyDeviceToHost, or
-     * cudaMemcpyDeviceToDevice, and specifies the direction of the copy.
-     * The memory areas may not overlap. Calling cudaMemcpy() with dst and src pointers that do not
+     * Copies count bytes from the memory area pointed to by src to the memory area pointed to by dst.
+     * Calling cudaMemcpy() with dst and src pointers that do not
      * match the direction of the copy results in an undefined behavior.
      *
      * @param dst   - Destination memory address
@@ -37,7 +35,7 @@ public class Cuda {
      * @param count - Size in bytes to copy
      * @param kind  - Type of transfer. {@link CudaMemcpyKind}
      */
-    public static void memcpy(long dst, long src, long count, CudaMemcpyKind kind) {
+    static void memcpy(long dst, long src, long count, CudaMemcpyKind kind) {
         memcpy(dst, src, count, kind.getValue());
     }
 

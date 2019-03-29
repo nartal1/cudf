@@ -18,19 +18,19 @@ package ai.rapids.cudf;
 /**
  * Base class for a Column of data
  */
-public class CudfColumn implements AutoCloseable{
+class CudfColumn implements AutoCloseable{
 
     // Constructor will allocate gdf_column in native. And store the returned gdf_column pointer in
     // nativeHandle.
     long nativeHandle = 0;
 
-    public CudfColumn(long data, long valid,
+    CudfColumn(long data, long valid,
                      int size, DType dtype) {
         nativeHandle = allocate();
         cudfColumnView(nativeHandle, data, valid, size, dtype.nativeId);
     }
 
-    public CudfColumn(long dataPtr, long valid, int size, DType dtype, int null_count,
+    CudfColumn(long dataPtr, long valid, int size, DType dtype, int null_count,
                      CudfTimeUnit timeUnit) {
         nativeHandle = allocate();
         cudfColumnViewAugmented(nativeHandle, dataPtr, valid, size, dtype.nativeId,

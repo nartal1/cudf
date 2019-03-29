@@ -15,7 +15,7 @@
  */
 package ai.rapids.cudf;
 
-public enum DType {
+enum DType {
     CUDF_INVALID(0, 0),
     CUDF_INT8(1, 1),
     CUDF_INT16(2, 2),

@@ -26,7 +26,7 @@ import java.lang.reflect.Field;
 /**
  * UnsafeMemory Accessor for accessing memory on host
  */
-public class UnsafeMemoryAccessor {
+class UnsafeMemoryAccessor {
 
     private static Logger log = LoggerFactory.getLogger(UnsafeMemoryAccessor.class);
 
@@ -196,7 +196,7 @@ public class UnsafeMemoryAccessor {
     }
 
     /**
-     * Limits the number of bytes to copy per {@link Unsafe#copyMemory(long, long, long)} to
+     * Limits the number of bytes to copy per {@link sun.misc.Unsafe#copyMemory(long, long, long)} to
      * allow safepoint polling during a large copy.
      */
     private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;

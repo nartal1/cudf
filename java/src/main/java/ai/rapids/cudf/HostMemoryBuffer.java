@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This class represents a Address held in the host memory
  */
-public class HostMemoryBuffer extends MemoryBuffer {
+class HostMemoryBuffer extends MemoryBuffer {
 
     private static Logger log = LoggerFactory.getLogger(HostMemoryBuffer.class);
 

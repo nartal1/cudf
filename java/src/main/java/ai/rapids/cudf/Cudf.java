@@ -18,39 +18,39 @@ package ai.rapids.cudf;
 /**
  * This is the binding class for cudf lib.
  */
-public class Cudf {
+class Cudf {
 
     /* arith */
 
-    public static void gdfAddGeneric(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
+    static void gdfAddGeneric(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
         gdfAddGeneric(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
     }
 
     private static native void gdfAddGeneric(long lhs, long rhs, long output) throws CudfException;
 
 
-    public static void gdfAddI32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
+    static void gdfAddI32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
         gdfAddI32(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
     }
 
     private static native void gdfAddI32(long lhs, long rhs, long output) throws CudfException;
 
 
-    public static void gdfAddI64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
+    static void gdfAddI64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
         gdfAddI64(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
     }
 
     private static native void gdfAddI64(long lhs, long rhs, long output) throws CudfException;
 
 
-    public static void gdfAddF32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
+    static void gdfAddF32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
         gdfAddF32(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
     }
 
     private static native void gdfAddF32(long lhs, long rhs, long output) throws CudfException;
 
 
-    public static void gdfAddF64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
+    static void gdfAddF64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
         gdfAddF64(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
     }
 

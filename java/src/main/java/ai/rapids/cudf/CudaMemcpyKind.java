@@ -15,7 +15,7 @@
  */
 package ai.rapids.cudf;
 
-public enum CudaMemcpyKind {
+enum CudaMemcpyKind {
     HOST_TO_HOST(0),     /*< Host   -> Host */
     HOST_TO_DEVICE(1),   /*< Host   -> Device */
     DEVICE_TO_HOST(2),   /*< Device -> Host */

@@ -45,7 +45,7 @@ public class Rmm {
      * @param stream The stream in which to synchronize this command
      * @return Returned pointer to the allocated memory
      */
-    public static native long alloc(long size, long stream) throws RmmException;
+    static native long alloc(long size, long stream) throws RmmException;
 
 
     /**
@@ -56,6 +56,6 @@ public class Rmm {
      * @param stream the stream in which to synchronize this command
      * @throws RmmException
      */
-    public static native void free(long ptr, long stream) throws RmmException;
+    static native void free(long ptr, long stream) throws RmmException;
 
 }
