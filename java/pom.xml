@@ -117,10 +117,10 @@
 
                 <configuration>
                     <javahClassNames>
-                        <javahClassName>ai.rapids.bindings.cuda.Cuda</javahClassName>
-                        <javahClassName>ai.rapids.bindings.cudf.Cudf</javahClassName>
-                        <javahClassName>ai.rapids.bindings.cudf.CudfColumn</javahClassName>
-                        <javahClassName>ai.rapids.bindings.rmm.Rmm</javahClassName>
+                        <javahClassName>ai.rapids.cudf.Cuda</javahClassName>
+                        <javahClassName>ai.rapids.cudf.Cudf</javahClassName>
+                        <javahClassName>ai.rapids.cudf.CudfColumn</javahClassName>
+                        <javahClassName>ai.rapids.cudf.Rmm</javahClassName>
 		    </javahClassNames>
                     <javahOutputDirectory>${basedir}/../cpp/jni/include/</javahOutputDirectory>
                 </configuration>
