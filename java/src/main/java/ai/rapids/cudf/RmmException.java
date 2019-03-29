@@ -16,8 +16,6 @@
 package ai.rapids.cudf;
 
 
-import ai.rapids.cudf.CudaException;
-
 /**
  * Error while doing RMM.
  */

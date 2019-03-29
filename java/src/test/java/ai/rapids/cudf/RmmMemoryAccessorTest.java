@@ -18,8 +18,6 @@
 
 package ai.rapids.cudf;
 
-import ai.rapids.cudf.CommonApi;
-import ai.rapids.cudf.Rmm;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
