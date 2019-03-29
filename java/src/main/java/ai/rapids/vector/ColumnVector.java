@@ -178,11 +178,12 @@ public abstract class ColumnVector implements AutoCloseable {
     }
 
     protected final CudfColumn getCudfColumn(DType type) {
-        // TODO: check if not dirty fist
-        cudfColumn = new CudfColumn(deviceData.data.getAddress(),
-                (deviceData.valid == null ? 0 : deviceData.valid.getAddress()),
-                (int) deviceData.data.getLength(),
-                type,(int) getNullCount(), CudfTimeUnit.NONE);
+        if (cudfColumn == null) {
+            cudfColumn = new CudfColumn(deviceData.data.getAddress(),
+                    (deviceData.valid == null ? 0 : deviceData.valid.getAddress()),
+                    (int) deviceData.data.getLength(),
+                    type, (int) getNullCount(), CudfTimeUnit.NONE);
+        }
         return cudfColumn;
     }
 
