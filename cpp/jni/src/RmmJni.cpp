@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_bindings_cuda_Cuda.h"
+#include "ai_rapids_cudf_Rmm.h"
 #include "jni_utils.h"
 
 #include <rmm/rmm_api.h>
@@ -22,7 +22,7 @@
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_rmm_Rmm_initialize
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Rmm_initialize
         (JNIEnv *env, jclass clazz, jint allocationMode, jboolean enableLogging, jlong poolSize) {
     rmmOptions_t opts;
     opts.allocation_mode = (rmmAllocationMode_t) allocationMode;
@@ -31,7 +31,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_bindings_rmm_Rmm_initialize
     JNI_RMM_TRY(env, , rmmInitialize(&opts));
 }
 
-JNIEXPORT jlong JNICALL Java_ai_rapids_bindings_rmm_Rmm_alloc
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Rmm_alloc
         (JNIEnv *env, jclass clazz, jlong size, jlong stream) {
     void *ret = 0;
     cudaStream_t cStream = (cudaStream_t) stream;
@@ -39,7 +39,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_bindings_rmm_Rmm_alloc
     return (jlong) ret;
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_rmm_Rmm_free
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Rmm_free
         (JNIEnv *env, jclass clazz, jlong ptr, jlong stream) {
     void *cptr = (void *) ptr;
     cudaStream_t cStream = (cudaStream_t) stream;

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_bindings_cudf_Cudf.h"
+#include "ai_rapids_cudf_Cudf.h"
 #include "jni_utils.h"
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddGeneric
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddGeneric
         (JNIEnv *env, jclass, jlong lhs, jlong rhs, jlong output) {
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
@@ -28,7 +28,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddGeneric
                 gdf_add_generic((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddI32
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI32
         (JNIEnv *env, jclass, jlong lhs, jlong rhs, jlong output) {
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
@@ -37,7 +37,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddI32
                 gdf_add_i32((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddI64
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI64
         (JNIEnv *env, jclass, jlong lhs, jlong rhs, jlong output) {
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
@@ -46,7 +46,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddI64
                 gdf_add_i64((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddF32
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF32
         (JNIEnv *env, jclass, jlong lhs, jlong rhs, jlong output) {
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
@@ -55,7 +55,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddF32
                 gdf_add_f32((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cudf_Cudf_gdfAddF64
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF64
         (JNIEnv *env, jclass, jlong lhs, jlong rhs, jlong output) {
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);

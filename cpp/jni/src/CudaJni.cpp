@@ -14,27 +14,27 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_bindings_cuda_Cuda.h"
+#include "ai_rapids_cudf_Cuda.h"
 #include "jni_utils.h"
 
 
 extern "C" {
 
-JNIEXPORT jobject JNICALL Java_ai_rapids_bindings_cuda_Cuda_memGetInfo
+JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo
         (JNIEnv *env, jclass clazz) {
     size_t free, total;
     JNI_CUDA_TRY(env, NULL, cudaMemGetInfo(&free, &total));
 
-    jclass infoClass = env->FindClass("Lai/rapids/bindings/cuda/CudaMemInfo;");
+    jclass infoClass = env->FindClass("Lai/rapids/cudf/CudaMemInfo;");
     if (infoClass == NULL) {
         JNI_THROW(env, "java/lang/NoClassDefFoundError",
-                  "Could not find class of ai.rapids.bindings.cuda.CudaMemInfo", NULL);
+                  "Could not find class of ai.rapids.cudf.CudaMemInfo", NULL);
     }
 
     jmethodID ctorID = env->GetMethodID(infoClass, "<init>", "(JJ)V");
     if (ctorID == NULL) {
         JNI_THROW(env, "java/lang/NoSuchMethodException",
-                  "Could not find constructor of ai.rapids.bindings.cuda.CudaMemInfo ",
+                  "Could not find constructor of ai.rapids.cudf.CudaMemInfo ",
                   NULL);
     }
 
@@ -44,7 +44,7 @@ JNIEXPORT jobject JNICALL Java_ai_rapids_bindings_cuda_Cuda_memGetInfo
     return infoObj;
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_bindings_cuda_Cuda_memcpy
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cuda_memcpy
         (JNIEnv *env, jclass, jlong dst, jlong src, jlong count, jint kind) {
     JNI_NULL_CHECK(env, dst, "dst memory pointer is null",);
     JNI_NULL_CHECK(env, src, "src memory pointer is null",);
