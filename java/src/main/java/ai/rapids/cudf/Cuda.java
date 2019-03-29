@@ -16,6 +16,9 @@
 package ai.rapids.cudf;
 
 public class Cuda {
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
 
     // Defined in driver_types.h in cuda library.
     static final int CPU_DEVICE_ID = -1;

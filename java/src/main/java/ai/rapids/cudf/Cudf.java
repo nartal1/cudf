@@ -19,6 +19,9 @@ package ai.rapids.cudf;
  * This is the binding class for cudf lib.
  */
 class Cudf {
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
 
     /* arith */
 

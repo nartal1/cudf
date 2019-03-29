@@ -18,7 +18,10 @@ package ai.rapids.cudf;
 /**
  * Base class for a Column of data
  */
-class CudfColumn implements AutoCloseable{
+class CudfColumn implements AutoCloseable {
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
 
     // Constructor will allocate gdf_column in native. And store the returned gdf_column pointer in
     // nativeHandle.
