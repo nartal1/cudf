@@ -18,62 +18,61 @@
 
 package ai.rapids.cudf;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class UnsafeMemoryAccessorTest {
-
-    static UnsafeMemoryAccessor memoryAccessor;
-
-    static long address;
-
-    @BeforeAll
-    static public void setup() {
-        memoryAccessor = new UnsafeMemoryAccessor();
-    }
-
-    @AfterEach
-    void freeAllocation() {
-        memoryAccessor.free(address);
-    }
-
     @Test
     public void testAllocate() {
-        address = memoryAccessor.allocate(3);
-        assertNotEquals(0, address);
+        long address = UnsafeMemoryAccessor.allocate(3);
+        try {
+            assertNotEquals(0, address);
+        } finally {
+            UnsafeMemoryAccessor.free(address);
+        }
     }
 
     @Test
     public void setByteAndGetByte() {
-        address = memoryAccessor.allocate(2);
-        memoryAccessor.setByte(address, (byte) 34);
-        memoryAccessor.setByte(address + 1, (byte) 63);
-        Byte b = memoryAccessor.getByte(address);
-        assertEquals((byte) 34, b);
-        b = memoryAccessor.getByte(address + 1);
-        assertEquals((byte) 63, b);
+        long address = UnsafeMemoryAccessor.allocate(2);
+        try {
+            UnsafeMemoryAccessor.setByte(address, (byte) 34);
+            UnsafeMemoryAccessor.setByte(address + 1, (byte) 63);
+            Byte b = UnsafeMemoryAccessor.getByte(address);
+            assertEquals((byte) 34, b);
+            b = UnsafeMemoryAccessor.getByte(address + 1);
+            assertEquals((byte) 63, b);
+        } finally {
+            UnsafeMemoryAccessor.free(address);
+        }
     }
 
     @Test
     public void setIntAndGetInt() {
-        address = memoryAccessor.allocate(2 * 4);
-        memoryAccessor.setInt(address, 2);
-        memoryAccessor.setInt(address + 4, 4);
-        int v = memoryAccessor.getInt(address);
-        assertEquals(2, v);
-        v = memoryAccessor.getInt(address + 4);
-        assertEquals(4, v);
+        long address = UnsafeMemoryAccessor.allocate(2 * 4);
+        try {
+            UnsafeMemoryAccessor.setInt(address, 2);
+            UnsafeMemoryAccessor.setInt(address + 4, 4);
+            int v = UnsafeMemoryAccessor.getInt(address);
+            assertEquals(2, v);
+            v = UnsafeMemoryAccessor.getInt(address + 4);
+            assertEquals(4, v);
+        } finally {
+            UnsafeMemoryAccessor.free(address);
+        }
     }
 
     @Test
     public void setMemoryValue() {
-        address = memoryAccessor.allocate(4);
-        memoryAccessor.setMemory(address, 4, (byte) 1);
-        int v = memoryAccessor.getInt(address);
-        assertEquals(16843009, v);
+        long address = UnsafeMemoryAccessor.allocate(4);
+        try {
+            UnsafeMemoryAccessor.setMemory(address, 4, (byte) 1);
+            int v = UnsafeMemoryAccessor.getInt(address);
+            assertEquals(16843009, v);
+        } finally {
+            UnsafeMemoryAccessor.free(address);
+        }
     }
 }

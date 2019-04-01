@@ -21,6 +21,8 @@ package ai.rapids.cudf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Consumer;
+
 public final class IntColumnVector extends ColumnVector {
 
     private static Logger log = LoggerFactory.getLogger(IntColumnVector.class);
@@ -65,10 +67,7 @@ public final class IntColumnVector extends ColumnVector {
     }
 
     /**
-     * This is a factory method to create a vector on the GPU with the intention that the caller will populate it
-     * @param rows
-     * @param bitmask
-     * @return
+     * This is a factory method to create a vector on the GPU with the intention that the caller will populate it.
      */
     static IntColumnVector newOutputVector(long rows, boolean bitmask) {
         DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
@@ -86,12 +85,11 @@ public final class IntColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      * Example:
-     *          IntColumnVector v1 = IntColumnVector.IntColumnVectorBuilder().append(1).append(5)...build();
-     *          IntColumnVector v2 = IntColumnVector.IntColumnVectorBuilder().append(5).append(13)...build();
-     *
-     *          IntColumnVector v3 = v1.add(v2);
-     *          ...
-     *          v3.close();
+     *          try (IntColumnVector v1 = IntColumnVector.build(5, (b) -> b.append(1).append(5)...);
+     *               IntColumnVector v2 = IntColumnVector.build(5, (b) -> b.append(5).append(13)...);
+     *               IntColumnVector v3 = v1.add(v2);_ {}
+     *            ...
+     *          }
      *
      * @param v1 - vector to be added to this vector.
      * @return - A new vector allocated on the GPU.
@@ -113,56 +111,66 @@ public final class IntColumnVector extends ColumnVector {
     }
 
     /**
+     * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when done with it.
+     * Please try to use {@see #build(int, Consumer)} instead to avoid needing to close the builder.
+     * @param rows the number of rows this builder can hold
+     * @return the builder to use.
+     */
+    public static Builder builder(int rows) {
+        return new Builder(rows);
+    }
+
+    /**
+     * Create a builder but with some things possibly replaced for testing.
+     */
+    static Builder builderTest(int rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
+        return new Builder(rows, testData, testValid);
+    }
+
+    /**
+     * Create a new vector.
+     * @param rows maximum number of rows that the vector can hold.
+     * @param init what will initialize the vector.
+     * @return the created vector.
+     */
+    public static IntColumnVector build(int rows, Consumer<Builder> init) {
+        try (Builder builder = builder(rows)) {
+            init.accept(builder);
+            return builder.build();
+        }
+    }
+
+    /**
      * Builder for IntColumnVector to make it immutable
      */
-    public static final class IntColumnVectorBuilder implements AutoCloseable {
+    public static final class Builder implements AutoCloseable {
         private HostMemoryBuffer data;
         private HostMemoryBuffer valid;
-        private long currentIndex;
+        private long currentIndex = 0;
         private long nullCount;
         private long rows;
         private boolean built;
 
         /**
-         * Getter method for testing
-         * @return @HostMemoryBuffer that holds the data
-         */
-        final HostMemoryBuffer getDataBuffer() {
-            return data;
-        }
-
-        /**
-         * Setter method for testing
-         * @param data - Set the data buffer
-         */
-        final void setDataBuffer(HostMemoryBuffer data) {
-            this.data = data;
-        }
-
-        /**
-         * Getter method for testing
-         * @return @HostMemoryBuffer that holds the validity mask
-         */
-        final HostMemoryBuffer getValidityBuffer() {
-            return valid;
-        }
-
-        /**
-         * Setter method for testing
-         * @param valid  @HostMemoryBuffer that holds the validity mask
-         */
-        final void setValidBuffer(HostMemoryBuffer valid) {
-            this.valid = valid;
-        }
-
-        /**
          * Create a builder with a buffer of size rows
-         * @param rows
+         * @param rows number of rows to allocate.
          */
-        public IntColumnVectorBuilder(long rows) {
+        private Builder(long rows) {
             this.rows = rows;
             this.data = HostMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
-            this.currentIndex = 0;
+        }
+
+        /**
+         * Create a builder with a buffer of size rows (for testing ONLY).
+         * @param rows number of rows to allocate.
+         * @param testData a buffer to hold the data (should be large enough to hold rows entries).
+         * @param testValid a buffer to hold the validity vector (should be large enough to hold
+         *                 rows entries or is null).
+         */
+        private Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
+            this.rows = rows;
+            this.data = testData;
+            this.valid = testValid;
         }
 
         /**
@@ -180,7 +188,7 @@ public final class IntColumnVector extends ColumnVector {
          * @param intColumnVector - Vector to be added
          * @return  - The IntColumnVector based on this builder values
          */
-        public final IntColumnVectorBuilder append(IntColumnVector intColumnVector) {
+        public final Builder append(IntColumnVector intColumnVector) {
             if (intColumnVector.rows > rows - currentIndex) {
                 throw new IndexOutOfBoundsException("Not enough space to copy column vector");
             }
@@ -197,12 +205,30 @@ public final class IntColumnVector extends ColumnVector {
         }
 
         /**
+         * Append multiple of the same value.
+         * @param value what to append.
+         * @param count how many to append.
+         * @return this for chaining.
+         */
+        public final Builder append(int value, long count) {
+            if ((currentIndex + count) > rows) {
+                throw new IndexOutOfBoundsException("vector allocated for: " + rows + " cannot fit " + count + " more");
+            }
+            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
+            for (long i = 0; i < count; i++) {
+                data.setInt((currentIndex + i) * DType.CUDF_DATE32.sizeInBytes, value);
+            }
+            currentIndex += count;
+            return this;
+        }
+
+        /**
          * Append value to the next open index
          * @param value - value to be appended
          * @return - IntColumnVector
          * @throws - {@link IndexOutOfBoundsException}
          */
-        public final IntColumnVectorBuilder append(int value) throws IndexOutOfBoundsException {
+        public final Builder append(int value) throws IndexOutOfBoundsException {
             if (currentIndex >= rows) {
                 throw new IndexOutOfBoundsException("vector allocated for: " + rows + " is full");
             }
@@ -216,7 +242,7 @@ public final class IntColumnVector extends ColumnVector {
          * Append null value to the next open index
          * @return
          */
-        public final IntColumnVectorBuilder appendNull() {
+        public final Builder appendNull() {
             if (currentIndex >= rows) {
                 throw new IndexOutOfBoundsException("vector allocated for: " + rows + " is full");
             }

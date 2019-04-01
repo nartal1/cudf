@@ -18,25 +18,20 @@
 
 package ai.rapids.cudf;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class RmmMemoryAccessorTest {
-
-    long address;
-
-    @AfterEach
-    void free() {
-        Rmm.free(address, 0);
-    }
-
     @Test
     public void allocate() {
         assumeTrue(CommonApi.libraryLoaded());
-        address = Rmm.alloc(10, 0);
-        assertNotEquals(0,address);
+        long address = Rmm.alloc(10, 0);
+        try {
+            assertNotEquals(0, address);
+        } finally {
+            Rmm.free(address, 0);
+        }
     }
 }

@@ -24,52 +24,55 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
 public class HostMemoryBufferImplTest {
-
-    static HostMemoryBuffer hostMemoryBuffer;
-
-    @BeforeEach
-    public void clear(){
-        hostMemoryBuffer = HostMemoryBuffer.allocate(16);
-    }
-
-    @AfterEach
-    void free() {
-        hostMemoryBuffer.close();
-    }
-
     @Test
     public void testGetInt() {
-        long offset = 1;
-        hostMemoryBuffer.setInt(offset * DType.CUDF_INT32.sizeInBytes, 2);
-        assertEquals(2, hostMemoryBuffer.getInt(offset * DType.CUDF_INT32.sizeInBytes));
+        try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
+            long offset = 1;
+            hostMemoryBuffer.setInt(offset * DType.CUDF_INT32.sizeInBytes, 2);
+            assertEquals(2, hostMemoryBuffer.getInt(offset * DType.CUDF_INT32.sizeInBytes));
+        }
     }
 
     @Test
     public void testGetByte() {
-        long offset = 1;
-        hostMemoryBuffer.setByte(offset * DType.CUDF_INT8.sizeInBytes, (byte) 2);
-        assertEquals((byte) 2, hostMemoryBuffer.getByte(offset * DType.CUDF_INT8.sizeInBytes));
-
+        try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
+            long offset = 1;
+            hostMemoryBuffer.setByte(offset * DType.CUDF_INT8.sizeInBytes, (byte) 2);
+            assertEquals((byte) 2, hostMemoryBuffer.getByte(offset * DType.CUDF_INT8.sizeInBytes));
+        }
     }
 
     @Test
     public void testGetLong() {
-        long offset = 1;
-        hostMemoryBuffer.setLong(offset * DType.CUDF_INT64.sizeInBytes, 3);
-        assertEquals(3, hostMemoryBuffer.getLong(offset * DType.CUDF_INT64.sizeInBytes));
+        try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
+            long offset = 1;
+            hostMemoryBuffer.setLong(offset * DType.CUDF_INT64.sizeInBytes, 3);
+            assertEquals(3, hostMemoryBuffer.getLong(offset * DType.CUDF_INT64.sizeInBytes));
+        }
     }
 
     @Test
     public void testGetLength() {
-        long length = hostMemoryBuffer.getLength();
-        assertEquals(16, length);
+        try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
+            long length = hostMemoryBuffer.getLength();
+            assertEquals(16, length);
+        }
     }
 
     @Test
     public void testCopyFromDeviceBuffer() {
-        assertFalse(true);
+        assumeTrue(CommonApi.libraryLoaded());
+        try (HostMemoryBuffer init = HostMemoryBuffer.allocate(16);
+             DeviceMemoryBuffer tmp = DeviceMemoryBuffer.allocate(16);
+             HostMemoryBuffer to = HostMemoryBuffer.allocate(16)) {
+            init.setLong(0, 123456789);
+            tmp.copyFromHostBuffer(init);
+            to.copyFromDeviceBuffer(tmp);
+            assertEquals(123456789, to.getLong(0));
+        }
     }
 }
