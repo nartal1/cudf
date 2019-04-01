@@ -18,52 +18,31 @@
 
 package ai.rapids.cudf;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.function.Consumer;
 
 public final class IntColumnVector extends ColumnVector {
-
-    private static Logger log = LoggerFactory.getLogger(IntColumnVector.class);
-
     /**
-     * Private constructor to use the BuilderPattern
+     * Private constructor to use the BuilderPattern.
      */
     private IntColumnVector(HostMemoryBuffer data, HostMemoryBuffer bitmask, long nullCount, long rows) {
         super(data, bitmask, nullCount, rows);
     }
 
     /**
-     * Private constructor for creating a device vector
+     * Private constructor for creating a device vector.
      */
     private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer bitmask, long nullCount, long rows) {
         super(data, bitmask, nullCount, rows);
     }
 
     /**
-     * Get the value pointed by the index
-     * @param index
-     * @return
-     * @throws IndexOutOfBoundsException
-     * @throws {@link NullPointerException}
+     * Get the value at index.
      */
-    public final int getValue(long index) throws IndexOutOfBoundsException, NullPointerException {
-        checkBeforeGetValue(index);
+    public final int get(long index) {
+        assert (index >= 0 && index < rows);
+        assert hostData != null;
+        assert !(hasNulls() && isNull(index));
         return hostData.data.getInt(index * DType.CUDF_INT32.sizeInBytes);
-
-    }
-
-    private void checkBeforeGetValue(long index) {
-        if (index < 0 || index >= rows) {
-            throw new IndexOutOfBoundsException(String.valueOf(index));
-        }
-        if (hasNulls() && isNull(index)) {
-            throw new NullPointerException("value at index: " + index + " is null");
-        }
-        if (hostData == null) {
-            throw new UnsupportedOperationException("Cannot access data from device buffer, transfer to host first");
-        }
     }
 
     /**
@@ -79,7 +58,7 @@ public final class IntColumnVector extends ColumnVector {
     }
 
     /**
-     * A method to add two vectors
+     * Add two vectors.
      * Preconditions - vectors have to be the same size
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
@@ -95,9 +74,7 @@ public final class IntColumnVector extends ColumnVector {
      * @return - A new vector allocated on the GPU.
      */
     public IntColumnVector add(IntColumnVector v1) {
-        if (v1.getSize() != getSize()) {
-            throw new IllegalStateException("Vectors size mismatch");
-        }
+        assert v1.getSize() == getSize(); // cudf will check this too.
 
         IntColumnVector result = IntColumnVector.newOutputVector(v1.getSize(), hasNulls() || v1.hasNulls());
         Cudf.gdfAddI32(getCudfColumn(DType.CUDF_INT32), v1.getCudfColumn(DType.CUDF_INT32),
@@ -189,9 +166,7 @@ public final class IntColumnVector extends ColumnVector {
          * @return  - The IntColumnVector based on this builder values
          */
         public final Builder append(IntColumnVector intColumnVector) {
-            if (intColumnVector.rows > rows - currentIndex) {
-                throw new IndexOutOfBoundsException("Not enough space to copy column vector");
-            }
+            assert intColumnVector.rows <= (rows - currentIndex);
 
             data.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.data,
                                                             0L, intColumnVector.hostData.data.getLength());
@@ -211,9 +186,7 @@ public final class IntColumnVector extends ColumnVector {
          * @return this for chaining.
          */
         public final Builder append(int value, long count) {
-            if ((currentIndex + count) > rows) {
-                throw new IndexOutOfBoundsException("vector allocated for: " + rows + " cannot fit " + count + " more");
-            }
+            assert rows <= (count + currentIndex);
             // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 data.setInt((currentIndex + i) * DType.CUDF_DATE32.sizeInBytes, value);
@@ -229,9 +202,7 @@ public final class IntColumnVector extends ColumnVector {
          * @throws - {@link IndexOutOfBoundsException}
          */
         public final Builder append(int value) throws IndexOutOfBoundsException {
-            if (currentIndex >= rows) {
-                throw new IndexOutOfBoundsException("vector allocated for: " + rows + " is full");
-            }
+            assert currentIndex < rows;
             //add value to the array
             setValues(currentIndex, value, true);
             currentIndex++;
@@ -239,13 +210,11 @@ public final class IntColumnVector extends ColumnVector {
         }
 
         /**
-         * Append null value to the next open index
-         * @return
+         * Append null value.
          */
         public final Builder appendNull() {
-            if (currentIndex >= rows) {
-                throw new IndexOutOfBoundsException("vector allocated for: " + rows + " is full");
-            }
+            assert currentIndex < rows;
+
             // add null
             if (this.valid == null) {
                 long bitmaskSize = getValidityBufferSize(rows);

@@ -19,25 +19,11 @@
 package ai.rapids.cudf;
 
 /**
- * This class represents a Address held in the host memory
+ * This class represents an address held in the host memory.
  */
 class HostMemoryBuffer extends MemoryBuffer {
-    private boolean closed = false;
-
-    // protected
-
     private HostMemoryBuffer(long address, long length) {
         super(address, length);
-    }
-
-    /**
-     * Method to copy from a DeviceMemoryBuffer to a HostMemoryBuffer
-     * @param deviceMemoryBuffer - Buffer to copy data from
-     */
-    public void copyFromDeviceBuffer(DeviceMemoryBuffer deviceMemoryBuffer) {
-        assert !closed;
-        Cuda.memcpy(address, deviceMemoryBuffer.address, deviceMemoryBuffer.length,
-                                                                  CudaMemcpyKind.DEVICE_TO_HOST);
     }
 
     /**
@@ -49,27 +35,58 @@ class HostMemoryBuffer extends MemoryBuffer {
         return new HostMemoryBuffer(UnsafeMemoryAccessor.allocate(bytes), bytes);
     }
 
-    private void addressOutOfBoundsCheck(long address) throws IndexOutOfBoundsException {
-        if (address < this.address || address >= this.address + length) {
-            throw new IndexOutOfBoundsException(String.valueOf(address));
-        }
+    /**
+     * Returns the Byte value at that offset
+     * @param offset - offset from the address
+     * @return - value
+     */
+    public final byte getByte(long offset) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 1,"getByte");
+        return UnsafeMemoryAccessor.getByte(requestedAddress);
     }
 
-    private void checkUpperAndLowerBounds(long address, DType type) {
-        addressOutOfBoundsCheck(address);
-        addressOutOfBoundsCheck(type.sizeInBytes - 1 + address);
+    /**
+     * Sets the Byte value at that offset
+     * @param offset - offset from the address
+     * @param value - value to be set
+     */
+    public final void setByte(long offset, byte value) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 1, "setByte");
+        UnsafeMemoryAccessor.setByte(requestedAddress, value);
+    }
+
+    /**
+     * Returns the Short value at that offset
+     * @param offset - offset from the address
+     * @return - value
+     */
+    public final short getShort(long offset) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 2, "getShort");
+        return UnsafeMemoryAccessor.getShort(requestedAddress);
+    }
+
+    /**
+     * Sets the Short value at that offset
+     * @param offset - offset from the address
+     * @param value - value to be set
+     */
+    public final void setShort(long offset, short value) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 2, "setShort");
+        UnsafeMemoryAccessor.setShort(requestedAddress, value);
     }
 
     /**
      * Returns the Integer value at that offset
      * @param offset - offset from the address
      * @return - value
-     * @throws IndexOutOfBoundsException
      */
-    public final int getInt(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
+    public final int getInt(long offset) {
         long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT32);
+        addressOutOfBoundsCheck(requestedAddress, 4, "getInt");
         return UnsafeMemoryAccessor.getInt(requestedAddress);
     }
 
@@ -77,52 +94,77 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Sets the Integer value at that offset
      * @param offset - offset from the address
      * @param value - value to be set
-     * @throws IndexOutOfBoundsException
      */
-    public final void setInt(long offset, int value) throws IndexOutOfBoundsException {
-        assert !closed;
+    public final void setInt(long offset, int value) {
         long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT32);
+        addressOutOfBoundsCheck(requestedAddress, 4, "setInt");
         UnsafeMemoryAccessor.setInt(requestedAddress, value);
     }
 
     /**
-     * Returns the Byte value at that offset
+     * Returns the Long value at that offset
      * @param offset - offset from the address
      * @return - value
-     * @throws IndexOutOfBoundsException
      */
-    public final byte getByte(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
+    public final long getLong(long offset) {
         long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT8);
-        return UnsafeMemoryAccessor.getByte(requestedAddress);
+        addressOutOfBoundsCheck(requestedAddress, 8, "setLong");
+        return UnsafeMemoryAccessor.getLong(requestedAddress);
     }
 
     /**
      * Sets the Long value at that offset
      * @param offset - offset from the address
      * @param value - value to be set
-     * @throws IndexOutOfBoundsException
      */
-    public final void setLong(long offset, long value) throws IndexOutOfBoundsException {
-        assert !closed;
+    public final void setLong(long offset, long value) {
         long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT64);
+        addressOutOfBoundsCheck(requestedAddress, 8, "getLong");
         UnsafeMemoryAccessor.setLong(requestedAddress, value);
     }
 
     /**
-     * Sets the Byte value at that offset
+     * Returns the Float value at that offset
+     * @param offset - offset from the address
+     * @return - value
+     */
+    public final float getFloat(long offset) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 4, "getFloat");
+        return UnsafeMemoryAccessor.getFloat(requestedAddress);
+    }
+
+    /**
+     * Sets the Float value at that offset
      * @param offset - offset from the address
      * @param value - value to be set
-     * @throws IndexOutOfBoundsException
      */
-    public final void setByte(long offset, byte value) throws IndexOutOfBoundsException {
-        assert !closed;
+    public final void setFloat(long offset, float value) {
         long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT8);
-        UnsafeMemoryAccessor.setByte(requestedAddress, value);
+        addressOutOfBoundsCheck(requestedAddress, 4, "setFloat");
+        UnsafeMemoryAccessor.setFloat(requestedAddress, value);
+    }
+
+    /**
+     * Returns the Double value at that offset
+     * @param offset - offset from the address
+     * @return - value
+     */
+    public final double getDouble(long offset) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 8, "getDouble");
+        return UnsafeMemoryAccessor.getDouble(requestedAddress);
+    }
+
+    /**
+     * Sets the Double value at that offset
+     * @param offset - offset from the address
+     * @param value - value to be set
+     */
+    public final void setDouble(long offset, double value) {
+        long requestedAddress = this.address + offset;
+        addressOutOfBoundsCheck(requestedAddress, 8, "setDouble");
+        UnsafeMemoryAccessor.setDouble(requestedAddress, value);
     }
 
     /**
@@ -130,128 +172,45 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param offset - offset from the address
      * @param length - number of bytes to set
      * @param value - value to be set
-     * @throws IndexOutOfBoundsException
      */
-    public final void setMemory(long offset, long length, byte value) throws IndexOutOfBoundsException {
-        assert !closed;
-        addressOutOfBoundsCheck(address + offset + length - 1);
+    public void setMemory(long offset, long length, byte value) {
+        addressOutOfBoundsCheck(address + offset, length, "set memory");
         UnsafeMemoryAccessor.setMemory(address + offset, length, value);
     }
 
-    public final void copyMemory(long fromAddress, long len) {
-        assert !closed;
-        addressOutOfBoundsCheck(address + len - 1);
+    public void copyMemory(long fromAddress, long len) {
+        addressOutOfBoundsCheck(address, len, "copy memory");
         UnsafeMemoryAccessor.copyMemory(null, fromAddress, null, address, len);
-    }
-    /**
-     * Returns the Long value at that offset
-     * @param offset - offset from the address
-     * @return - value
-     * @throws IndexOutOfBoundsException
-     */
-    public final long getLong(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT64);
-        return UnsafeMemoryAccessor.getLong(requestedAddress);
-    }
-
-    /**
-     * Sets the Short value at that offset
-     * @param offset - offset from the address
-     * @param value - value to be set
-     * @throws IndexOutOfBoundsException
-     */
-    public final void setShort(long offset, short value) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT16);
-        UnsafeMemoryAccessor.setShort(requestedAddress, value);
-    }
-
-    /**
-     * Returns the Short value at that offset
-     * @param offset - offset from the address
-     * @return - value
-     * @throws IndexOutOfBoundsException
-     */
-    public final short getShort(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT16);
-        return UnsafeMemoryAccessor.getShort(requestedAddress);
-    }
-
-    /**
-     * Sets the Double value at that offset
-     * @param offset - offset from the address
-     * @param value - value to be set
-     * @throws IndexOutOfBoundsException
-     */
-    public final void setDouble(long offset, double value) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT64);
-        UnsafeMemoryAccessor.setDouble(requestedAddress, value);
-    }
-
-    /**
-     * Returns the Double value at that offset
-     * @param offset - offset from the address
-     * @return - value
-     * @throws IndexOutOfBoundsException
-     */
-    public final double getDouble(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT64);
-        return UnsafeMemoryAccessor.getDouble(requestedAddress);
-    }
-
-    /**
-     * Sets the Float value at that offset
-     * @param offset - offset from the address
-     * @param value - value to be set
-     * @throws IndexOutOfBoundsException
-     */
-    public final void setFloat(long offset, float value) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT32);
-        UnsafeMemoryAccessor.setFloat(requestedAddress, value);
-    }
-
-    /**
-     * Returns the Float value at that offset
-     * @param offset - offset from the address
-     * @return - value
-     * @throws IndexOutOfBoundsException
-     */
-    public final float getFloat(long offset) throws IndexOutOfBoundsException {
-        assert !closed;
-        long requestedAddress = this.address + offset;
-        checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT32);
-        return UnsafeMemoryAccessor.getFloat(requestedAddress);
-    }
-
-    @Override
-    public void close() {
-        if (!closed) {
-            UnsafeMemoryAccessor.free(address);
-            closed = true;
-        }
     }
 
     /**
      * Append the contents of the given buffer to this buffer
-     * @param currentOffset
-     * @param hostData - Buffer to be copied from
-     * @param startIndex
-     * @param length
+     * @param destOffset offset in bytes in this buffer to start copying to
+     * @param srcData Buffer to be copied from
+     * @param srcOffset offset in bytes to start copying from in srcData
+     * @param length number of bytes to copy
      */
-    public void copyRange(long currentOffset, HostMemoryBuffer hostData, long startIndex, long length) {
-        addressOutOfBoundsCheck(address + length - 1);
-        UnsafeMemoryAccessor.copyMemory(null, hostData.address + startIndex, null,
-                                                            address + currentOffset, hostData.getLength());
+    public void copyRange(long destOffset, HostMemoryBuffer srcData, long srcOffset, long length) {
+        addressOutOfBoundsCheck(address + destOffset, length, "copy range dest");
+        srcData.addressOutOfBoundsCheck(srcData.address + srcOffset, length, "copy range source");
+        UnsafeMemoryAccessor.copyMemory(null, srcData.address + srcOffset, null,
+                                                            address + destOffset, length);
+    }
+
+    /**
+     * Method to copy from a DeviceMemoryBuffer to a HostMemoryBuffer
+     * @param deviceMemoryBuffer - Buffer to copy data from
+     */
+    public void copyFromDeviceBuffer(DeviceMemoryBuffer deviceMemoryBuffer) {
+        addressOutOfBoundsCheck(address, deviceMemoryBuffer.length, "copy range dest");
+        deviceMemoryBuffer.addressOutOfBoundsCheck(deviceMemoryBuffer.address, deviceMemoryBuffer.length,
+                "copy range source");
+        Cuda.memcpy(address, deviceMemoryBuffer.address, deviceMemoryBuffer.length,
+                CudaMemcpyKind.DEVICE_TO_HOST);
+    }
+
+    @Override
+    protected void doClose() {
+        UnsafeMemoryAccessor.free(address);
     }
 }
