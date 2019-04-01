@@ -69,7 +69,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public int getInt(long offset) throws IndexOutOfBoundsException {
+    public final int getInt(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT32);
         return UnsafeMemoryAccessor.getInt(requestedAddress);
@@ -81,7 +81,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setInt(long offset, int value) throws IndexOutOfBoundsException {
+    public final void setInt(long offset, int value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT32);
         UnsafeMemoryAccessor.setInt(requestedAddress, value);
@@ -93,7 +93,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public byte getByte(long offset) throws IndexOutOfBoundsException {
+    public final byte getByte(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT8);
         return UnsafeMemoryAccessor.getByte(requestedAddress);
@@ -105,7 +105,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setLong(long offset, long value) throws IndexOutOfBoundsException {
+    public final void setLong(long offset, long value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT64);
         UnsafeMemoryAccessor.setLong(requestedAddress, value);
@@ -117,7 +117,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setByte(long offset, byte value) throws IndexOutOfBoundsException {
+    public final void setByte(long offset, byte value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT8);
         UnsafeMemoryAccessor.setByte(requestedAddress, value);
@@ -130,12 +130,12 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setMemory(long offset, long length, byte value) throws IndexOutOfBoundsException {
+    public final void setMemory(long offset, long length, byte value) throws IndexOutOfBoundsException {
         addressOutOfBoundsCheck(address + offset + length - 1);
         UnsafeMemoryAccessor.setMemory(address + offset, length, value);
     }
 
-    public void copyMemory(long fromAddress, long len) {
+    public final void copyMemory(long fromAddress, long len) {
         addressOutOfBoundsCheck(address + len - 1);
         UnsafeMemoryAccessor.copyMemory(null, fromAddress, null, address, len);
     }
@@ -145,7 +145,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public long getLong(long offset) throws IndexOutOfBoundsException {
+    public final long getLong(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT64);
         return UnsafeMemoryAccessor.getLong(requestedAddress);
@@ -157,7 +157,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setShort(long offset, short value) throws IndexOutOfBoundsException {
+    public final void setShort(long offset, short value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT16);
         UnsafeMemoryAccessor.setShort(requestedAddress, value);
@@ -169,7 +169,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public short getShort(long offset) throws IndexOutOfBoundsException {
+    public final short getShort(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_INT16);
         return UnsafeMemoryAccessor.getShort(requestedAddress);
@@ -181,7 +181,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setDouble(long offset, double value) throws IndexOutOfBoundsException {
+    public final void setDouble(long offset, double value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT64);
         UnsafeMemoryAccessor.setDouble(requestedAddress, value);
@@ -193,7 +193,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public double getDouble(long offset) throws IndexOutOfBoundsException {
+    public final double getDouble(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT64);
         return UnsafeMemoryAccessor.getDouble(requestedAddress);
@@ -205,7 +205,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param value - value to be set
      * @throws IndexOutOfBoundsException
      */
-    public void setFloat(long offset, float value) throws IndexOutOfBoundsException {
+    public final void setFloat(long offset, float value) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT32);
         UnsafeMemoryAccessor.setFloat(requestedAddress, value);
@@ -217,7 +217,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @return - value
      * @throws IndexOutOfBoundsException
      */
-    public float getFloat(long offset) throws IndexOutOfBoundsException {
+    public final float getFloat(long offset) throws IndexOutOfBoundsException {
         long requestedAddress = this.address + offset;
         checkUpperAndLowerBounds(requestedAddress, DType.CUDF_FLOAT32);
         return UnsafeMemoryAccessor.getFloat(requestedAddress);
