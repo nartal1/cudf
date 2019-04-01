@@ -23,18 +23,20 @@ import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ColumnVectorTest {
 
     @Test
     void testCudfColumnSize() {
-        HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
-        HostMemoryBuffer mockValidBuffer = mock(HostMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
+        DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
+        DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
+        when(mockDataBuffer.getLength()).thenReturn(Long.MAX_VALUE);
 
-        IntColumnVector v2 = IntColumnVector.builderTest(Integer.MAX_VALUE + 1, mockDataBuffer, mockValidBuffer).build();
-        try (IntColumnVector v1 = IntColumnVector.build(Integer.MAX_VALUE + 1, (v) -> v.append(3, Integer.MAX_VALUE + 1))) {
-            assertThrows(IndexOutOfBoundsException.class, () -> v1.getCudfColumn(DType.CUDF_INT32));
-        }
+        ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, 0) {};
+        assertThrows(AssertionError.class, () -> v0.getCudfColumn(DType.CUDF_INT32));
+
+        ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, 0) {};
+        assertThrows(AssertionError.class, () -> v1.getCudfColumn(DType.CUDF_INT32));
     }
-
 }

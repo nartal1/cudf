@@ -173,7 +173,7 @@ public abstract class ColumnVector implements AutoCloseable {
 
     protected final CudfColumn getCudfColumn(DType type) {
         if (cudfColumn == null) {
-            assert deviceData.data.length <= Integer.MAX_VALUE;
+            assert deviceData.data.getLength() <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
             cudfColumn = new CudfColumn(deviceData.data.getAddress(),
                     (deviceData.valid == null ? 0 : deviceData.valid.getAddress()),
