@@ -35,6 +35,8 @@ class DeviceMemoryBuffer extends MemoryBuffer {
      * @param hostBuffer - Buffer to copy data from
      */
     public void copyFromHostBuffer(HostMemoryBuffer hostBuffer) {
+        addressOutOfBoundsCheck(address, hostBuffer.length, "copy range dest");
+        assert !hostBuffer.closed;
         Cuda.memcpy(address, hostBuffer.address, hostBuffer.length, CudaMemcpyKind.HOST_TO_DEVICE);
     }
 
@@ -50,7 +52,7 @@ class DeviceMemoryBuffer extends MemoryBuffer {
      * Close this Buffer and free memory allocated
      */
     @Override
-    public void close() {
+    protected void doClose() {
         Rmm.free(address, 0);
     }
 

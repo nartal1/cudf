@@ -24,6 +24,7 @@ package ai.rapids.cudf;
 abstract class MemoryBuffer implements AutoCloseable {
     protected final long address;
     protected final long length;
+    protected boolean closed = false;
 
     /**
      * Public constructor
@@ -43,10 +44,28 @@ abstract class MemoryBuffer implements AutoCloseable {
         return length;
     }
 
+    protected final void addressOutOfBoundsCheck(long address, long size, String type) {
+        assert !closed;
+        assert address >= this.address : "Start address is too low for " + type +
+                " 0x" + Long.toHexString(address) + " < 0x" + Long.toHexString(this.address);
+        assert (address + size) <= (this.address + length) : "End address is too high for " + type +
+                " 0x" + Long.toHexString(address + size) + " < 0x" + Long.toHexString(this.address + length);
+    }
+
+    /**
+     * Actually close the buffer.
+     */
+    protected abstract void doClose();
+
     /**
      * Close this buffer and free memory
      */
-    public abstract void close();
+    public final void close() {
+        if (!closed) {
+            doClose();
+            closed = true;
+        }
+    }
 
     @Override
     public String toString() {
