@@ -19,6 +19,9 @@ package ai.rapids.cudf;
  * This is the binding class for rmm lib.
  */
 public class Rmm {
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
 
     /**
      * ---------------------------------------------------------------------------*
