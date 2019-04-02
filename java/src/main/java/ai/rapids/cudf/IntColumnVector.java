@@ -151,13 +151,14 @@ public final class IntColumnVector extends ColumnVector {
         }
 
         /**
-         * Build the immutable @IntColumnVector
+         * Build the immutable @IntColumnVector. The rows of the vector will be equal to the appended values i.e. If a
+         * larger buffer was allocated then the extra space will not be considered as part of the rows.
          * @return  - The IntColumnVector based on this builder values
          */
         public final IntColumnVector build() {
             //do the magic
             built = true;
-            return new IntColumnVector(data, valid, nullCount, rows);
+            return new IntColumnVector(data, valid, nullCount, currentIndex);
         }
 
         /**
@@ -169,11 +170,13 @@ public final class IntColumnVector extends ColumnVector {
             assert intColumnVector.rows <= (rows - currentIndex);
 
             data.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.data,
-                                                            0L, intColumnVector.hostData.data.getLength());
+                                                            0L,
+                                                    intColumnVector.getSize() * DType.CUDF_INT32.sizeInBytes);
 
             if (intColumnVector.hasNulls()) {
                 valid.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.valid,
-                                                            0L, intColumnVector.hostData.data.getLength());
+                                                            0L,
+                                                    intColumnVector.getSize() * DType.CUDF_INT32.sizeInBytes);
             }
             currentIndex += intColumnVector.rows;
             return this;
@@ -186,7 +189,7 @@ public final class IntColumnVector extends ColumnVector {
          * @return this for chaining.
          */
         public final Builder append(int value, long count) {
-            assert rows <= (count + currentIndex);
+            assert (count + currentIndex) <= rows;
             // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 data.setInt((currentIndex + i) * DType.CUDF_DATE32.sizeInBytes, value);

@@ -94,7 +94,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testCopyVector() {
-        try (IntColumnVector vector1 = IntColumnVector.build(7,
+        try (IntColumnVector vector1 = IntColumnVector.build(9,
                 (b) -> b.append(3, 7));
              IntColumnVector vector2 = IntColumnVector.build(8,
                      (b) -> {
