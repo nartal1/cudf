@@ -135,31 +135,36 @@ public abstract class ColumnVector implements AutoCloseable {
      */
     public final void toDeviceBuffer() {
         checkHostData();
-        if (deviceData == null) {
-            DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
-            DeviceMemoryBuffer deviceValidityBuffer = null;
-            boolean validityBufferAlloc =false;
-            try {
-                if (hasNulls()) {
-                    deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
-                }
-                deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
-                validityBufferAlloc = true;
-            } finally {
-                if (!validityBufferAlloc) {
-                    if (deviceDataBuffer != null) {
-                        deviceDataBuffer.close();
+        try {
+            if (deviceData == null) {
+                DeviceMemoryBuffer deviceDataBuffer = null;
+                DeviceMemoryBuffer deviceValidityBuffer = null;
+                boolean validityBufferAlloc = false;
+                try {
+                    deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
+                    if (hasNulls()) {
+                        deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
                     }
-                    if (deviceValidityBuffer != null){
-                        deviceValidityBuffer.close();
+                    deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
+                    validityBufferAlloc = true;
+                } finally {
+                    if (!validityBufferAlloc) {
+                        if (deviceDataBuffer != null) {
+                            deviceDataBuffer.close();
+                        }
+                        if (deviceValidityBuffer != null) {
+                            deviceValidityBuffer.close();
+                        }
+                        log.error("ERROR: Could not copy data to DeviceBuffer");
                     }
-                    log.error("ERROR: Could not copy data to DeviceBuffer");
                 }
             }
-        }
-        deviceData.data.copyFromHostBuffer(hostData.data);
-        if (deviceData.valid != null) {
-            deviceData.valid.copyFromHostBuffer(hostData.valid);
+            deviceData.data.copyFromHostBuffer(hostData.data);
+            if (deviceData.valid != null) {
+                deviceData.valid.copyFromHostBuffer(hostData.valid);
+            }
+        } catch (Throwable t) {
+            log.error("Error while copying data to DeviceBuffer",t);
         }
     }
 
@@ -169,31 +174,36 @@ public abstract class ColumnVector implements AutoCloseable {
      */
     public final void toHostBuffer() {
         checkDeviceData();
-        if (hostData == null) {
-            HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
-            HostMemoryBuffer hostValidityBuffer = null;
-            boolean validityBufferAlloc = false;
-            try {
-                if (hasNulls()) {
-                    hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
-                }
-                hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
-                validityBufferAlloc = true;
-            } finally {
-                if (!validityBufferAlloc) {
-                    if (hostDataBuffer != null) {
-                        hostDataBuffer.close();
+        try {
+            if (hostData == null) {
+                HostMemoryBuffer hostDataBuffer = null;
+                HostMemoryBuffer hostValidityBuffer = null;
+                boolean validityBufferAlloc = false;
+                try {
+                    hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
+                    if (hasNulls()) {
+                        hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
                     }
-                    if (hostValidityBuffer != null){
-                        hostValidityBuffer.close();
+                    hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
+                    validityBufferAlloc = true;
+                } finally {
+                    if (!validityBufferAlloc) {
+                        if (hostDataBuffer != null) {
+                            hostDataBuffer.close();
+                        }
+                        if (hostValidityBuffer != null) {
+                            hostValidityBuffer.close();
+                        }
+                        log.error("ERROR: Could not copy data to HostBuffer");
                     }
-                    log.error("ERROR: Could not copy data to HostBuffer");
                 }
             }
-        }
-        hostData.data.copyFromDeviceBuffer(deviceData.data);
-        if (hostData.valid != null) {
-            hostData.valid.copyFromDeviceBuffer(deviceData.valid);
+            hostData.data.copyFromDeviceBuffer(deviceData.data);
+            if (hostData.valid != null) {
+                hostData.valid.copyFromDeviceBuffer(deviceData.valid);
+            }
+        }catch (Throwable t) {
+            log.error("Error while copying data to HostBuffer", t);
         }
     }
 
