@@ -134,15 +134,15 @@ public abstract class ColumnVector implements AutoCloseable {
         if (deviceData == null) {
             DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
             DeviceMemoryBuffer deviceValidityBuffer = null;
-            boolean validityBufferAlloc = false;
+            boolean needsCleanup = true;
             try {
                 if (hasNulls()) {
                     deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
                 }
                 deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
-                validityBufferAlloc = true;
+                needsCleanup = false;
             } finally {
-                if (!validityBufferAlloc) {
+                if (needsCleanup) {
                     if (deviceDataBuffer != null) {
                         deviceDataBuffer.close();
                     }
@@ -167,15 +167,15 @@ public abstract class ColumnVector implements AutoCloseable {
         if (hostData == null) {
             HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
             HostMemoryBuffer hostValidityBuffer = null;
-            boolean validityBufferAlloc = false;
+            boolean needsCleanup = true;
             try {
                 if (hasNulls()) {
                     hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
                 }
                 hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
-                validityBufferAlloc = true;
+                needsCleanup = false;
             } finally {
-                if (!validityBufferAlloc) {
+                if (needsCleanup) {
                     if (hostDataBuffer != null) {
                         hostDataBuffer.close();
                     }
