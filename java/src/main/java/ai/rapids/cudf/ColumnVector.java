@@ -18,6 +18,7 @@
 
 package ai.rapids.cudf;
 
+
 /**
  * Abstract class depicting a Column Vector. This class represents the immutable vector created by the Builders from
  * each respective ColumnVector subclasses
@@ -29,6 +30,7 @@ public abstract class ColumnVector implements AutoCloseable {
     protected BufferEncapsulator<DeviceMemoryBuffer> deviceData;
     protected final long nullCount;
     private CudfColumn cudfColumn;
+
 
     protected ColumnVector(HostMemoryBuffer hostDataBuffer,
                            HostMemoryBuffer hostValidityBuffer, long nullCount, long rows) {
@@ -132,10 +134,23 @@ public abstract class ColumnVector implements AutoCloseable {
         if (deviceData == null) {
             DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
             DeviceMemoryBuffer deviceValidityBuffer = null;
-            if (hasNulls()) {
-                deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
+            boolean needsCleanup = true;
+            try {
+                if (hasNulls()) {
+                    deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
+                }
+                deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
+                needsCleanup = false;
+            } finally {
+                if (needsCleanup) {
+                    if (deviceDataBuffer != null) {
+                        deviceDataBuffer.close();
+                    }
+                    if (deviceValidityBuffer != null) {
+                        deviceValidityBuffer.close();
+                    }
+                }
             }
-            deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
         }
         deviceData.data.copyFromHostBuffer(hostData.data);
         if (deviceData.valid != null) {
@@ -152,10 +167,23 @@ public abstract class ColumnVector implements AutoCloseable {
         if (hostData == null) {
             HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
             HostMemoryBuffer hostValidityBuffer = null;
-            if (hasNulls()) {
-                hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
+            boolean needsCleanup = true;
+            try {
+                if (hasNulls()) {
+                    hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
+                }
+                hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
+                needsCleanup = false;
+            } finally {
+                if (needsCleanup) {
+                    if (hostDataBuffer != null) {
+                        hostDataBuffer.close();
+                    }
+                    if (hostValidityBuffer != null) {
+                        hostValidityBuffer.close();
+                    }
+                }
             }
-            hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
         }
         hostData.data.copyFromDeviceBuffer(deviceData.data);
         if (hostData.valid != null) {
