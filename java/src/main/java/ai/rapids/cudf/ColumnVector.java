@@ -18,8 +18,6 @@
 
 package ai.rapids.cudf;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Abstract class depicting a Column Vector. This class represents the immutable vector created by the Builders from
