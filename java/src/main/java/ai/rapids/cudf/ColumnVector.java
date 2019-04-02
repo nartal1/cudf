@@ -164,31 +164,31 @@ public abstract class ColumnVector implements AutoCloseable {
      */
     public final void toHostBuffer() {
         checkDeviceData();
-            if (hostData == null) {
-                HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
-                HostMemoryBuffer hostValidityBuffer = null;
-                boolean validityBufferAlloc = false;
-                try {
-                    if (hasNulls()) {
-                        hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
+        if (hostData == null) {
+            HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
+            HostMemoryBuffer hostValidityBuffer = null;
+            boolean validityBufferAlloc = false;
+            try {
+                if (hasNulls()) {
+                    hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
+                }
+                hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
+                validityBufferAlloc = true;
+            } finally {
+                if (!validityBufferAlloc) {
+                    if (hostDataBuffer != null) {
+                        hostDataBuffer.close();
                     }
-                    hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
-                    validityBufferAlloc = true;
-                } finally {
-                    if (!validityBufferAlloc) {
-                        if (hostDataBuffer != null) {
-                            hostDataBuffer.close();
-                        }
-                        if (hostValidityBuffer != null) {
-                            hostValidityBuffer.close();
-                        }
+                    if (hostValidityBuffer != null) {
+                        hostValidityBuffer.close();
                     }
                 }
             }
-            hostData.data.copyFromDeviceBuffer(deviceData.data);
-            if (hostData.valid != null) {
-                hostData.valid.copyFromDeviceBuffer(deviceData.valid);
-            }
+        }
+        hostData.data.copyFromDeviceBuffer(deviceData.data);
+        if (hostData.valid != null) {
+            hostData.valid.copyFromDeviceBuffer(deviceData.valid);
+        }
     }
 
     @Override
