@@ -32,8 +32,6 @@ public abstract class ColumnVector implements AutoCloseable {
     protected BufferEncapsulator<DeviceMemoryBuffer> deviceData;
     protected final long nullCount;
     private CudfColumn cudfColumn;
-    private final Logger log = LoggerFactory.getLogger(getClass());
-
 
 
     protected ColumnVector(HostMemoryBuffer hostDataBuffer,
@@ -135,36 +133,30 @@ public abstract class ColumnVector implements AutoCloseable {
      */
     public final void toDeviceBuffer() {
         checkHostData();
-        try {
-            if (deviceData == null) {
-                DeviceMemoryBuffer deviceDataBuffer = null;
-                DeviceMemoryBuffer deviceValidityBuffer = null;
-                boolean validityBufferAlloc = false;
-                try {
-                    deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
-                    if (hasNulls()) {
-                        deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
+        if (deviceData == null) {
+            DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(hostData.data.getLength());
+            DeviceMemoryBuffer deviceValidityBuffer = null;
+            boolean validityBufferAlloc = false;
+            try {
+                if (hasNulls()) {
+                    deviceValidityBuffer = DeviceMemoryBuffer.allocate(hostData.valid.getLength());
+                }
+                deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
+                validityBufferAlloc = true;
+            } finally {
+                if (!validityBufferAlloc) {
+                    if (deviceDataBuffer != null) {
+                        deviceDataBuffer.close();
                     }
-                    deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
-                    validityBufferAlloc = true;
-                } finally {
-                    if (!validityBufferAlloc) {
-                        if (deviceDataBuffer != null) {
-                            deviceDataBuffer.close();
-                        }
-                        if (deviceValidityBuffer != null) {
-                            deviceValidityBuffer.close();
-                        }
-                        log.error("ERROR: Could not copy data to DeviceBuffer");
+                    if (deviceValidityBuffer != null) {
+                        deviceValidityBuffer.close();
                     }
                 }
             }
-            deviceData.data.copyFromHostBuffer(hostData.data);
-            if (deviceData.valid != null) {
-                deviceData.valid.copyFromHostBuffer(hostData.valid);
-            }
-        } catch (Throwable t) {
-            log.error("Error while copying data to DeviceBuffer",t);
+        }
+        deviceData.data.copyFromHostBuffer(hostData.data);
+        if (deviceData.valid != null) {
+            deviceData.valid.copyFromHostBuffer(hostData.valid);
         }
     }
 
@@ -174,13 +166,11 @@ public abstract class ColumnVector implements AutoCloseable {
      */
     public final void toHostBuffer() {
         checkDeviceData();
-        try {
             if (hostData == null) {
-                HostMemoryBuffer hostDataBuffer = null;
+                HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
                 HostMemoryBuffer hostValidityBuffer = null;
                 boolean validityBufferAlloc = false;
                 try {
-                    hostDataBuffer = HostMemoryBuffer.allocate(deviceData.data.getLength());
                     if (hasNulls()) {
                         hostValidityBuffer = HostMemoryBuffer.allocate(deviceData.valid.getLength());
                     }
@@ -194,7 +184,6 @@ public abstract class ColumnVector implements AutoCloseable {
                         if (hostValidityBuffer != null) {
                             hostValidityBuffer.close();
                         }
-                        log.error("ERROR: Could not copy data to HostBuffer");
                     }
                 }
             }
@@ -202,9 +191,6 @@ public abstract class ColumnVector implements AutoCloseable {
             if (hostData.valid != null) {
                 hostData.valid.copyFromDeviceBuffer(deviceData.valid);
             }
-        }catch (Throwable t) {
-            log.error("Error while copying data to HostBuffer", t);
-        }
     }
 
     @Override
