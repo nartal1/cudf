@@ -18,6 +18,7 @@
 
 package ai.rapids.cudf;
 
+import java.util.Optional;
 
 /**
  * Abstract class depicting a Column Vector. This class represents the immutable vector created by the Builders from
@@ -28,7 +29,7 @@ public abstract class ColumnVector implements AutoCloseable {
     protected final long rows;
     protected BufferEncapsulator<HostMemoryBuffer> hostData;
     protected BufferEncapsulator<DeviceMemoryBuffer> deviceData;
-    protected final long nullCount;
+    protected Optional<Long> nullCount;
     private CudfColumn cudfColumn;
 
 
@@ -40,13 +41,17 @@ public abstract class ColumnVector implements AutoCloseable {
         this.hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
         this.deviceData = null;
         this.rows = rows;
-        this.nullCount = nullCount;
+        this.nullCount = Optional.of(nullCount);
     }
 
     protected ColumnVector(DeviceMemoryBuffer deviceDataBuffer, DeviceMemoryBuffer deviceValidityBuffer,
-                           long nullCount, long rows) {
-        if (nullCount > 0 && deviceValidityBuffer == null) {
-            throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
+                           long rows, Optional<Long> nullCount) {
+        if (deviceValidityBuffer == null) {
+            if (nullCount.isPresent() && nullCount.get() > 0) {
+                throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
+            } else if (!nullCount.isPresent()) {
+                throw new IllegalStateException("null count is uknown but the validity buffer is null");
+            }
         }
         this.deviceData = new BufferEncapsulator(deviceDataBuffer, deviceValidityBuffer);
         this.rows = rows;
@@ -93,7 +98,10 @@ public abstract class ColumnVector implements AutoCloseable {
      * @return
      */
     public final long getNullCount(){
-        return nullCount;
+        if (!nullCount.isPresent()) {
+            nullCount = Optional.of((long) cudfColumn.getNullCount());
+        }
+        return nullCount.get();
     }
 
     private void checkDeviceData() {
@@ -113,7 +121,7 @@ public abstract class ColumnVector implements AutoCloseable {
      * @return - true, if it has nulls, else, false
      */
     public final boolean hasNulls() {
-        return nullCount > 0;
+        return getNullCount() > 0;
     }
 
     public final boolean isNull(long index) {

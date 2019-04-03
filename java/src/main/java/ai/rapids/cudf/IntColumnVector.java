@@ -18,6 +18,7 @@
 
 package ai.rapids.cudf;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public final class IntColumnVector extends ColumnVector {
@@ -31,8 +32,8 @@ public final class IntColumnVector extends ColumnVector {
     /**
      * Private constructor for creating a device vector.
      */
-    private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer bitmask, long nullCount, long rows) {
-        super(data, bitmask, nullCount, rows);
+    private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer bitmask, long rows, Optional<Long> nullCount) {
+        super(data, bitmask, rows, nullCount);
     }
 
     /**
@@ -46,15 +47,32 @@ public final class IntColumnVector extends ColumnVector {
     }
 
     /**
-     * This is a factory method to create a vector on the GPU with the intention that the caller will populate it.
+     * This is a factory method to create a vector on the GPU with the intention that the caller will populate it. The
+     * nullCount will be set lazily in cases when both given vectors (v1 and v2) have a validity vector
+     * @param v1 - vector 1
+     * @param v2 - vector 2
+     * @return IntColumnVector big enough to store the result
      */
-    static IntColumnVector newOutputVector(long rows, boolean bitmask) {
+    static IntColumnVector newOutputVector(IntColumnVector v1, IntColumnVector v2) {
+        boolean nullCountKnown = (v1.nullCount.isPresent() && v2.nullCount.isPresent())
+                                                            && (v1.nullCount.get() == 0 || v2.nullCount.get() == 0);
+        Optional<Long> nullCount = nullCountKnown ? Optional.of(v1.nullCount.get() > 0 ? v1.nullCount.get() : v2.nullCount.get())
+                                                                                                    : Optional.empty();
+        boolean hasValidityVector = v1.hostData.valid != null || v2.hostData.valid != null;
+        return newOutputVector(v1.rows, hasValidityVector, nullCount);
+    }
+
+    /**
+     * This is a factory method to create a vector on the GPU with the intention that the
+     * caller will populate it.
+     */
+    static IntColumnVector newOutputVector(long rows, boolean hasValidityVector, Optional<Long> nullCount) {
         DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
         DeviceMemoryBuffer valid = null;
-        if (bitmask) {
+        if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(getValidityBufferSize(rows));
         }
-        return new IntColumnVector(data, valid, 0L, rows);
+        return new IntColumnVector(data, valid, rows, nullCount == null ? Optional.empty() : nullCount);
     }
 
     /**
@@ -76,7 +94,7 @@ public final class IntColumnVector extends ColumnVector {
     public IntColumnVector add(IntColumnVector v1) {
         assert v1.getSize() == getSize(); // cudf will check this too.
 
-        IntColumnVector result = IntColumnVector.newOutputVector(v1.getSize(), hasNulls() || v1.hasNulls());
+        IntColumnVector result = IntColumnVector.newOutputVector(v1, this);
         Cudf.gdfAddI32(getCudfColumn(DType.CUDF_INT32), v1.getCudfColumn(DType.CUDF_INT32),
                                                                         result.getCudfColumn(DType.CUDF_INT32));
         return result;

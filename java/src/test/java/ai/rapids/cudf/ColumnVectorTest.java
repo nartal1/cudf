@@ -21,6 +21,8 @@ package ai.rapids.cudf;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -33,10 +35,10 @@ public class ColumnVectorTest {
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         when(mockDataBuffer.getLength()).thenReturn(Long.MAX_VALUE);
 
-        ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, 0) {};
+        ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, Optional.empty()) {};
         assertThrows(AssertionError.class, () -> v0.getCudfColumn(DType.CUDF_INT32));
 
-        ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, 0) {};
+        ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, Optional.empty()) {};
         assertThrows(AssertionError.class, () -> v1.getCudfColumn(DType.CUDF_INT32));
     }
 }
