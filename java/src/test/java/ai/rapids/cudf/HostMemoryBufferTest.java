@@ -18,16 +18,13 @@
 
 package ai.rapids.cudf;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 
-public class HostMemoryBufferImplTest {
+public class HostMemoryBufferTest {
     @Test
     public void testGetInt() {
         try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {

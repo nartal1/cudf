@@ -17,10 +17,14 @@ package ai.rapids.cudf;
 
 
 /**
- * Error while doing RMM.
+ * Exception from RMM allocator.
  */
-public class RmmException extends CudaException {
-    public RmmException(String cause) {
-        super(cause);
+public class RmmException extends RuntimeException {
+    RmmException(String message) {
+        super(message);
+    }
+
+    RmmException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
