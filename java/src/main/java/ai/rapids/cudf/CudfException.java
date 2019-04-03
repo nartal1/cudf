@@ -16,8 +16,14 @@
 package ai.rapids.cudf;
 
 /**
- * Error while doing CUDF processing
+ * Exception thrown by cudf itself.
  */
-public class CudfException extends CudaException {
-    public CudfException(String cause) { super(cause); }
+public class CudfException extends RuntimeException {
+    CudfException(String message) {
+        super(message);
+    }
+
+    CudfException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

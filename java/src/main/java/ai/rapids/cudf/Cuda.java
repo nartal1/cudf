@@ -43,5 +43,4 @@ public class Cuda {
     }
 
     private static native void memcpy(long dst, long src, long count, int kind) throws CudaException;
-
 }

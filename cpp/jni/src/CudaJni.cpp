@@ -27,15 +27,12 @@ JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo
 
     jclass infoClass = env->FindClass("Lai/rapids/cudf/CudaMemInfo;");
     if (infoClass == NULL) {
-        JNI_THROW(env, "java/lang/NoClassDefFoundError",
-                  "Could not find class of ai.rapids.cudf.CudaMemInfo", NULL);
+        return NULL;
     }
 
     jmethodID ctorID = env->GetMethodID(infoClass, "<init>", "(JJ)V");
     if (ctorID == NULL) {
-        JNI_THROW(env, "java/lang/NoSuchMethodException",
-                  "Could not find constructor of ai.rapids.cudf.CudaMemInfo ",
-                  NULL);
+        return NULL;
     }
 
     jobject infoObj = env->NewObject(infoClass, ctorID, (jlong) free, (jlong) total);
