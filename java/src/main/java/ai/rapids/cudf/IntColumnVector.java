@@ -18,31 +18,27 @@
 
 package ai.rapids.cudf;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 public final class IntColumnVector extends ColumnVector {
     /**
      * Private constructor to use the BuilderPattern.
      */
-    private IntColumnVector(HostMemoryBuffer data, HostMemoryBuffer bitmask, long nullCount, long rows) {
-        super(data, bitmask, nullCount, rows);
+    private IntColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
+        super(data, validity, rows, DType.CUDF_INT32, nullCount);
     }
 
-    /**
-     * Private constructor for creating a device vector.
-     */
-    private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer bitmask, long rows, Optional<Long> nullCount) {
-        super(data, bitmask, rows, nullCount);
+    private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
+        super(data, validity, rows, DType.CUDF_INT32);
     }
 
     /**
      * Get the value at index.
      */
     public final int get(long index) {
-        assert (index >= 0 && index < rows);
-        assert hostData != null;
-        assert !(hasNulls() && isNull(index));
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
         return hostData.data.getInt(index * DType.CUDF_INT32.sizeInBytes);
     }
 
@@ -54,25 +50,21 @@ public final class IntColumnVector extends ColumnVector {
      * @return IntColumnVector big enough to store the result
      */
     static IntColumnVector newOutputVector(IntColumnVector v1, IntColumnVector v2) {
-        boolean nullCountKnown = (v1.nullCount.isPresent() && v2.nullCount.isPresent())
-                                                            && (v1.nullCount.get() == 0 || v2.nullCount.get() == 0);
-        Optional<Long> nullCount = nullCountKnown ? Optional.of(v1.nullCount.get() > 0 ? v1.nullCount.get() : v2.nullCount.get())
-                                                                                                    : Optional.empty();
-        boolean hasValidityVector = v1.hostData.valid != null || v2.hostData.valid != null;
-        return newOutputVector(v1.rows, hasValidityVector, nullCount);
+        assert v1.rows == v2.rows;
+        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector());
     }
 
     /**
      * This is a factory method to create a vector on the GPU with the intention that the
      * caller will populate it.
      */
-    static IntColumnVector newOutputVector(long rows, boolean hasValidityVector, Optional<Long> nullCount) {
+    static IntColumnVector newOutputVector(long rows, boolean hasValidityVector) {
         DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(getValidityBufferSize(rows));
         }
-        return new IntColumnVector(data, valid, rows, nullCount == null ? Optional.empty() : nullCount);
+        return new IntColumnVector(data, valid, rows);
     }
 
     /**
@@ -92,11 +84,13 @@ public final class IntColumnVector extends ColumnVector {
      * @return - A new vector allocated on the GPU.
      */
     public IntColumnVector add(IntColumnVector v1) {
-        assert v1.getSize() == getSize(); // cudf will check this too.
+        assert v1.getRows() == getRows(); // cudf will check this too.
+        assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
+        assert getNullCount() == 0;
 
         IntColumnVector result = IntColumnVector.newOutputVector(v1, this);
-        Cudf.gdfAddI32(getCudfColumn(DType.CUDF_INT32), v1.getCudfColumn(DType.CUDF_INT32),
-                                                                        result.getCudfColumn(DType.CUDF_INT32));
+        Cudf.gdfAddI32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
         return result;
     }
 
@@ -176,7 +170,7 @@ public final class IntColumnVector extends ColumnVector {
         public final IntColumnVector build() {
             //do the magic
             built = true;
-            return new IntColumnVector(data, valid, nullCount, currentIndex);
+            return new IntColumnVector(data, valid, currentIndex, nullCount);
         }
 
         /**
@@ -189,12 +183,12 @@ public final class IntColumnVector extends ColumnVector {
 
             data.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.data,
                                                             0L,
-                                                    intColumnVector.getSize() * DType.CUDF_INT32.sizeInBytes);
+                                                    intColumnVector.getRows() * DType.CUDF_INT32.sizeInBytes);
 
             if (intColumnVector.hasNulls()) {
                 valid.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.valid,
                                                             0L,
-                                                    intColumnVector.getSize() * DType.CUDF_INT32.sizeInBytes);
+                                                    intColumnVector.getRows() * DType.CUDF_INT32.sizeInBytes);
             }
             currentIndex += intColumnVector.rows;
             return this;

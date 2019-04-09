@@ -33,12 +33,13 @@ public class ColumnVectorTest {
     void testCudfColumnSize() {
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
-        when(mockDataBuffer.getLength()).thenReturn(Long.MAX_VALUE);
 
-        ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, Optional.empty()) {};
-        assertThrows(AssertionError.class, () -> v0.getCudfColumn(DType.CUDF_INT32));
+        try (ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, DType.CUDF_INT32){}) {
+            v0.getCudfColumn();
+        }
 
-        ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, Optional.empty()) {};
-        assertThrows(AssertionError.class, () -> v1.getCudfColumn(DType.CUDF_INT32));
+        try (ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, DType.CUDF_INT32) {}) {
+            assertThrows(AssertionError.class, () -> v1.getCudfColumn());
+        }
     }
 }
