@@ -63,6 +63,13 @@ public abstract class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Returns the type of this vector.
+     */
+    public final DType getType() {
+        return type;
+    }
+
+    /**
      * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
      */
     public void close() {
