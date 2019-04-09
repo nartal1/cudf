@@ -71,7 +71,7 @@ abstract class MemoryBuffer implements AutoCloseable {
     public String toString() {
         return "MemoryBuffer{" +
                 "address=" + address +
-                ", rows=" + length +
+                ", length=" + length +
                 '}';
     }
 }

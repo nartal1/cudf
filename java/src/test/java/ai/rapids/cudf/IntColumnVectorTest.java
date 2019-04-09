@@ -130,8 +130,9 @@ public class IntColumnVectorTest {
             intColumnVector2.toDeviceBuffer();
 
             try (IntColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
-
                 intColumnVector3.toHostBuffer();
+                assertEquals(4, intColumnVector3.getRows());
+                assertEquals(0, intColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {
                     long v1 = intColumnVector1.get(i);
                     long v2 = intColumnVector2.get(i);
@@ -139,33 +140,6 @@ public class IntColumnVectorTest {
                     assertEquals(v1 + v2, v3);
                     log.debug("{}", v3);
                 }
-            }
-        }
-    }
-
-    @Test
-    void testNewOutputVector() {
-        //Only v1 has nulls -> nullCount known
-        try (IntColumnVector v1 = IntColumnVector.build(3, (v) -> v.appendNull().append(4).append(6));
-            IntColumnVector v2 = IntColumnVector.build(3, (v) -> v.append(1).append(7).append(63))) {
-            try (IntColumnVector v3 = IntColumnVector.newOutputVector(v1, v2)) {
-                assertTrue(v3.nullCount.isPresent());
-            }
-        }
-
-        //Only v2 has nulls -> nullCount known
-        try (IntColumnVector v2 = IntColumnVector.build(3, (v) -> v.append(29).appendNull().append(86));
-            IntColumnVector v1 = IntColumnVector.build(3, (v) -> v.append(13).append(72).append(63))) {
-            try (IntColumnVector v3 = IntColumnVector.newOutputVector(v1, v2)) {
-                assertTrue(v3.nullCount.isPresent());
-            }
-        }
-
-        //v1 and v2 has nulls -> nullCount not known
-        try (IntColumnVector v2 = IntColumnVector.build(3, (v) -> v.append(29).appendNull().append(86));
-             IntColumnVector v1 = IntColumnVector.build(3, (v) -> v.appendNull().append(4).append(6))) {
-            try (IntColumnVector v3 = IntColumnVector.newOutputVector(v1, v2)) {
-                assertFalse(v3.nullCount.isPresent());
             }
         }
     }
