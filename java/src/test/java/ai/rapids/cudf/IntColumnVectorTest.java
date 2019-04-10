@@ -23,6 +23,8 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.spy;
@@ -93,17 +95,55 @@ public class IntColumnVectorTest {
     }
 
     @Test
-    public void testCopyVector() {
-        try (IntColumnVector vector1 = IntColumnVector.build(9,
-                (b) -> b.append(3, 7));
-             IntColumnVector vector2 = IntColumnVector.build(8,
-                     (b) -> {
-                         b.append(1);
-                         b.append(vector1);
-                     })) {
-            assertEquals(1, vector2.get(0));
-            for (int i = 1; i < 8; i++) {
-                assertEquals(vector1.get(i - 1), vector2.get(i));
+    void testAppendVector() {
+        Random random = new Random(192312989128L);
+        for (int dstSize = 1 ; dstSize <= 100 ; dstSize++) {
+            for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
+                final int srcSize = dstSize - dstPrefilledSize;
+                try (IntColumnVector.Builder dst = IntColumnVector.builder(dstSize);
+                     IntColumnVector src = IntColumnVector.build(srcSize, (b) -> {
+                        for (int i = 0 ; i < srcSize ; i++) {
+                            if (random.nextBoolean()) {
+                                b.appendNull();
+                            } else {
+                                b.append(random.nextInt());
+                            }
+                        }
+                     });
+                     IntColumnVector.Builder gtBuilder = IntColumnVector.builder(dstPrefilledSize)) {
+                    assertEquals(dstSize, srcSize + dstPrefilledSize);
+                    for (int i = 0; i < dstPrefilledSize; i++) {
+                        if (random.nextBoolean()) {
+                            dst.appendNull();
+                            gtBuilder.appendNull();
+                        } else {
+                            int a = random.nextInt();
+                            dst.append(a);
+                            gtBuilder.append(a);
+                        }
+                    }
+                    dst.append(src);
+                    try(IntColumnVector dstVector = dst.build();
+                        IntColumnVector gt = gtBuilder.build()) {
+                        for (int i = 0 ; i < dstPrefilledSize ; i++) {
+                            assertEquals(gt.isNull(i), dstVector.isNull(i));
+                            if (!gt.isNull(i)) {
+                                assertEquals(gt.get(i), dstVector.get(i));
+                            }
+                        }
+                        for (int i = dstPrefilledSize, j = 0; i < dstSize && j < srcSize; i++, j++) {
+                            assertEquals(src.isNull(j), dstVector.isNull(i));
+                            if (!src.isNull(j)) {
+                                assertEquals(src.get(j), dstVector.get(i));
+                            }
+                        }
+                        if (dstVector.hostData.valid != null) {
+                            for (int i = dstSize; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.hostData.valid.length); i++) {
+                                assertFalse(BitVectorHelper.isNull(dstVector.hostData.valid, i));
+                            }
+                        }
+                    }
+                }
             }
         }
     }
