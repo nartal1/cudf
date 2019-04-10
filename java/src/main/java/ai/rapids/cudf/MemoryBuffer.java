@@ -70,7 +70,7 @@ abstract class MemoryBuffer implements AutoCloseable {
     @Override
     public String toString() {
         return "MemoryBuffer{" +
-                "address=" + address +
+                "address=0x" + Long.toHexString(address) +
                 ", length=" + length +
                 '}';
     }

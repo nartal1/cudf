@@ -62,7 +62,7 @@ public final class IntColumnVector extends ColumnVector {
         DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
-            valid = DeviceMemoryBuffer.allocate(getValidityBufferSize(rows));
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
         }
         return new IntColumnVector(data, valid, rows);
     }
@@ -92,11 +92,6 @@ public final class IntColumnVector extends ColumnVector {
         Cudf.gdfAddI32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
-    }
-
-    private static long getValidityBufferSize(long rows) {
-        long numBytes = Math.max(rows / 8, 1);
-        return ((numBytes + 7) / 8) * 8;
     }
 
     /**
@@ -180,15 +175,19 @@ public final class IntColumnVector extends ColumnVector {
          */
         public final Builder append(IntColumnVector intColumnVector) {
             assert intColumnVector.rows <= (rows - currentIndex);
+            assert intColumnVector.hostData != null;
 
             data.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.data,
                                                             0L,
                                                     intColumnVector.getRows() * DType.CUDF_INT32.sizeInBytes);
 
-            if (intColumnVector.hasNulls()) {
-                valid.copyRange(currentIndex * DType.CUDF_INT32.sizeInBytes, intColumnVector.hostData.valid,
-                                                            0L,
-                                                    intColumnVector.getRows() * DType.CUDF_INT32.sizeInBytes);
+            if (intColumnVector.nullCount != 0) {
+                if (valid == null) {
+                    allocateBitmaskAndSetDefaultValues();
+                }
+                //copy values from intColumnVector to this
+                BitVectorHelper.append(intColumnVector.hostData.valid, valid, currentIndex, intColumnVector.rows);
+                nullCount += intColumnVector.nullCount;
             }
             currentIndex += intColumnVector.rows;
             return this;
@@ -232,9 +231,7 @@ public final class IntColumnVector extends ColumnVector {
 
             // add null
             if (this.valid == null) {
-                long bitmaskSize = getValidityBufferSize(rows);
-                this.valid = HostMemoryBuffer.allocate(bitmaskSize);
-                valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+                allocateBitmaskAndSetDefaultValues();
             }
             setValues(currentIndex, 0, false);
             currentIndex++;
@@ -242,15 +239,17 @@ public final class IntColumnVector extends ColumnVector {
             return this;
         }
 
+        private void allocateBitmaskAndSetDefaultValues() {
+            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
+            valid = HostMemoryBuffer.allocate(bitmaskSize);
+            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+        }
+
         private void setValues(long index, int value, boolean isValid) {
             if (isValid) {
                 data.setInt(index * DType.CUDF_INT32.sizeInBytes, value);
             } else {
-                long bucket = index / 8;
-                byte currentByte = valid.getByte(bucket);
-                int bitmask = ~(1 << (index % 8));
-                currentByte &= bitmask;
-                valid.setByte(bucket, currentByte);
+                BitVectorHelper.appendNull(valid, currentIndex);
             }
         }
 
@@ -265,6 +264,18 @@ public final class IntColumnVector extends ColumnVector {
                     valid.close();
                 }
             }
+        }
+
+        @Override
+        public String toString() {
+            return "Builder{" +
+                    "data=" + data +
+                    ", valid=" + valid +
+                    ", currentIndex=" + currentIndex +
+                    ", nullCount=" + nullCount +
+                    ", rows=" + rows +
+                    ", built=" + built +
+                    '}';
         }
     }
 }

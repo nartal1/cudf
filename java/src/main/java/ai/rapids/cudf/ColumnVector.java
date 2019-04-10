@@ -129,9 +129,7 @@ public abstract class ColumnVector implements AutoCloseable {
     public final boolean isNull(long index) {
         checkHostData();
         if (hasNulls()) {
-            int b = hostData.valid.getByte(index / 8);
-            int i = b & (1 << (index % 8));
-            return i == 0;
+            return BitVectorHelper.isNull(hostData.valid, index);
         }
         return false;
     }
@@ -203,10 +201,14 @@ public abstract class ColumnVector implements AutoCloseable {
 
     @Override
     public String toString() {
-        return "ColumnVector{type= " + this.getClass().getSimpleName()
-                + " hostData=" + hostData
-                + ", deviceData=" + deviceData
-                + ", rows=" + rows + "}";
+        return "ColumnVector{" +
+                "rows=" + rows +
+                ", type=" + type +
+                ", hostData=" + hostData +
+                ", deviceData=" + deviceData +
+                ", nullCount=" + nullCount +
+                ", cudfColumn=" + cudfColumn +
+                '}';
     }
 
     protected final CudfColumn getCudfColumn() {
