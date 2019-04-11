@@ -100,46 +100,69 @@ public class IntColumnVectorTest {
         for (int dstSize = 1 ; dstSize <= 100 ; dstSize++) {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
-                try (IntColumnVector.Builder dst = IntColumnVector.builder(dstSize);
-                     IntColumnVector src = IntColumnVector.build(srcSize, (b) -> {
-                        for (int i = 0 ; i < srcSize ; i++) {
+                for (int  prefilledSizeToAddAfterAppend = 0 ; prefilledSizeToAddAfterAppend <= dstPrefilledSize ; prefilledSizeToAddAfterAppend++) {
+                    try (IntColumnVector.Builder dst = IntColumnVector.builder(dstSize);
+                        IntColumnVector src = IntColumnVector.build(srcSize, (b) -> {
+                            for (int i = 0 ; i < srcSize ; i++) {
+                                if (random.nextBoolean()) {
+                                    b.appendNull();
+                                } else {
+                                    b.append(random.nextInt());
+                                }
+                            }
+                        });
+                        IntColumnVector.Builder gtBuilder = IntColumnVector.builder(dstPrefilledSize)) {
+                        assertEquals(dstSize, srcSize + dstPrefilledSize);
+                        //add the first half of the prefilled list
+                        for (int i = 0; i < dstPrefilledSize - prefilledSizeToAddAfterAppend ; i++) {
                             if (random.nextBoolean()) {
-                                b.appendNull();
+                                dst.appendNull();
+                                gtBuilder.appendNull();
                             } else {
-                                b.append(random.nextInt());
+                                int a = random.nextInt();
+                                dst.append(a);
+                                gtBuilder.append(a);
                             }
                         }
-                     });
-                     IntColumnVector.Builder gtBuilder = IntColumnVector.builder(dstPrefilledSize)) {
-                    assertEquals(dstSize, srcSize + dstPrefilledSize);
-                    for (int i = 0; i < dstPrefilledSize; i++) {
-                        if (random.nextBoolean()) {
-                            dst.appendNull();
-                            gtBuilder.appendNull();
-                        } else {
-                            int a = random.nextInt();
-                            dst.append(a);
-                            gtBuilder.append(a);
-                        }
-                    }
-                    dst.append(src);
-                    try(IntColumnVector dstVector = dst.build();
-                        IntColumnVector gt = gtBuilder.build()) {
-                        for (int i = 0 ; i < dstPrefilledSize ; i++) {
-                            assertEquals(gt.isNull(i), dstVector.isNull(i));
-                            if (!gt.isNull(i)) {
-                                assertEquals(gt.get(i), dstVector.get(i));
+
+                        // append the src vector
+                        dst.append(src);
+
+                        // add the remaining prefillled
+                        for (int i = dstPrefilledSize - prefilledSizeToAddAfterAppend + srcSize ; i < dstSize ; i++) {
+                            if (random.nextBoolean()) {
+                                dst.appendNull();
+                                gtBuilder.appendNull();
+                            } else {
+                                int a = random.nextInt();
+                                dst.append(a);
+                                gtBuilder.append(a);
                             }
                         }
-                        for (int i = dstPrefilledSize, j = 0; i < dstSize && j < srcSize; i++, j++) {
-                            assertEquals(src.isNull(j), dstVector.isNull(i));
-                            if (!src.isNull(j)) {
-                                assertEquals(src.get(j), dstVector.get(i));
+                        try (IntColumnVector dstVector = dst.build();
+                             IntColumnVector gt = gtBuilder.build()) {
+                            for (int i = 0; i < dstPrefilledSize - prefilledSizeToAddAfterAppend ; i++) {
+                                assertEquals(gt.isNull(i), dstVector.isNull(i));
+                                if (!gt.isNull(i)) {
+                                    assertEquals(gt.get(i), dstVector.get(i));
+                                }
                             }
-                        }
-                        if (dstVector.hostData.valid != null) {
-                            for (int i = dstSize; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.hostData.valid.length); i++) {
-                                assertFalse(BitVectorHelper.isNull(dstVector.hostData.valid, i));
+                            for (int i = dstPrefilledSize - prefilledSizeToAddAfterAppend, j = 0; i < dstSize - prefilledSizeToAddAfterAppend && j < srcSize; i++, j++) {
+                                assertEquals(src.isNull(j), dstVector.isNull(i));
+                                if (!src.isNull(j)) {
+                                    assertEquals(src.get(j), dstVector.get(i));
+                                }
+                            }
+                            for (int i = dstPrefilledSize - prefilledSizeToAddAfterAppend + srcSize, j = dstPrefilledSize - prefilledSizeToAddAfterAppend ; i < dstSize && j < gt.rows ; i++, j++) {
+                                assertEquals(gt.isNull(j), dstVector.isNull(i));
+                                if (!gt.isNull(j)) {
+                                    assertEquals(gt.get(j), dstVector.get(i));
+                                }
+                            }
+                            if (dstVector.hostData.valid != null) {
+                                for (int i = dstSize; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.hostData.valid.length); i++) {
+                                    assertFalse(BitVectorHelper.isNull(dstVector.hostData.valid, i));
+                                }
                             }
                         }
                     }
