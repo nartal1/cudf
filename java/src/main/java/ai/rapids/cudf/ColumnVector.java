@@ -260,4 +260,134 @@ public abstract class ColumnVector implements AutoCloseable {
         }
     }
 
+
+    /**
+     * Base class for Builder
+     */
+    static final class Builder implements AutoCloseable {
+        HostMemoryBuffer data;
+        HostMemoryBuffer valid;
+        long currentIndex = 0;
+        long nullCount;
+        final long rows;
+        boolean built;
+        final DType type;
+
+
+        /**
+         * Create a builder with a buffer of size rows
+         * @param type datatype
+         * @param rows number of rows to allocate.
+         */
+        Builder(DType type, long rows) {
+            this.type=type;
+            this.rows = rows;
+            this.data=HostMemoryBuffer.allocate(rows * type.sizeInBytes);
+        }
+
+        /**
+         * Create a builder with a buffer of size rows (for testing ONLY).
+         * @param type datatype
+         * @param rows number of rows to allocate.
+         * @param testData a buffer to hold the data (should be large enough to hold rows entries).
+         * @param testValid a buffer to hold the validity vector (should be large enough to hold
+         *                 rows entries or is null).
+         */
+        Builder(DType type, long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
+            this.type = type;
+            this.rows = rows;
+            this.data = testData;
+            this.valid = testValid;
+        }
+
+        final void appendInt(int value) {
+            assert type == DType.CUDF_INT32;
+            assert currentIndex < rows;
+            data.setInt(currentIndex *  type.sizeInBytes, value);
+            currentIndex++;
+        }
+
+        final void appendLong(long value) {
+            assert type == DType.CUDF_INT64;
+            assert currentIndex < rows;
+            data.setLong(currentIndex * type.sizeInBytes, value);
+            currentIndex++;
+        }
+
+        void allocateBitmaskAndSetDefaultValues() {
+            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
+            valid = HostMemoryBuffer.allocate(bitmaskSize);
+            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+        }
+
+        /**
+         * Append this vector to the end of this vector
+         * @param columnVector - Vector to be added
+         * @return  - The ColumnVector based on this builder values
+         */
+        final Builder append(ColumnVector columnVector) {
+            assert columnVector.rows <= (rows - currentIndex);
+            assert columnVector.type == type;
+            assert columnVector.hostData != null;
+
+            data.copyRange(currentIndex * type.sizeInBytes, columnVector.hostData.data,
+                    0L,
+                    columnVector.getRows() * type.sizeInBytes);
+
+            if (columnVector.nullCount != 0) {
+                if (valid == null) {
+                    allocateBitmaskAndSetDefaultValues();
+                }
+                //copy values from intColumnVector to this
+                BitVectorHelper.append(columnVector.hostData.valid, valid, currentIndex, columnVector.rows);
+                nullCount += columnVector.nullCount;
+            }
+            currentIndex += columnVector.rows;
+            return this;
+        }
+
+        /**
+         * Append null value.
+         */
+        void appendNull() {
+            assert currentIndex < rows;
+
+            // add null
+            if (this.valid == null) {
+                allocateBitmaskAndSetDefaultValues();
+            }
+            BitVectorHelper.appendNull(valid,currentIndex);
+            currentIndex++;
+            nullCount++;
+        }
+
+        /**
+         * Close this builder and free memory if the ColumnVector wasn't generated
+         */
+        @Override
+        public void close() {
+            if (!built) {
+                data.close();
+                data = null;
+                if (valid != null) {
+                    valid.close();
+                    valid = null;
+                }
+                built = true;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Builder{" +
+                    "data=" + data +
+                    "type=" + type +
+                    ", valid=" + valid +
+                    ", currentIndex=" + currentIndex +
+                    ", nullCount=" + nullCount +
+                    ", rows=" + rows +
+                    ", built=" + built +
+                    '}';
+        }
+    }
 }

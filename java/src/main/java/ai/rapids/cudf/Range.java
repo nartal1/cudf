@@ -58,4 +58,40 @@ public final class Range {
             }
         };
     }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @param step how must to step by.
+     * @return the builder for chaining.
+     */
+    public static final Consumer<LongColumnVector.Builder> appendLongs(long start, long end, long step) {
+        assert step > 0;
+        assert start <= end;
+        return (b) -> {
+            for (long i = start; i < end; i += step) {
+                b.append(i);
+            }
+        };
+    }
+     /**
+     * Append a range to the builder. 0 inclusive to end exclusive.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<LongColumnVector.Builder> appendLongs(long end) {
+        return appendLongs(0, end, 1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<LongColumnVector.Builder> appendLongs(long start, long end) {
+        return appendLongs(start, end, 1);
+    }
+
 }
