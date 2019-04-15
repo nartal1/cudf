@@ -20,8 +20,8 @@ package ai.rapids.cudf;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.Random;
 
 import java.util.Random;
 
@@ -30,8 +30,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.spy;
 
 public class IntColumnVectorTest {
-
-    private static Logger log = LoggerFactory.getLogger(IntColumnVector.class);
 
     @Test
     public void testCreateColumnVectorBuilder() {
@@ -79,7 +77,6 @@ public class IntColumnVectorTest {
                     b.append(2).appendNull();
                 })) {
             for (int i = 0; i < 71; i++) {
-                log.debug("{}", intColumnVector.get(i));
                 assertFalse(intColumnVector.isNull(i));
             }
             assertTrue(intColumnVector.isNull(71));
@@ -156,7 +153,7 @@ public class IntColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 4));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (IntColumnVector.Builder builder = IntColumnVector.builderTest(4, mockDataBuffer, mockValidBuffer)) {
+            try (IntColumnVector.Builder builder = IntColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
                 builder.append(2).append(3).append(5).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
@@ -182,7 +179,6 @@ public class IntColumnVectorTest {
                     long v2 = intColumnVector2.get(i);
                     long v3 = intColumnVector3.get(i);
                     assertEquals(v1 + v2, v3);
-                    log.debug("{}", v3);
                 }
             }
         }

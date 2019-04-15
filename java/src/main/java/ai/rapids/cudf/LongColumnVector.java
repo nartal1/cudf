@@ -20,27 +20,27 @@ package ai.rapids.cudf;
 
 import java.util.function.Consumer;
 
-public final class IntColumnVector extends ColumnVector {
+public final class LongColumnVector extends ColumnVector {
 
     /**
      * Private constructor to use the BuilderPattern.
      */
-    private IntColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_INT32, nullCount);
+    private LongColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
+        super(data, validity, rows, DType.CUDF_INT64, nullCount);
     }
 
-    private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_INT32);
+    private LongColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
+        super(data, validity, rows, DType.CUDF_INT64);
     }
 
     /**
      * Get the value at index.
      */
-    public final int get(long index) {
+    public final long get(long index) {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return hostData.data.getInt(index * DType.CUDF_INT32.sizeInBytes);
+        return hostData.data.getLong(index * DType.CUDF_INT64.sizeInBytes);
     }
 
     /**
@@ -48,9 +48,9 @@ public final class IntColumnVector extends ColumnVector {
      * nullCount will be set lazily in cases when both given vectors (v1 and v2) have a validity vector
      * @param v1 - vector 1
      * @param v2 - vector 2
-     * @return IntColumnVector big enough to store the result
+     * @return LongColumnVector big enough to store the result
      */
-    static IntColumnVector newOutputVector(IntColumnVector v1, IntColumnVector v2) {
+    static LongColumnVector newOutputVector(LongColumnVector v1, LongColumnVector v2) {
         assert v1.rows == v2.rows;
         return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector());
     }
@@ -59,13 +59,13 @@ public final class IntColumnVector extends ColumnVector {
      * This is a factory method to create a vector on the GPU with the intention that the
      * caller will populate it.
      */
-    static IntColumnVector newOutputVector(long rows, boolean hasValidityVector) {
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
+    static LongColumnVector newOutputVector(long rows, boolean hasValidityVector) {
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT64.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
         }
-        return new IntColumnVector(data, valid, rows);
+        return new LongColumnVector(data, valid, rows);
     }
 
     /**
@@ -75,22 +75,22 @@ public final class IntColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      * Example:
-     *          try (IntColumnVector v1 = IntColumnVector.build(5, (b) -> b.append(1).append(5)...);
-     *               IntColumnVector v2 = IntColumnVector.build(5, (b) -> b.append(5).append(13)...);
-     *               IntColumnVector v3 = v1.add(v2);_ {}
+     *          try (LongColumnVector v1 = LongColumnVector.build(5, (b) -> b.append(1).append(5)...);
+     *               LongColumnVector v2 = LongColumnVector.build(5, (b) -> b.append(5).append(13)...);
+     *               LongColumnVector v3 = v1.add(v2);_ {}
      *            ...
      *          }
      *
      * @param v1 - vector to be added to this vector.
      * @return - A new vector allocated on the GPU.
      */
-    public IntColumnVector add(IntColumnVector v1) {
+    public LongColumnVector add(LongColumnVector v1) {
         assert v1.getRows() == getRows(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
-        IntColumnVector result = IntColumnVector.newOutputVector(v1, this);
-        Cudf.gdfAddI32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+        LongColumnVector result = LongColumnVector.newOutputVector(v1, this);
+        Cudf.gdfAddI64(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
     }
@@ -116,16 +116,13 @@ public final class IntColumnVector extends ColumnVector {
      * @param init what will initialize the vector.
      * @return the created vector.
      */
-    public static IntColumnVector build(int rows, Consumer<Builder> init) {
+    public static LongColumnVector build(int rows, Consumer<Builder> init) {
         try (Builder builder = builder(rows)) {
             init.accept(builder);
             return builder.build();
         }
     }
 
-    /**
-     * Builder for IntColumnVector to make it immutable
-     */
     public static final class Builder implements AutoCloseable {
 
         private final ColumnVector.Builder builder;
@@ -135,9 +132,8 @@ public final class IntColumnVector extends ColumnVector {
          * @param rows number of rows to allocate.
          */
         private Builder(long rows) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT32, rows);
+            builder = new ColumnVector.Builder(DType.CUDF_INT64, rows);
         }
-
 
         /**
          * Create a builder with a buffer of size rows (for testing ONLY).
@@ -146,28 +142,28 @@ public final class IntColumnVector extends ColumnVector {
          * @param testValid a buffer to hold the validity vector (should be large enough to hold
          *                 rows entries or is null).
          */
-        Builder(int rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT32,rows, testData, testValid);
+        Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
+            builder = new ColumnVector.Builder(DType.CUDF_INT64, rows, testData, testValid);
         }
 
         /**
-         * Build the immutable @IntColumnVector. The rows of the vector will be equal to the appended values i.e. If a
+         * Build the immutable @LongColumnVector. The rows of the vector will be equal to the appended values i.e. If a
          * larger buffer was allocated then the extra space will not be considered as part of the rows.
-         * @return  - The IntColumnVector based on this builder values
+         * @return  - The LongColumnVector based on this builder values
          */
-        public final IntColumnVector build() {
+        public final LongColumnVector build() {
             //do the magic
             builder.built = true;
-            return new IntColumnVector(builder.data, builder.valid, builder.currentIndex, builder.nullCount);
+            return new LongColumnVector(builder.data, builder.valid, builder.currentIndex, builder.nullCount);
         }
 
         /**
          * Append this vector to the end of this vector
-         * @param intColumnVector - Vector to be added
-         * @return  - The IntColumnVector based on this builder values
+         * @param longColumnVector - Vector to be added
+         * @return  - The LongColumnVector based on this builder values
          */
-        public final Builder append(IntColumnVector intColumnVector) {
-            builder.append(intColumnVector);
+        public final Builder append(LongColumnVector longColumnVector) {
+            builder.append(longColumnVector);
             return this;
         }
 
@@ -177,11 +173,11 @@ public final class IntColumnVector extends ColumnVector {
          * @param count how many to append.
          * @return this for chaining.
          */
-        public final Builder append(int value, long count) {
+        public final Builder append(long value, long count) {
             assert (count + builder.currentIndex) <= builder.rows;
             // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
-                builder.appendInt(value);
+                builder.appendLong(value);
             }
             return this;
         }
@@ -192,10 +188,11 @@ public final class IntColumnVector extends ColumnVector {
          * @return - IntColumnVector
          * @throws - {@link IndexOutOfBoundsException}
          */
-        public final Builder append(int value) throws IndexOutOfBoundsException {
-            builder.appendInt(value);
+        public final Builder append(long value) throws IndexOutOfBoundsException {
+            builder.appendLong(value);
             return this;
         }
+
 
         /**
          * Append null value.
