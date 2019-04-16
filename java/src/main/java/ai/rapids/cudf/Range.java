@@ -75,7 +75,8 @@ public final class Range {
             }
         };
     }
-     /**
+
+    /**
      * Append a range to the builder. 0 inclusive to end exclusive.
      * @param end last entry exclusive.
      * @return the consumer.
@@ -92,6 +93,78 @@ public final class Range {
      */
     public static final Consumer<LongColumnVector.Builder> appendLongs(long start, long end) {
         return appendLongs(start, end, 1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @param step how must to step by.
+     * @return the builder for chaining.
+     */
+    public static final Consumer<FloatColumnVector.Builder> appendFloats(float start, float end, float step) {
+        assert step > 0;
+        assert start <= end;
+        return (b) -> {
+            for (float i = start; i < end; i += step) {
+                b.append(i);
+            }
+        };
+    }
+
+    /**
+     * Append a range to the builder. 0 inclusive to end exclusive.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<FloatColumnVector.Builder> appendFloats(float end) {
+        return appendFloats(0, end, 1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<FloatColumnVector.Builder> appendFloats(float start, float end) {
+        return appendFloats(start, end, 1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @param step how must to step by.
+     * @return the builder for chaining.
+     */
+    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double start, double end, double step) {
+        assert step > 0;
+        assert start <= end;
+        return (b) -> {
+            for (double i = start; i < end; i += step) {
+                b.append(i);
+            }
+        };
+    }
+
+    /**
+     * Append a range to the builder. 0 inclusive to end exclusive.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double end) {
+        return appendDoubles(0, end, 1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double start, double end) {
+        return appendDoubles(start, end, 1);
     }
 
 }

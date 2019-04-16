@@ -314,6 +314,20 @@ public abstract class ColumnVector implements AutoCloseable {
             currentIndex++;
         }
 
+        final void appendFloat(float value) {
+            assert type == DType.CUDF_FLOAT32;
+            assert currentIndex < rows;
+            data.setFloat(currentIndex * type.sizeInBytes, value);
+            currentIndex++;
+        }
+
+        final void appendDouble(double value) {
+            assert type == DType.CUDF_FLOAT64;
+            assert currentIndex < rows;
+            data.setDouble(currentIndex * type.sizeInBytes, value);
+            currentIndex++;
+        }
+
         void allocateBitmaskAndSetDefaultValues() {
             long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
             valid = HostMemoryBuffer.allocate(bitmaskSize);
