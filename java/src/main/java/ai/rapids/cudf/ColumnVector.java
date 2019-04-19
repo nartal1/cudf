@@ -18,11 +18,17 @@
 
 package ai.rapids.cudf;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Abstract class depicting a Column Vector. This class represents the immutable vector created by the Builders from
- * each respective ColumnVector subclasses
+ * each respective ColumnVector subclasses.  This class holds references to off heap memory and is
+ * reference counted to know when to release it.  Call close to decrement the reference count when
+ * you are done with the column, and call inRefCount to increment the reference count.
  */
 public abstract class ColumnVector implements AutoCloseable {
+    private static Logger log = LoggerFactory.getLogger(ColumnVector.class);
 
     protected long rows;
     protected final DType type;
@@ -30,6 +36,7 @@ public abstract class ColumnVector implements AutoCloseable {
     protected BufferEncapsulator<DeviceMemoryBuffer> deviceData;
     protected long nullCount;
     private CudfColumn cudfColumn;
+    private int refCount;
 
 
     protected ColumnVector(HostMemoryBuffer hostDataBuffer,
@@ -42,7 +49,7 @@ public abstract class ColumnVector implements AutoCloseable {
         this.rows = rows;
         this.nullCount = nullCount;
         this.type = type;
-
+        refCount = 1;
     }
 
     protected ColumnVector(DeviceMemoryBuffer dataBuffer,
@@ -53,6 +60,15 @@ public abstract class ColumnVector implements AutoCloseable {
         // This should be overwritten, as this constructor is just for output
         this.nullCount = 0;
         this.type = type;
+        refCount = 1;
+    }
+
+    /**
+     * Increment the reference count for this column.  You need to call close on this
+     * to decrement the reference count again.
+     */
+    public void incRefCount() {
+        refCount++;
     }
 
     /**
@@ -72,18 +88,23 @@ public abstract class ColumnVector implements AutoCloseable {
     /**
      * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
      */
-    public void close() {
-        if (hostData != null) {
-            hostData.close();
-            hostData = null;
-        }
-        if (deviceData != null) {
-            deviceData.close();
-            deviceData = null;
-        }
-        if (cudfColumn != null) {
-            cudfColumn.close();
-            cudfColumn = null;
+    public final void close() {
+        refCount --;
+        if (refCount == 0) {
+            if (hostData != null) {
+                hostData.close();
+                hostData = null;
+            }
+            if (deviceData != null) {
+                deviceData.close();
+                deviceData = null;
+            }
+            if (cudfColumn != null) {
+                cudfColumn.close();
+                cudfColumn = null;
+            }
+        } else if (refCount < 0) {
+            log.error("Close called too many times on %s", this);
         }
     }
 
