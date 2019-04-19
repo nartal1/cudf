@@ -47,6 +47,54 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF32
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF64
   (JNIEnv *, jclass, jlong, jlong, jlong);
 
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeYear
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeYear
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeMonth
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMonth
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeDay
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeDay
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeHour
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeHour
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeMinute
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMinute
+  (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     ai_rapids_cudf_Cudf
+ * Method:    gdfExtractDatetimeSecond
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
+  (JNIEnv *, jclass, jlong, jlong);
+
 #ifdef __cplusplus
 }
 #endif

@@ -58,4 +58,43 @@ class Cudf {
     }
 
     private static native void gdfAddF64(long lhs, long rhs, long output) throws CudfException;
+
+    /* datetime extract*/
+
+    static void gdfExtractDatetimeYear(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeYear(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeYear(long input, long output) throws CudfException;
+
+    static void gdfExtractDatetimeMonth(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeMonth(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeMonth(long input, long output) throws CudfException;
+
+    static void gdfExtractDatetimeDay(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeDay(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeDay(long input, long output) throws CudfException;
+
+    static void gdfExtractDatetimeHour(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeHour(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeHour(long input, long output) throws CudfException;
+
+    static void gdfExtractDatetimeMinute(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeMinute(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeMinute(long input, long output) throws CudfException;
+
+    static void gdfExtractDatetimeSecond(CudfColumn input, CudfColumn output) {
+        gdfExtractDatetimeSecond(input.nativeHandle, output.nativeHandle);
+    }
+
+    private static native void gdfExtractDatetimeSecond(long input, long output) throws CudfException;
+
 }
