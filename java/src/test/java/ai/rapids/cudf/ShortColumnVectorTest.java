@@ -135,9 +135,9 @@ public class ShortColumnVectorTest {
                                      assertEquals(src.get(j), dstVector.get(i));
                                  }
                              }
-                             if (dstVector.hostData.valid != null) {
-                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.hostData.valid.length); i++) {
-                                     assertFalse(BitVectorHelper.isNull(dstVector.hostData.valid, i));
+                             if (dstVector.offHeap.hostData.valid != null) {
+                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
+                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
                                  }
                              }
                          }
