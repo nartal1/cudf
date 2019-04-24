@@ -38,9 +38,9 @@ public final class LongColumnVector extends ColumnVector {
      */
     public final long get(long index) {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert hostData != null : "data is not on the host";
+        assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return hostData.data.getLong(index * DType.CUDF_INT64.sizeInBytes);
+        return offHeap.hostData.data.getLong(index * DType.CUDF_INT64.sizeInBytes);
     }
 
     /**

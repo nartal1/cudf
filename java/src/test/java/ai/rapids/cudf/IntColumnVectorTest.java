@@ -94,7 +94,7 @@ public class IntColumnVectorTest {
     @Test
     void testAppendVector() {
         Random random = new Random(192312989128L);
-        for (int dstSize = 1 ; dstSize <= 100 ; dstSize++) {
+        for (int dstSize = 1; dstSize <= 100 ; dstSize++) {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
@@ -137,9 +137,9 @@ public class IntColumnVectorTest {
                                     assertEquals(src.get(j), dstVector.get(i));
                                 }
                             }
-                            if (dstVector.hostData.valid != null) {
-                                for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.hostData.valid.length); i++) {
-                                    assertFalse(BitVectorHelper.isNull(dstVector.hostData.valid, i));
+                            if (dstVector.offHeap.hostData.valid != null) {
+                                for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
+                                    assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
                                 }
                             }
                         }

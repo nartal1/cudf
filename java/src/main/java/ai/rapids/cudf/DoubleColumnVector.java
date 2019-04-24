@@ -38,9 +38,9 @@ public final class DoubleColumnVector extends ColumnVector {
      */
     public final double get(long index) {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert hostData != null : "data is not on the host";
+        assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return hostData.data.getDouble(index * DType.CUDF_FLOAT64.sizeInBytes);
+        return offHeap.hostData.data.getDouble(index * DType.CUDF_FLOAT64.sizeInBytes);
     }
 
     /**
