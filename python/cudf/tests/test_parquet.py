@@ -1,4 +1,4 @@
-# Copyright (c) 2018, NVIDIA CORPORATION.
+# Copyright (c) 2019, NVIDIA CORPORATION.
 
 import cudf
 from cudf.tests.utils import assert_eq
@@ -60,21 +60,92 @@ def parquet_file(request, tmp_path_factory, pdf):
 
 @pytest.mark.filterwarnings("ignore:Using CPU")
 @pytest.mark.filterwarnings("ignore:Strings are not yet supported")
+@pytest.mark.parametrize('engine', ['pyarrow', 'cudf'])
 @pytest.mark.parametrize('columns', [['col_int8'], ['col_category'],
-                                     ['col_int32', 'col_float32'], None])
-def test_parquet_reader(parquet_file, columns):
+                                     ['col_int32', 'col_float32'],
+                                     ['col_int16', 'col_float64', 'col_int8'],
+                                     None])
+def test_parquet_reader(parquet_file, columns, engine):
     expect = pd.read_parquet(parquet_file, columns=columns)
-    got = cudf.read_parquet(parquet_file, columns=columns)
+    got = cudf.read_parquet(parquet_file, engine=engine, columns=columns)
     if len(expect) == 0:
         expect = expect.reset_index(drop=True)
+        if 'col_category' in expect.columns:
+            expect['col_category'] = expect['col_category'].astype('category')
 
-    # Pandas parquet reader converts the Arrow Dictionary Array to an `object`
-    # dtype instead of a `categorical` dtype even though the metadata
-    # explicitly states pandas_dtype `categorical`
-    if 'col_category' in expect.columns:
-        expect['col_category'] = expect['col_category'].astype('category')
+    # cuDF's default currently handles bools and categories differently
+    # For bool, cuDF doesn't support it so convert it to int8
+    # For categories, PANDAS originally returns as object whereas cuDF hashes
+    if engine == 'cudf':
+        if 'col_bool' in expect.columns:
+            expect['col_bool'] = expect['col_bool'].astype('int8')
+        if 'col_category' in expect.columns:
+            expect = expect.drop(columns=['col_category'])
+        if 'col_category' in got.columns:
+            got = got.drop('col_category')
 
     assert_eq(expect, got, check_categorical=False)
+
+
+@pytest.mark.filterwarnings("ignore:Strings are not yet supported")
+def test_parquet_read_metadata(tmpdir, pdf):
+    def num_row_groups(rows, group_size):
+        return max(1, (rows + (group_size - 1)) // group_size)
+
+    fname = tmpdir.join("metadata.parquet")
+    row_group_size = 5
+    pdf.to_parquet(fname, compression='snappy', row_group_size=row_group_size)
+
+    num_rows, row_groups, col_names = cudf.io.read_parquet_metadata(fname)
+
+    assert(num_rows == len(pdf.index))
+    assert(row_groups == num_row_groups(num_rows, row_group_size))
+    for a, b in zip(col_names, pdf.columns):
+        assert(a == b)
+
+
+@pytest.mark.filterwarnings("ignore:Strings are not yet supported")
+@pytest.mark.parametrize('row_group_size', [1, 5, 100])
+def test_parquet_read_row_group(tmpdir, pdf, row_group_size):
+    fname = tmpdir.join("row_group.parquet")
+    pdf.to_parquet(fname, compression='gzip', row_group_size=row_group_size)
+
+    num_rows, row_groups, col_names = cudf.io.read_parquet_metadata(fname)
+
+    gdf = [cudf.read_parquet(fname, row_group=i) for i in range(row_groups)]
+    gdf = cudf.concat(gdf).reset_index(drop=True)
+
+    if 'col_bool' in pdf.columns:
+        pdf['col_bool'] = pdf['col_bool'].astype('int8')
+    if 'col_category' in pdf.columns:
+        pdf = pdf.drop(columns=['col_category'])
+    if 'col_category' in gdf.columns:
+        gdf = gdf.drop('col_category')
+
+    assert_eq(pdf.reset_index(drop=True), gdf, check_categorical=False)
+
+
+@pytest.mark.filterwarnings("ignore:Strings are not yet supported")
+@pytest.mark.parametrize('row_group_size', [1, 4, 33])
+def test_parquet_read_rows(tmpdir, pdf, row_group_size):
+    fname = tmpdir.join("row_group.parquet")
+    pdf.to_parquet(fname, compression='None', row_group_size=row_group_size)
+
+    total_rows, row_groups, col_names = cudf.io.read_parquet_metadata(fname)
+
+    num_rows = total_rows // 4
+    skip_rows = (total_rows - num_rows) // 2
+    gdf = cudf.read_parquet(fname, skip_rows=skip_rows, num_rows=num_rows)
+
+    if 'col_bool' in pdf.columns:
+        pdf['col_bool'] = pdf['col_bool'].astype('int8')
+    if 'col_category' in pdf.columns:
+        pdf = pdf.drop(columns=['col_category'])
+    if 'col_category' in gdf.columns:
+        gdf = gdf.drop('col_category')
+
+    for row in range(num_rows):
+        assert(gdf['col_int32'][row] == row + skip_rows)
 
 
 @pytest.mark.filterwarnings("ignore:Using CPU")
