@@ -20,27 +20,27 @@ package ai.rapids.cudf;
 
 import java.util.function.Consumer;
 
-public final class ShortColumnVector extends ColumnVector {
+public final class ByteColumnVector extends ColumnVector {
 
     /**
      * Private constructor to use the BuilderPattern.
      */
-    private ShortColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_INT16, nullCount);
+    private ByteColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
+        super(data, validity, rows, DType.CUDF_INT8, nullCount);
     }
 
-    private ShortColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_INT16);
+    private ByteColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
+        super(data, validity, rows, DType.CUDF_INT8);
     }
 
     /**
      * Get the value at index.
      */
-    public final short get(long index) {
+    public final byte get(long index) {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getShort(index * DType.CUDF_INT16.sizeInBytes);
+        return offHeap.hostData.data.getByte(index * DType.CUDF_INT8.sizeInBytes);
     }
 
     /**
@@ -48,9 +48,9 @@ public final class ShortColumnVector extends ColumnVector {
      * nullCount will be set lazily in cases when both given vectors (v1 and v2) have a validity vector
      * @param v1 - vector 1
      * @param v2 - vector 2
-     * @return LongColumnVector big enough to store the result
+     * @return ByteColumnVector big enough to store the result
      */
-    static ShortColumnVector newOutputVector(ShortColumnVector v1, ShortColumnVector v2) {
+    static ByteColumnVector newOutputVector(ByteColumnVector v1, ByteColumnVector v2) {
         assert v1.rows == v2.rows;
         return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector());
     }
@@ -59,22 +59,13 @@ public final class ShortColumnVector extends ColumnVector {
      * This is a factory method to create a vector on the GPU with the intention that the
      * caller will populate it.
      */
-    static ShortColumnVector newOutputVector(long rows, boolean hasValidityVector) {
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT16.sizeInBytes);
+    static ByteColumnVector newOutputVector(long rows, boolean hasValidityVector) {
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT8.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
         }
-        return new ShortColumnVector(data, valid, rows);
-    }
-
-    /**
-     * This is a factory method to create a vector on the GPU with the intention that the caller will populate it.
-     * @param v1 - vector 1
-     * @return ShortColumnVector big enough to store the result
-     */
-    static ShortColumnVector newOutputVector(ColumnVector v1) {
-        return ShortColumnVector.newOutputVector(v1.rows, v1.hasValidityVector());
+        return new ByteColumnVector(data, valid, rows);
     }
 
     /**
@@ -98,7 +89,7 @@ public final class ShortColumnVector extends ColumnVector {
      * @param init what will initialize the vector.
      * @return the created vector.
      */
-    public static ShortColumnVector build(int rows, Consumer<Builder> init) {
+    public static ByteColumnVector build(int rows, Consumer<Builder> init) {
         try (Builder builder = builder(rows)) {
             init.accept(builder);
             return builder.build();
@@ -113,7 +104,7 @@ public final class ShortColumnVector extends ColumnVector {
          * Create a builder with a buffer of size rows
          * @param rows number of rows to allocate.
          */
-        private Builder(long rows) { builder = new ColumnVector.Builder(DType.CUDF_INT16, rows); }
+        private Builder(long rows) { builder = new ColumnVector.Builder(DType.CUDF_INT8, rows); }
 
         /**
          * Create a builder with a buffer of size rows (for testing ONLY).
@@ -123,27 +114,27 @@ public final class ShortColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT16, rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.CUDF_INT8, rows, testData, testValid);
         }
 
         /**
-         * Build the immutable @ShortColumnVector. The rows of the vector will be equal to the appended values i.e. If a
+         * Build the immutable @ByteColumnVector. The rows of the vector will be equal to the appended values i.e. If a
          * larger buffer was allocated then the extra space will not be considered as part of the rows.
-         * @return  - The ShortColumnVector based on this builder values
+         * @return  - The ByteColumnVector based on this builder values
          */
-        public final ShortColumnVector build() {
+        public final ByteColumnVector build() {
             //do the magic
             builder.built = true;
-            return new ShortColumnVector(builder.data, builder.valid, builder.currentIndex, builder.nullCount);
+            return new ByteColumnVector(builder.data, builder.valid, builder.currentIndex, builder.nullCount);
         }
 
         /**
          * Append this vector to the end of this vector
-         * @param shortColumnVector - Vector to be added
-         * @return  - The ShortColumnVector based on this builder values
+         * @param byteColumnVector - Vector to be added
+         * @return The Builder
          */
-        public final Builder append(ShortColumnVector shortColumnVector) {
-            builder.append(shortColumnVector);
+        public final Builder append(ByteColumnVector byteColumnVector) {
+            builder.append(byteColumnVector);
             return this;
         }
 
@@ -153,23 +144,19 @@ public final class ShortColumnVector extends ColumnVector {
          * @param count how many to append.
          * @return this for chaining.
          */
-        public final Builder append(short value, long count) {
-            assert (count + builder.currentIndex) <= builder.rows;
-            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
-            for (long i = 0; i < count; i++) {
-                builder.appendShort(value);
-            }
+        public final Builder append(byte value, long count) {
+            builder.appendBytes(value, count);
             return this;
         }
 
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - IntColumnVector
-         * @throws - {@link IndexOutOfBoundsException}
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
          */
-        public final Builder append(short value) throws IndexOutOfBoundsException {
-            builder.appendShort(value);
+        public final Builder append(byte value) throws IndexOutOfBoundsException {
+            builder.appendByte(value);
             return this;
         }
 

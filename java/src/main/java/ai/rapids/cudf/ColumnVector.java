@@ -408,6 +408,20 @@ public abstract class ColumnVector implements AutoCloseable {
             this.valid = testValid;
         }
 
+        final void appendByte(byte value) {
+            assert type == DType.CUDF_INT8;
+            assert currentIndex < rows;
+            data.setByte(currentIndex *  type.sizeInBytes, value);
+            currentIndex++;
+        }
+
+        final void appendBytes(byte value, long count) {
+            assert (count + currentIndex) <= rows;
+            assert type == DType.CUDF_INT8;
+            data.setMemory(currentIndex * type.sizeInBytes, count, value);
+            currentIndex += count;
+        }
+
         final void appendShort(short value) {
             assert type == DType.CUDF_INT16;
             assert currentIndex < rows;
@@ -423,7 +437,7 @@ public abstract class ColumnVector implements AutoCloseable {
         }
 
         final void appendLong(long value) {
-            assert type == DType.CUDF_INT64;
+            assert type == DType.CUDF_INT64 || type == DType.CUDF_DATE64 || type == DType.CUDF_TIMESTAMP;
             assert currentIndex < rows;
             data.setLong(currentIndex * type.sizeInBytes, value);
             currentIndex++;
