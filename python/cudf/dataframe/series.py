@@ -10,7 +10,9 @@ import pandas as pd
 from pandas.api.types import is_scalar, is_dict_like
 from numba.cuda.cudadrv.devicearray import DeviceNDArray
 
-from cudf.utils import cudautils, utils
+from librmm_cffi import librmm as rmm
+
+from cudf.utils import cudautils, utils, ioutils
 from cudf import formatting
 from cudf.dataframe.buffer import Buffer
 from cudf.dataframe.index import Index, RangeIndex, as_index
@@ -19,7 +21,7 @@ from cudf.dataframe.column import Column
 from cudf.dataframe.datetime import DatetimeColumn
 from cudf.dataframe import columnops
 from cudf.comm.serialize import register_distributed_serializer
-from cudf._gdf import nvtx_range_push, nvtx_range_pop
+from cudf.bindings.nvtx import nvtx_range_push, nvtx_range_pop
 
 
 class Series(object):
@@ -64,7 +66,8 @@ class Series(object):
         col = columnops.as_column(data).set_mask(mask, null_count=null_count)
         return cls(data=col)
 
-    def __init__(self, data=None, index=None, name=None, nan_as_null=True):
+    def __init__(self, data=None, index=None, name=None, nan_as_null=True,
+                 dtype=None):
         if isinstance(data, pd.Series):
             name = data.name
             index = as_index(data.index)
@@ -76,10 +79,11 @@ class Series(object):
             data = {}
 
         if not isinstance(data, columnops.TypedColumnBase):
-            data = columnops.as_column(data, nan_as_null=nan_as_null)
+            data = columnops.as_column(data, nan_as_null=nan_as_null,
+                                       dtype=dtype)
 
         if index is not None and not isinstance(index, Index):
-            raise TypeError('index not a Index type: got {!r}'.format(index))
+            index = as_index(index)
 
         assert isinstance(data, columnops.TypedColumnBase)
         self._column = data
@@ -176,10 +180,30 @@ class Series(object):
     def as_index(self):
         return self.set_index(RangeIndex(len(self)))
 
-    def to_frame(self):
-        """ Convert Series into a DataFrame """
+    def to_frame(self, name=None):
+        """Convert Series into a DataFrame
+
+        Parameters
+        ----------
+        name : str, default None
+            Name to be used for the column
+
+        Returns
+        -------
+        DataFrame
+            cudf DataFrame
+        """
+
         from cudf import DataFrame
-        return DataFrame({self.name or 0: self}, index=self.index)
+
+        if name is not None:
+            col = name
+        elif self.name is None:
+            col = 0
+        else:
+            col = self.name
+
+        return DataFrame({col: self}, index=self.index)
 
     def set_mask(self, mask, null_count=None):
         """Create new Series by setting a mask array.
@@ -210,6 +234,14 @@ class Series(object):
         """
         return len(self._column)
 
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        import cudf
+        if (method == '__call__' and hasattr(cudf, ufunc.__name__)):
+            func = getattr(cudf, ufunc.__name__)
+            return func(self)
+        else:
+            return NotImplemented
+
     @property
     def empty(self):
         return not len(self)
@@ -217,16 +249,30 @@ class Series(object):
     def __getitem__(self, arg):
         if isinstance(arg, (list, np.ndarray, pd.Series, range, Index,
                             DeviceNDArray)):
-            arg = Series(arg)
+            if len(arg) == 0:
+                arg = Series(np.array([], dtype='int32'))
+            else:
+                arg = Series(arg)
         if isinstance(arg, Series):
             if issubclass(arg.dtype.type, np.integer):
-                selvals, selinds = columnops.column_select_by_position(
-                    self._column, arg)
-                index = self.index.take(selinds.to_gpu_array())
+                if self.dtype == np.dtype('object'):
+                    idx = arg.to_gpu_array()
+                    selvals = self._column[idx]
+                    index = self.index.take(idx)
+                else:
+                    selvals, selinds = columnops.column_select_by_position(
+                        self._column, arg)
+                    index = self.index.take(selinds.to_gpu_array())
             elif arg.dtype in [np.bool, np.bool_]:
-                selvals, selinds = columnops.column_select_by_boolmask(
-                    self._column, arg)
-                index = self.index.take(selinds.to_gpu_array())
+                if self.dtype == np.dtype('object'):
+                    idx = cudautils.boolean_array_to_index_array(
+                        arg.to_gpu_array())
+                    selvals = self._column[idx]
+                    index = self.index.take(idx)
+                else:
+                    selvals, selinds = columnops.column_select_by_boolmask(
+                        self._column, arg)
+                    index = self.index.take(selinds.to_gpu_array())
             else:
                 raise NotImplementedError(arg.dtype)
             return self._copy_construct(data=selvals, index=index)
@@ -249,6 +295,9 @@ class Series(object):
         if indices.size == 0:
             return self._copy_construct(data=self.data[:0],
                                         index=self.index[:0])
+
+        if self.dtype == np.dtype("object"):
+            return self[indices]
 
         data = cudautils.gather(data=self.data.to_gpu_array(), index=indices)
 
@@ -281,7 +330,10 @@ class Series(object):
         """Returns a list of string for each element.
         """
         values = self[:nrows]
-        out = ['' if v is None else str(v) for v in values]
+        if self.dtype == np.dtype('object'):
+            out = [str(v) for v in values]
+        else:
+            out = ['' if v is None else str(v) for v in values]
         return out
 
     def head(self, n=5):
@@ -316,8 +368,10 @@ class Series(object):
         if nrows is NOTSET:
             nrows = settings.formatting.get(nrows)
 
+        str_dtype = self.dtype
+
         if len(self) == 0:
-            return "<empty Series of dtype={}>".format(self.dtype)
+            return "<empty Series of dtype={}>".format(str_dtype)
 
         if nrows is None:
             nrows = len(self)
@@ -328,12 +382,15 @@ class Series(object):
 
         # Prepare cells
         cols = OrderedDict([('', self.values_to_string(nrows=nrows))])
+        dtypes = OrderedDict([('', self.dtype)])
         # Format into a table
         output = formatting.format(index=self.index,
-                                   cols=cols, more_rows=more_rows,
+                                   cols=cols, dtypes=dtypes,
+                                   more_rows=more_rows,
                                    series_spacing=True)
-        return output + "\nName: {}, dtype: {}".format(self.name, self.dtype)\
-            if self.name else output + "\ndtype: {}".format(self.dtype)
+        return output + "\nName: {}, dtype: {}".format(self.name, str_dtype)\
+            if self.name is not None else output + \
+            "\ndtype: {}".format(str_dtype)
 
     def __str__(self):
         return self.to_string(nrows=10)
@@ -433,6 +490,34 @@ class Series(object):
 
     __div__ = __truediv__
 
+    def _bitwise_binop(self, other, op):
+        if (np.issubdtype(self.dtype.type, np.integer) and
+                np.issubdtype(other.dtype.type, np.integer)):
+            return self._binaryop(other, op)
+        else:
+            raise TypeError(
+                f"Operation 'bitwise {op}' not supported between "
+                f"{self.dtype.type.__name__} and {other.dtype.type.__name__}"
+            )
+
+    def __and__(self, other):
+        """Performs vectorized bitwise and (&) on corresponding elements of two
+        series.
+        """
+        return self._bitwise_binop(other, 'and')
+
+    def __or__(self, other):
+        """Performs vectorized bitwise or (|) on corresponding elements of two
+        series.
+        """
+        return self._bitwise_binop(other, 'or')
+
+    def __xor__(self, other):
+        """Performs vectorized bitwise xor (^) on corresponding elements of two
+        series.
+        """
+        return self._bitwise_binop(other, 'xor')
+
     def _normalize_binop_value(self, other):
         if isinstance(other, Series):
             return other
@@ -478,9 +563,32 @@ class Series(object):
     def __ge__(self, other):
         return self._ordered_compare(other, 'ge')
 
+    def __invert__(self):
+        """Bitwise invert (~)/(not) for each element
+
+        Returns a new Series.
+        """
+        if np.issubdtype(self.dtype.type, np.integer):
+            return self._unaryop('not')
+        else:
+            raise TypeError(
+                f"Operation `~` not supported on {self.dtype.type.__name__}"
+            )
+
+    def __neg__(self):
+        """Negatated value (-) for each element
+
+        Returns a new Series.
+        """
+        return self.__mul__(-1)
+
     @property
     def cat(self):
         return self._column.cat()
+
+    @property
+    def str(self):
+        return self._column.str(self.index)
 
     @property
     def dtype(self):
@@ -985,33 +1093,70 @@ class Series(object):
         assert axis in (None, 0) and skipna is True
         return self.valid_count
 
-    def min(self, axis=None, skipna=True):
+    def min(self, axis=None, skipna=True, dtype=None):
         """Compute the min of the series
         """
         assert axis in (None, 0) and skipna is True
-        return self._column.min()
+        return self._column.min(dtype=dtype)
 
-    def max(self, axis=None, skipna=True):
+    def max(self, axis=None, skipna=True, dtype=None):
         """Compute the max of the series
         """
         assert axis in (None, 0) and skipna is True
-        return self._column.max()
+        return self._column.max(dtype=dtype)
 
-    def sum(self, axis=None, skipna=True):
+    def sum(self, axis=None, skipna=True, dtype=None):
         """Compute the sum of the series"""
         assert axis in (None, 0) and skipna is True
-        return self._column.sum()
+        return self._column.sum(dtype=dtype)
 
-    def product(self, axis=None, skipna=True):
+    def product(self, axis=None, skipna=True, dtype=None):
         """Compute the product of the series"""
         assert axis in (None, 0) and skipna is True
-        return self._column.product()
+        return self._column.product(dtype=dtype)
 
-    def mean(self, axis=None, skipna=True):
+    def cummin(self, axis=0, skipna=True):
+        """Compute the cumulative minimum of the series"""
+        assert axis in (None, 0) and skipna is True
+        return Series(self._column._apply_scan_op('min'), name=self.name,
+                      index=self.index)
+
+    def cummax(self, axis=0, skipna=True):
+        """Compute the cumulative maximum of the series"""
+        assert axis in (None, 0) and skipna is True
+        return Series(self._column._apply_scan_op('max'), name=self.name,
+                      index=self.index)
+
+    def cumsum(self, axis=0, skipna=True):
+        """Compute the cumulative sum of the series"""
+        assert axis in (None, 0) and skipna is True
+
+        # pandas always returns int64 dtype if original dtype is int
+        if np.issubdtype(self.dtype, np.integer):
+            return Series(self.astype(np.int64)._column._apply_scan_op('sum'),
+                          name=self.name, index=self.index)
+        else:
+            return Series(self._column._apply_scan_op('sum'), name=self.name,
+                          index=self.index)
+
+    def cumprod(self, axis=0, skipna=True):
+        """Compute the cumulative product of the series"""
+        assert axis in (None, 0) and skipna is True
+
+        # pandas always returns int64 dtype if original dtype is int
+        if np.issubdtype(self.dtype, np.integer):
+            return Series(
+                self.astype(np.int64)._column._apply_scan_op('product'),
+                name=self.name, index=self.index)
+        else:
+            return Series(self._column._apply_scan_op('product'),
+                          name=self.name, index=self.index)
+
+    def mean(self, axis=None, skipna=True, dtype=None):
         """Compute the mean of the series
         """
         assert axis in (None, 0) and skipna is True
-        return self._column.mean()
+        return self._column.mean(dtype=dtype)
 
     def std(self, ddof=1, axis=None, skipna=True):
         """Compute the standard deviation of the series
@@ -1032,8 +1177,8 @@ class Series(object):
         mu, var = self._column.mean_var(ddof=ddof)
         return mu, var
 
-    def sum_of_squares(self):
-        return self._column.sum_of_squares()
+    def sum_of_squares(self, dtype=None):
+        return self._column.sum_of_squares(dtype=dtype)
 
     def unique_k(self, k):
         warnings.warn("Use .unique() instead", DeprecationWarning)
@@ -1092,6 +1237,17 @@ class Series(object):
         scaled = cudautils.compute_scale(gpuarr, vmin, vmax)
         return self._copy_construct(data=scaled)
 
+    # Absolute
+    def abs(self):
+        """Absolute value of each element of the series.
+
+        Returns a new Series.
+        """
+        return self._unaryop('abs')
+
+    def __abs__(self):
+        return self.abs()
+
     # Rounding
     def ceil(self):
         """Rounds each value upward to the smallest integral value not less
@@ -1108,6 +1264,42 @@ class Series(object):
         Returns a new Series.
         """
         return self._unaryop('floor')
+
+    # Math
+    def _float_math(self, op):
+        if np.issubdtype(self.dtype.type, np.floating):
+            return self._unaryop(op)
+        else:
+            raise TypeError(
+                f"Operation '{op}' not supported on {self.dtype.type.__name__}"
+            )
+
+    def sin(self):
+        return self._float_math('sin')
+
+    def cos(self):
+        return self._float_math('cos')
+
+    def tan(self):
+        return self._float_math('tan')
+
+    def asin(self):
+        return self._float_math('asin')
+
+    def acos(self):
+        return self._float_math('acos')
+
+    def atan(self):
+        return self._float_math('atan')
+
+    def exp(self):
+        return self._float_math('exp')
+
+    def log(self):
+        return self._float_math('log')
+
+    def sqrt(self):
+        return self._unaryop('sqrt')
 
     # Misc
 
@@ -1146,7 +1338,7 @@ class Series(object):
         mod_vals = cudautils.modulo(hashed_values.data.to_gpu_array(), stop)
         return Series(mod_vals)
 
-    def quantile(self, q, interpolation='midpoint', exact=True,
+    def quantile(self, q, interpolation='linear', exact=True,
                  quant_index=True):
         """
         Return values at the given quantile.
@@ -1178,6 +1370,95 @@ class Series(object):
             return Series(self._column.quantile(q, interpolation, exact),
                           index=as_index(np.asarray(q)))
 
+    def describe(self, percentiles=None, include=None, exclude=None):
+        """Compute summary statistics of a Series. For numeric
+        data, the output includes the minimum, maximum, mean, median,
+        standard deviation, and various quantiles. For object data, the output
+        includes the count, number of unique values, the most common value, and
+        the number of occurrences of the most common value.
+
+        Parameters
+        ----------
+        percentiles : list-like, optional
+            The percentiles used to generate the output summary statistics.
+            If None, the default percentiles used are the 25th, 50th and 75th.
+            Values should be within the interval [0, 1].
+
+        Returns
+        -------
+        A DataFrame containing summary statistics of relevant columns from
+        the input DataFrame.
+
+        Examples
+        --------
+        Describing a ``Series`` containing numeric values.
+        >>> import cudf
+        >>> s = cudf.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        >>> print(s.describe())
+           stats   values
+        0  count     10.0
+        1   mean      5.5
+        2    std  3.02765
+        3    min      1.0
+        4    25%      2.5
+        5    50%      5.5
+        6    75%      7.5
+        7    max     10.0
+        """
+
+        from cudf import DataFrame
+
+        def _prepare_percentiles(percentiles):
+            percentiles = list(percentiles)
+
+            if not all(0 <= x <= 1 for x in percentiles):
+                raise ValueError("All percentiles must be between 0 and 1, "
+                                 "inclusive.")
+
+            # describe always includes 50th percentile
+            if 0.5 not in percentiles:
+                percentiles.append(0.5)
+
+            percentiles = np.sort(percentiles)
+            return percentiles
+
+        def _format_percentile_names(percentiles):
+            return ['{0}%'.format(int(x*100)) for x in percentiles]
+
+        def _format_stats_values(stats_data):
+            return list(map(lambda x: round(x, 6), stats_data))
+
+        def describe_numeric(self):
+            # mimicking pandas
+            names = ['count', 'mean', 'std', 'min'] + \
+                    _format_percentile_names(percentiles) + ['max']
+            data = [self.count(), self.mean(), self.std(), self.min()] + \
+                self.quantile(percentiles).to_array().tolist() + [self.max()]
+            data = _format_stats_values(data)
+
+            values_name = 'values'
+            if self.name:
+                values_name = self.name
+
+            return DataFrame({'stats': names, values_name: data})
+
+        def describe_categorical(self):
+            # blocked by StringColumn/DatetimeColumn support for
+            # value_counts/unique
+            pass
+
+        if percentiles is not None:
+            percentiles = _prepare_percentiles(percentiles)
+        else:
+            # pandas defaults
+            percentiles = np.array([0.25, 0.5, 0.75])
+
+        if np.issubdtype(self.dtype, np.number):
+            return describe_numeric(self)
+        else:
+            raise NotImplementedError("Describing non-numeric columns is not "
+                                      "yet supported")
+
     def digitize(self, bins, right=False):
         """Return the indices of the bins to which each value in series belongs.
 
@@ -1199,6 +1480,33 @@ class Series(object):
         from cudf.dataframe import numerical
 
         return Series(numerical.digitize(self._column, bins, right))
+
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        """Shift values of an input array by periods positions and store the
+        output in a new array.
+
+        Notes
+        -----
+        Shift currently only supports float and integer dtype columns with
+        no null values.
+        """
+        assert axis in (None, 0) and freq is None and fill_value is None
+
+        if self.null_count != 0:
+            raise AssertionError("Shift currently requires columns with no "
+                                 "null values")
+
+        if not np.issubdtype(self.dtype, np.number):
+            raise NotImplementedError("Shift currently only supports "
+                                      "numeric dtypes")
+        if periods == 0:
+            return self
+
+        input_dary = self.data.to_gpu_array()
+        output_dary = rmm.device_array_like(input_dary)
+        cudautils.gpu_shift.forall(output_dary.size)(input_dary, output_dary,
+                                                     periods)
+        return Series(output_dary, name=self.name, index=self.index)
 
     def groupby(self, group_series=None, level=None, sort=False):
         from cudf.groupby.groupby import SeriesGroupBy
@@ -1339,6 +1647,12 @@ class Series(object):
         import cudf.io.hdf as hdf
         hdf.to_hdf(path_or_buf, key, self, *args, **kwargs)
 
+    @ioutils.doc_to_dlpack()
+    def to_dlpack(self):
+        """{docstring}"""
+        import cudf.io.dlpack as dlpack
+        return dlpack.to_dlpack(self)
+
     def rename(self, index=None, copy=True):
         """
         Alter Series name.
@@ -1421,46 +1735,9 @@ class Iloc(object):
         self._sr = sr
 
     def __getitem__(self, arg):
-        rows = []
-        len_idx = len(self._sr)
-
         if isinstance(arg, tuple):
-            for idx in arg:
-                rows.append(idx)
-
-        elif isinstance(arg, int):
-            rows.append(arg)
-
-        elif isinstance(arg, slice):
-            start, stop, step, sln = utils.standard_python_slice(len_idx, arg)
-            if sln > 0:
-                for idx in range(start, stop, step):
-                    rows.append(idx)
-
-        else:
-            raise TypeError(type(arg))
-
-        # To check whether all the indices are valid.
-        for idx in rows:
-            if abs(idx) > len_idx or idx == len_idx:
-                raise IndexError("positional indexers are out-of-bounds")
-
-        for i in range(len(rows)):
-            if rows[i] < 0:
-                rows[i] = len_idx+rows[i]
-
-        # returns the single elem similar to pandas
-        if isinstance(arg, int) and len(rows) == 1:
-            return self._sr[rows[0]]
-
-        ret_list = []
-        for idx in rows:
-            ret_list.append(self._sr[idx])
-
-        col_data = columnops.as_column(ret_list, dtype=self._sr.dtype,
-                                       nan_as_null=True)
-
-        return Series(col_data, index=as_index(np.asarray(rows)))
+            arg = list(arg)
+        return self._sr[arg]
 
     def __setitem__(self, key, value):
         # throws an exception while updating

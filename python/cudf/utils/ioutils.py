@@ -1,14 +1,57 @@
+# Copyright (c) 2019, NVIDIA CORPORATION.
+
 from cudf.utils.docutils import docfmt_partial
 
-_docstring_read_parquet = """
-Load a parquet object from the file path, returning a DataFrame.
+_docstring_read_parquet_metadata = """
+Read a Parquet file's metadata and schema
 
 Parameters
 ----------
-path : string
-    File path
-columns : list, default=None
-    If not None, only these columns will be read from the file.
+path : string or path object
+    Path of file to be read
+
+Returns
+-------
+Total number of rows
+Number of row groups
+List of column names
+
+Examples
+--------
+>>> import cudf
+>>> num_rows, num_row_groups, names = cudf.read_parquet_metadata(filename)
+>>> df = [cudf.read_parquet(fname, row_group=i) for i in range(row_groups)]
+>>> df = cudf.concat(df)
+>>> df
+  num1                datetime text
+0  123 2018-11-13T12:00:00.000 5451
+1  456 2018-11-14T12:35:01.000 5784
+2  789 2018-11-15T18:02:59.000 6117
+
+See Also
+--------
+cudf.io.parquet.read_parquet
+"""
+doc_read_parquet_metadata = docfmt_partial(
+    docstring=_docstring_read_parquet_metadata)
+
+_docstring_read_parquet = """
+Read a Parquet file into DataFrame
+
+Parameters
+----------
+path : string or path object
+    Path of file to be read
+engine : { 'cudf', 'pyarrow' }, default 'cudf'
+    Parser engine to use.
+columns : list, default None
+    If not None, only these columns will be read.
+row_group : int, default None
+    If not None, only the row group with the specified index will be read.
+skip_rows : int, default None
+    If not None, the nunber of rows to skip from the start of the file.
+num_rows : int, default None
+    If not None, the total number of rows to read.
 
 Returns
 -------
@@ -26,6 +69,7 @@ Examples
 
 See Also
 --------
+cudf.io.parquet.read_parquet_metadata
 cudf.io.parquet.to_parquet
 cudf.io.orc.read_orc
 """
@@ -413,3 +457,25 @@ See Also
 cudf.io.feather.read_feather
 """
 doc_to_feather = docfmt_partial(docstring=_docstring_to_feather)
+
+_docstring_to_dlpack = """
+Converts a cuDF object into a DLPack tensor.
+
+DLPack is an open-source memory tensor structure:
+`dmlc/dlpack <https://github.com/dmlc/dlpack>`_.
+
+This function takes a cuDF object and converts it to a PyCapsule object
+which contains a pointer to a DLPack tensor. This function deep copies the
+data into the DLPack tensor from the cuDF object.
+
+Parameters
+----------
+cudf_obj : DataFrame, Series, Index, or Column
+
+Returns
+-------
+pycapsule_obj : PyCapsule
+    Output DLPack tensor pointer which is encapsulated in a PyCapsule
+    object.
+"""
+doc_to_dlpack = docfmt_partial(docstring=_docstring_to_dlpack)
