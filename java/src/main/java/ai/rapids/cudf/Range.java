@@ -28,6 +28,40 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
+    public static final Consumer<ByteColumnVector.Builder> appendBytes(byte end) { return appendBytes((byte)0, end, (byte)1); }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
+    public static final Consumer<ByteColumnVector.Builder> appendBytes(byte start, byte end) {
+        return appendBytes(start, end, (byte)1);
+    }
+
+    /**
+     * Append a range to the builder. start inclusive to end exclusive.
+     * @param start first entry.
+     * @param end last entry exclusive.
+     * @param step how must to step by.
+     * @return the builder for chaining.
+     */
+    public static final Consumer<ByteColumnVector.Builder> appendBytes(byte start, byte end, byte step) {
+        assert step > 0;
+        assert start <= end;
+        return (b) -> {
+            for (byte i = start; i < end; i += step) {
+                b.append(i);
+            }
+        };
+    }
+
+    /**
+     * Append a range to the builder. 0 inclusive to end exclusive.
+     * @param end last entry exclusive.
+     * @return the consumer.
+     */
     public static final Consumer<ShortColumnVector.Builder> appendShorts(short end) { return appendShorts((short)0, end, (short)1); }
 
     /**
