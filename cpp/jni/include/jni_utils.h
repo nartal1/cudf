@@ -131,3 +131,10 @@ namespace cudf {
         JNI_THROW_NEW(env, "java/lang/NullPointerException", error_msg, ret_val); \
   } \
 }
+
+#define JNI_EXCEPTION_OCCURRED_CHECK(env, ret_val) \
+{\
+    if (env -> ExceptionOccurred()) { \
+        return ret_val; \
+    } \
+}

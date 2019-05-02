@@ -26,35 +26,35 @@ class Cudf {
     /* arith */
 
     static void gdfAddGeneric(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
-        gdfAddGeneric(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
+        gdfAddGeneric(lhs.getNativeHandle(), rhs.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfAddGeneric(long lhs, long rhs, long output) throws CudfException;
 
 
     static void gdfAddI32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
-        gdfAddI32(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
+        gdfAddI32(lhs.getNativeHandle(), rhs.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfAddI32(long lhs, long rhs, long output) throws CudfException;
 
 
     static void gdfAddI64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
-        gdfAddI64(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
+        gdfAddI64(lhs.getNativeHandle(), rhs.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfAddI64(long lhs, long rhs, long output) throws CudfException;
 
 
     static void gdfAddF32(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
-        gdfAddF32(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
+        gdfAddF32(lhs.getNativeHandle(), rhs.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfAddF32(long lhs, long rhs, long output) throws CudfException;
 
 
     static void gdfAddF64(CudfColumn lhs, CudfColumn rhs, CudfColumn output) {
-        gdfAddF64(lhs.nativeHandle, rhs.nativeHandle, output.nativeHandle);
+        gdfAddF64(lhs.getNativeHandle(), rhs.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfAddF64(long lhs, long rhs, long output) throws CudfException;
@@ -62,37 +62,37 @@ class Cudf {
     /* datetime extract*/
 
     static void gdfExtractDatetimeYear(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeYear(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeYear(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeYear(long input, long output) throws CudfException;
 
     static void gdfExtractDatetimeMonth(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeMonth(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeMonth(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeMonth(long input, long output) throws CudfException;
 
     static void gdfExtractDatetimeDay(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeDay(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeDay(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeDay(long input, long output) throws CudfException;
 
     static void gdfExtractDatetimeHour(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeHour(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeHour(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeHour(long input, long output) throws CudfException;
 
     static void gdfExtractDatetimeMinute(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeMinute(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeMinute(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeMinute(long input, long output) throws CudfException;
 
     static void gdfExtractDatetimeSecond(CudfColumn input, CudfColumn output) {
-        gdfExtractDatetimeSecond(input.nativeHandle, output.nativeHandle);
+        gdfExtractDatetimeSecond(input.getNativeHandle(), output.getNativeHandle());
     }
 
     private static native void gdfExtractDatetimeSecond(long input, long output) throws CudfException;

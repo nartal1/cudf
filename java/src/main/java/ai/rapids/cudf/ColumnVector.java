@@ -89,6 +89,36 @@ public abstract class ColumnVector implements AutoCloseable {
         offHeap.addRef();
     }
 
+    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
+        ColumnVector columnVector = null;
+        switch (type) {
+            case CUDF_INT32:
+                columnVector = IntColumnVector.newOutputVector(rows, hasValidity);
+                break;
+            case CUDF_INT64:
+                columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
+                break;
+            case CUDF_FLOAT32:
+                columnVector = FloatColumnVector.newOutputVector(rows, hasValidity);
+                break;
+            case CUDF_FLOAT64:
+                columnVector = DoubleColumnVector.newOutputVector(rows, hasValidity);
+                break;
+            case CUDF_INT16:
+                columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
+                break;
+            case CUDF_DATE32:
+            case CUDF_DATE64:
+            case CUDF_INT8:
+            case CUDF_TIMESTAMP:
+                throw new UnsupportedOperationException();
+            case CUDF_INVALID:
+            default:
+                throw new IllegalArgumentException("Invalid type: " + type);
+        }
+        return columnVector;
+    }
+
     /**
      * Returns the number of rows in this vector.
      */

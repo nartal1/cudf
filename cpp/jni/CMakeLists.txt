@@ -50,7 +50,8 @@ set(SOURCE_FILES
 	"src/CudfJni.cpp"
 	"src/CudaJni.cpp"
 	"src/CudfColumnJni.cpp"
-	"src/RmmJni.cpp")
+	"src/RmmJni.cpp"
+	"src/CudfTableJni.cpp")
 add_library(cudfjni SHARED ${SOURCE_FILES})
 
 target_link_libraries(cudfjni cudf)
