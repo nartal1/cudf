@@ -45,6 +45,18 @@ namespace cudf {
   };
 
   /**
+   * @brief throw a java exception and a C++ one for flow control.
+   */
+  inline void throwJavaException(JNIEnv * const env, const char * clazz_name, const char * message) {
+    jclass exClass = env->FindClass(clazz_name); \
+    if (exClass != NULL) {
+      env->ThrowNew(exClass, message);
+    }
+    throw jni_exception(message);
+  }
+
+
+  /**
    * @brief check if an java exceptions have been thrown and if so throw a C++ exception
    * so the flow control stop processing. 
    */
@@ -57,13 +69,23 @@ namespace cudf {
 
   /**
    * @brief RAII for jlongArray to be sure it is handled correctly. 
+   *
+   * By default any changes to the array will be committed back when
+   * the destructor is called unless cancel is called first.
    */
   class native_jlongArray {
   private:
-      JNIEnv * const env;
-      jlongArray orig;
-      int len;
-      jlong *data_ptr;
+     JNIEnv * const env;
+     jlongArray orig;
+     int len;
+     mutable jlong *data_ptr;
+
+     void init_data_ptr() const {
+       if (data_ptr == NULL) {
+         data_ptr = env->GetLongArrayElements(orig, NULL);
+         checkJavaException(env);
+       }
+     }
   public:
      native_jlongArray(native_jlongArray const&) = delete;
      native_jlongArray& operator=(native_jlongArray const&) = delete;
@@ -80,16 +102,39 @@ namespace cudf {
        return len;
      }
 
-     jlong operator[](int index) {
+     jlong operator[](int index) const {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+       }
        return data()[index];
      }
 
-     const jlong * data() {
-       if (data_ptr == NULL) {
-         data_ptr = env->GetLongArrayElements(orig, NULL);
-         checkJavaException(env);
+     jlong& operator[](int index) {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
+       return data()[index];
+     }
+
+     const jlong * const data() const {
+       init_data_ptr();
        return data_ptr;
+     }
+
+     jlong * data() {
+       init_data_ptr();
+       return data_ptr;
+     }
+
+     /**
+      * @brief if data has been written back into this array, don't commit
+      * it.
+      */
+     void cancel() {
+       if (data_ptr != NULL) {
+         env->ReleaseLongArrayElements(orig, data_ptr, JNI_ABORT);
+         data_ptr = NULL;
+       }
      }
 
      ~native_jlongArray() {
@@ -101,13 +146,23 @@ namespace cudf {
 
   /**
    * @brief RAII for jbooleanArray to be sure it is handled correctly. 
+   *
+   * By default any changes to the array will be committed back when
+   * the destructor is called unless cancel is called first.
    */
   class native_jbooleanArray {
   private:
-      JNIEnv * const env;
-      jbooleanArray orig;
-      int len;
-      jboolean *data_ptr;
+     JNIEnv * const env;
+     jbooleanArray orig;
+     int len;
+     mutable jboolean *data_ptr;
+
+     void init_data_ptr() const {
+       if (data_ptr == NULL) {
+         data_ptr = env->GetBooleanArrayElements(orig, NULL);
+         checkJavaException(env);
+       }
+     }
   public:
      native_jbooleanArray(native_jbooleanArray const&) = delete;
      native_jbooleanArray& operator=(native_jbooleanArray const&) = delete;
@@ -124,16 +179,39 @@ namespace cudf {
        return len;
      }
 
-     jboolean operator[](int index) {
+     jboolean operator[](int index) const {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+       }
        return data()[index];
      }
 
-     const jboolean * data() {
-       if (data_ptr == NULL) {
-         data_ptr = env->GetBooleanArrayElements(orig, NULL);
-         checkJavaException(env);
+     jboolean& operator[](int index) {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
+       return data()[index];
+     }
+
+     const jboolean * const data() const {
+       init_data_ptr();
        return data_ptr;
+     }
+
+     jboolean * data() {
+       init_data_ptr();
+       return data_ptr;
+     }
+
+     /**
+      * @brief if data has been written back into this array, don't commit
+      * it.
+      */
+     void cancel() {
+       if (data_ptr != NULL) {
+         env->ReleaseBooleanArrayElements(orig, data_ptr, JNI_ABORT);
+         data_ptr = NULL;
+       }
      }
 
      ~native_jbooleanArray() {
@@ -151,28 +229,124 @@ namespace cudf {
   private:
       JNIEnv * const env;
       jstring orig;
-      const char * const cstr;
+      mutable const char * cstr;
+
+     void init_cstr() const {
+       if (cstr == NULL) {
+         cstr = env->GetStringUTFChars(orig, 0);
+         checkJavaException(env);
+       }
+     }
 
   public:
       native_jstring(native_jstring const&) = delete;
       native_jstring& operator=(native_jstring const&) = delete;
 
+      native_jstring(native_jstring && other) noexcept :
+          env(other.env),
+          orig(other.orig),
+          cstr(other.cstr) {
+        other.cstr = NULL;
+      }
+
       native_jstring(JNIEnv * const env, jstring orig) : 
           env(env),
           orig(orig),
-          cstr(env->GetStringUTFChars(orig, 0)) {
-       checkJavaException(env);
+          cstr(NULL) {
+        checkJavaException(env);
       }
 
-      const char * get() {
-          return cstr;
+      const char * get() const {
+        init_cstr();
+        return cstr;
+      }
+
+      const jstring getJstring() const {
+        return orig;
       }
 
       ~native_jstring() {
-          if (cstr != NULL) {
-            env->ReleaseStringUTFChars(orig, cstr);
-          }
+        if (cstr != NULL) {
+          env->ReleaseStringUTFChars(orig, cstr);
+        }
       }
+  };
+
+  /**
+   * @brief jobjectArray wrapper to make accessing it more convenient.
+   */
+  template<typename T>
+  class native_jobjectArray {
+  private:
+     JNIEnv * const env;
+     jobjectArray orig;
+     int len;
+  public:
+     native_jobjectArray(JNIEnv * const env, jobjectArray orig) :
+         env(env),
+         orig(orig),
+         len(env->GetArrayLength(orig)) {
+       checkJavaException(env);
+     }
+
+     int size() const noexcept {
+       return len;
+     }
+
+     T operator[](int index) const {
+       return get(index);
+     }
+
+     T get(int index) const {
+       T ret = static_cast<T>(env->GetObjectArrayElement(orig, index));
+       checkJavaException(env);
+       return ret;
+     }
+
+     void set(int index, const T& val) {
+       env->SetObjectArrayElement(orig, index, val);
+       checkJavaException(env);
+     }
+  };
+
+  /**
+   * @brief jobjectArray wrapper to make accessing strings safe through RAII
+   * and convenient.
+   */
+  class native_jstringArray {
+  private:
+     JNIEnv * const env;
+     native_jobjectArray<jstring> arr;
+  public:
+     native_jstringArray(JNIEnv * const env, jobjectArray orig) :
+         env(env),
+         arr(env, orig) {}
+
+     int size() const noexcept {
+       return arr.size();
+     }
+
+     native_jstring operator[](int index) const {
+       return get(index);
+     }
+
+     native_jstring get(int index) const {
+       return native_jstring(env, arr.get(index));
+     }
+
+     void set(int index, jstring val) {
+       arr.set(index, val);
+     }
+
+     void set(int index, const native_jstring& val) {
+       arr.set(index, val.getJstring());
+     }
+
+     void set(int index, const char * val) {
+       jstring str = env->NewStringUTF(val);
+       checkJavaException(env);
+       arr.set(index, str);
+     }
   };
 
   /**
@@ -405,7 +579,7 @@ namespace cudf {
     catch (const std::bad_alloc& e) { \
         JNI_THROW_NEW(env, "java/lang/OutOfMemoryError", "Could not allocate native memory", ret_val); \
     } catch (const cudf::jni_exception& e) { \
-        /* indicates that a java exception happend, just return so java can throw it. */ \
+        /* indicates that a java exception happened, just return so java can throw it. */ \
         return ret_val; \
     } catch (const cudf::cuda_error& e) { \
         JNI_THROW_NEW(env, "ai/rapids/cudf/CudaException", e.what(), ret_val); \

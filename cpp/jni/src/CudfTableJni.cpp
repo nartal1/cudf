@@ -28,7 +28,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfTable_createCudfTable(JNIEnv *en
     JNI_NULL_CHECK(env, cudfColumns, "input columns are null", 0);
 
     try {
-      cudf::native_jlongArray nCudfColumns(env, cudfColumns);
+      const cudf::native_jlongArray nCudfColumns(env, cudfColumns);
       int const len = nCudfColumns.size();
 
       std::unique_ptr<gdf_column *[]> cols(new gdf_column *[len]);
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_free(JNIEnv *env, jclass cl
 /**
  * Copy contents of a jbooleanArray into an array of int8_t pointers
  */
-cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, cudf::native_jbooleanArray &nArr) {
+cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, const cudf::native_jbooleanArray &nArr) {
   jsize len = nArr.size();
   size_t byteLen = len * sizeof(int8_t);
   const jboolean *tmp = nArr.data();
@@ -72,7 +72,7 @@ cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, cudf::native_jboolea
 /**
  * Convert an array of longs into an array of gdf_column pointers.
  */
-std::vector<gdf_column *> as_gdf_columns(cudf::native_jlongArray &nColumnPtrs) {
+std::vector<gdf_column *> as_gdf_columns(const cudf::native_jlongArray &nColumnPtrs) {
     jsize numColumns = nColumnPtrs.size();
 
     std::vector<gdf_column *> columns(numColumns);
@@ -97,9 +97,9 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
     JNI_NULL_CHECK(env, jOutputTable, "output table is null", );
 
     try {
-        cudf::native_jlongArray nSortKeysGdfcolumns(env, jSortKeysGdfcolumns);
+        const cudf::native_jlongArray nSortKeysGdfcolumns(env, jSortKeysGdfcolumns);
         jsize numColumns = nSortKeysGdfcolumns.size();
-        cudf::native_jbooleanArray nIsDescending(env, jIsDescending);
+        const cudf::native_jbooleanArray nIsDescending(env, jIsDescending);
         jsize numColumnsIsDesc = nIsDescending.size();
 
         if ( numColumnsIsDesc != numColumns) {
