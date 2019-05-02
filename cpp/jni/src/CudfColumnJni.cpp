@@ -15,83 +15,83 @@
  */
 
 #include "ai_rapids_cudf_CudfColumn.h"
-#include "jni_utils.h"
+#include "jni_utils.hpp"
 
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfColumn_allocate
         (JNIEnv *env, jobject object) {
-    gdf_column *column = (gdf_column *) calloc(1, sizeof(gdf_column));
-    return (jlong) column;
+    try {
+      return reinterpret_cast<jlong>(calloc(1, sizeof(gdf_column)));
+    } CATCH_STD(env, 0);
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfColumn_free
         (JNIEnv *env, jobject jObject, jlong handle) {
-    if (handle == 0) return;
-
-    gdf_column *column = (gdf_column *) handle;
-    free(column->col_name);
-
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    if (column != NULL) {
+      free(column->col_name);
+    }
     free(column);
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfColumn_getDataPtr
         (JNIEnv *env, jobject jObject, jlong handle) {
     JNI_NULL_CHECK(env, handle, "native handle is null", 0);
-    gdf_column *column = (gdf_column *) handle;
-    return (jlong) column->data;
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    return reinterpret_cast<jlong>(column->data);
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfColumn_getValidPtr
         (JNIEnv *env, jobject jObject, jlong handle) {
     JNI_NULL_CHECK(env, handle, "native handle is null", 0);
-    gdf_column *column = (gdf_column *) handle;
-    return (jlong) column->valid;
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    return reinterpret_cast<jlong>(column->valid);
 }
 
 JNIEXPORT jint JNICALL Java_ai_rapids_cudf_CudfColumn_getSize
         (JNIEnv *env, jobject jObject, jlong handle) {
     JNI_NULL_CHECK(env, handle, "native handle is null", 0);
-    gdf_column *column = (gdf_column *) handle;
-    return column->size;
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    return static_cast<jint>(column->size);
 }
 
 JNIEXPORT jint JNICALL Java_ai_rapids_cudf_CudfColumn_getNullCount
         (JNIEnv *env, jobject jObject, jlong handle) {
     JNI_NULL_CHECK(env, handle, "native handle is null", 0);
-    gdf_column *column = (gdf_column *) handle;
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
     return column->null_count;
 }
 
 JNIEXPORT jint JNICALL Java_ai_rapids_cudf_CudfColumn_getDtype
         (JNIEnv *env, jobject jObject, jlong handle) {
     JNI_NULL_CHECK(env, handle, "native handle is null", 0);
-    gdf_column *column = (gdf_column *) handle;
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
     return column->dtype;
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfColumn_cudfColumnView
-        (JNIEnv *env, jobject, jlong column, jlong data, jlong valid, jint size, jint dtype) {
-    JNI_NULL_CHECK(env, column, "column is null",);
-    gdf_column *c_column = (gdf_column *) column;
-    void *c_data = (void *) data;
-    gdf_valid_type *c_valid = (gdf_valid_type *) valid;
-    gdf_dtype c_dtype = (gdf_dtype) dtype;
-    JNI_GDF_TRY(env, , gdf_column_view(c_column, c_data, c_valid, size, c_dtype));
+        (JNIEnv *env, jobject, jlong handle, jlong data, jlong valid, jint size, jint dtype) {
+    JNI_NULL_CHECK(env, handle, "column is null",);
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    void *c_data = reinterpret_cast<void *>(data);
+    gdf_valid_type *c_valid = reinterpret_cast<gdf_valid_type *>(valid);
+    gdf_dtype c_dtype = static_cast<gdf_dtype>(dtype);
+    JNI_GDF_TRY(env, , gdf_column_view(column, c_data, c_valid, size, c_dtype));
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfColumn_cudfColumnViewAugmented
-        (JNIEnv *env, jobject, jlong column, jlong dataPtr, jlong jValid, jint size,
+        (JNIEnv *env, jobject, jlong handle, jlong dataPtr, jlong jValid, jint size,
          jint dtype, jint null_count, jint timeUnit) {
-    JNI_NULL_CHECK(env, column, "column is null",);
-    gdf_column *c_column = (gdf_column *) column;
-    void *data = (void *) dataPtr;
-    gdf_valid_type *valid = (gdf_valid_type *) jValid;
-    gdf_dtype cDtype = (gdf_dtype) dtype;
+    JNI_NULL_CHECK(env, handle, "column is null",);
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    void *data = reinterpret_cast<void *>(dataPtr);
+    gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(jValid);
+    gdf_dtype cDtype = static_cast<gdf_dtype>(dtype);
     gdf_dtype_extra_info info;
-    info.time_unit = (gdf_time_unit) timeUnit;
+    info.time_unit = static_cast<gdf_time_unit>(timeUnit);
     JNI_GDF_TRY(env, ,
-                gdf_column_view_augmented(c_column, data, valid, size, cDtype, null_count, info));
+                gdf_column_view_augmented(column, data, valid, size, cDtype, null_count, info));
 }
 
 }
