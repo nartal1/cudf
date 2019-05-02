@@ -25,7 +25,7 @@ class CudfColumn implements AutoCloseable {
 
     // Constructor will allocate gdf_column in native. And store the returned gdf_column pointer in
     // nativeHandle.
-    long nativeHandle = 0;
+    private long nativeHandle = 0;
 
     CudfColumn(long data, long valid,
                      int size, DType dtype) {
@@ -38,6 +38,14 @@ class CudfColumn implements AutoCloseable {
         nativeHandle = allocate();
         cudfColumnViewAugmented(nativeHandle, dataPtr, valid, size, dtype.nativeId,
                 null_count, timeUnit.getValue());
+    }
+
+    final long getNativeHandle() {
+        return nativeHandle;
+    }
+
+    CudfColumn(long nativeHandle) {
+        this.nativeHandle = nativeHandle;
     }
 
     private native long allocate() throws CudfException;
@@ -114,4 +122,5 @@ class CudfColumn implements AutoCloseable {
     }
 
     private native int getNullCount(long handle) throws CudfException;
+
 }
