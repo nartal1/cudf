@@ -7,8 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#undef ai_rapids_cudf_Cuda_cudaCpuDeviceId
-#define ai_rapids_cudf_Cuda_cudaCpuDeviceId -1L
+#undef ai_rapids_cudf_Cuda_CPU_DEVICE_ID
+#define ai_rapids_cudf_Cuda_CPU_DEVICE_ID -1L
 /*
  * Class:     ai_rapids_cudf_Cuda
  * Method:    memGetInfo

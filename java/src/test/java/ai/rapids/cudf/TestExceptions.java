@@ -33,7 +33,8 @@ public class TestExceptions {
         }
     }
 
-    // TODO enable this once https://gitlab-master.nvidia.com/nvspark/cudf/issues/17 is resolved.
+    // TODO something odd is happening and once this runs cuda always see bad memory access
+    // and even when we clear it device synchronize brings it back again.
 //    @Test
 //    public void testCudaCausedCudfException() {
 //        assumeTrue(NativeDepsLoader.libraryLoaded());

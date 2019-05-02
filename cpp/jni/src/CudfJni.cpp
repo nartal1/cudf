@@ -15,7 +15,7 @@
  */
 
 #include "ai_rapids_cudf_Cudf.h"
-#include "jni_utils.h"
+#include "jni_utils.hpp"
 
 extern "C" {
 
@@ -24,8 +24,10 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddGeneric
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
     JNI_NULL_CHECK(env, output, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
                 gdf_add_generic((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI32
@@ -33,8 +35,10 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI32
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
     JNI_NULL_CHECK(env, output, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
                 gdf_add_i32((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI64
@@ -42,8 +46,10 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddI64
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
     JNI_NULL_CHECK(env, output, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
                 gdf_add_i64((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF32
@@ -51,8 +57,10 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF32
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
     JNI_NULL_CHECK(env, output, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
                 gdf_add_f32((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF64
@@ -60,56 +68,70 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfAddF64
     JNI_NULL_CHECK(env, lhs, "lhs is null",);
     JNI_NULL_CHECK(env, rhs, "rhs is null",);
     JNI_NULL_CHECK(env, output, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
                 gdf_add_f64((gdf_column *) lhs, (gdf_column *) rhs, (gdf_column *) output));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeYear
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_year((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMonth
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_month((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeDay
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_day((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeHour
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_hour((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMinute
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_minute((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
         (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
     JNI_NULL_CHECK(env, inputPtr, "input is null",);
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
-    JNI_GDF_TRY(env, ,
+    try {
+      JNI_GDF_TRY(env, ,
 		gdf_extract_datetime_second((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
 }
 
 }
