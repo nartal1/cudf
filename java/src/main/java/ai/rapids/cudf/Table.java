@@ -60,14 +60,21 @@ public final class Table implements AutoCloseable {
      * Orders the table using the sortkeys returning a new allocated table. The caller is responsible for cleaning up
      * the {@link ColumnVector} returned as part of the output {@link Table}
      *
-     * @param sortKeysIndices - indices of columnVectors to sort the table on.
-     * @param isDescending - boolean array representing sortorder. (false = ascending)
+     * Example usage: orderBy(true, Table.asc(0), Table.desc(3)...);
+     *
      * @param areNullsSmallest - represents if nulls are to be considered smaller than non-nulls.
+     * @param args - Suppliers to initialize sortKeys.
      * @return Sorted Table
      */
-    public Table orderBy(int[] sortKeysIndices, boolean[] isDescending, boolean areNullsSmallest) {
-        assert sortKeysIndices.length <= columnVectors.length;
-        assert sortKeysIndices.length == isDescending.length;
+    public Table orderBy(boolean areNullsSmallest, OrderByArg... args){
+        assert args.length <= columnVectors.length;
+        int[] sortKeysIndices = new int[args.length];
+        boolean[] isDescending = new boolean[args.length];
+        for (int i = 0 ; i < args.length ; i++) {
+            sortKeysIndices[i] = args[i].index;
+            assert (sortKeysIndices[i] >= 0 && sortKeysIndices[i] < columnVectors.length) :
+                    "index is out of range 0 <= " + sortKeysIndices[i] + " < " + columnVectors.length;
+            isDescending[i] = args[i].isDescending;}
         Table outputTable = Table.newOutputTable(this.columnVectors);
         cudfTable.gdfOrderBy(sortKeysIndices, isDescending, outputTable.cudfTable, areNullsSmallest);
         return outputTable;
@@ -77,7 +84,7 @@ public final class Table implements AutoCloseable {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
             outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].rows,
-                                                inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].type);
+                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].type);
         }
         return new Table(outputColumnVectors);
     }
@@ -111,6 +118,14 @@ public final class Table implements AutoCloseable {
         }
     }
 
+    public static OrderByArg asc(final int index) {
+        return new OrderByArg(index, false);
+    }
+
+    public static OrderByArg desc(final int index) {
+        return new OrderByArg(index, true);
+    }
+
     @Override
     public String toString() {
         return "Table{" +
@@ -118,5 +133,15 @@ public final class Table implements AutoCloseable {
                 ", cudfTable=" + cudfTable +
                 ", rows=" + rows +
                 '}';
+    }
+
+    public static final class OrderByArg {
+        final int index;
+        final boolean isDescending;
+
+        OrderByArg(int index, boolean isDescending) {
+            this.index = index;
+            this.isDescending = isDescending;
+        }
     }
 }
