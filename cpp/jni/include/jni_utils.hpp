@@ -144,6 +144,84 @@ namespace cudf {
      }
   };
 
+
+  /**
+   * @brief RAII for jintArray to be sure it is handled correctly. 
+   *
+   * By default any changes to the array will be committed back when
+   * the destructor is called unless cancel is called first.
+   */
+  class native_jintArray {
+  private:
+     JNIEnv * const env;
+     jintArray orig;
+     int len;
+     mutable jint *data_ptr;
+
+     void init_data_ptr() const {
+       if (data_ptr == NULL) {
+         data_ptr = env->GetIntArrayElements(orig, NULL);
+         checkJavaException(env);
+       }
+     }
+  public:
+     native_jintArray(native_jintArray const&) = delete;
+     native_jintArray& operator=(native_jintArray const&) = delete;
+
+     native_jintArray(JNIEnv * const env, jintArray orig) :
+         env(env),
+         orig(orig),
+         len(env->GetArrayLength(orig)),
+         data_ptr(NULL) {
+       checkJavaException(env);
+     }
+
+     int size() const noexcept {
+       return len;
+     }
+
+     jint operator[](int index) const {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+       }
+       return data()[index];
+     }
+
+     jint& operator[](int index) {
+       if (index < 0 || index >= len) {
+         throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+       }
+       return data()[index];
+     }
+
+     const jint * const data() const {
+       init_data_ptr();
+       return data_ptr;
+     }
+
+     jint * data() {
+       init_data_ptr();
+       return data_ptr;
+     }
+
+     /**
+      * @brief if data has been written back into this array, don't commit
+      * it.
+      */
+     void cancel() {
+       if (data_ptr != NULL) {
+         env->ReleaseIntArrayElements(orig, data_ptr, JNI_ABORT);
+         data_ptr = NULL;
+       }
+     }
+
+     ~native_jintArray() {
+       if (data_ptr != NULL) {
+         env->ReleaseIntArrayElements(orig, data_ptr, 0);
+       }
+     }
+  };
+
   /**
    * @brief RAII for jbooleanArray to be sure it is handled correctly. 
    *
