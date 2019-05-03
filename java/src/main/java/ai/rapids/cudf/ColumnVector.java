@@ -271,6 +271,20 @@ public abstract class ColumnVector implements AutoCloseable {
                 '}';
     }
 
+    /**
+     * USE WITH CAUTION: This method exposes the address of the native cudf_column.  This allows
+     * writing custom kernels or other cuda operations on the data.  DO NOT close this column
+     * vector until you are completely done using the native column.  DO NOT modify the column in
+     * any way.  This should be treated as a read only data structure. This API is unstable as
+     * the underlying C/C++ API is still not stabilized.  If the underlying data structure
+     * is renamed this API may be replaced.  The underlying data structure can change from release
+     * to release (it is not stable yet) so be sure that your native code is complied against the
+     * exact same version of libcudf as this is released for.
+     */
+    public final long getNativeCudfColumnAddress() {
+        return offHeap.cudfColumn.getNativeHandle();
+    }
+
     protected final CudfColumn getCudfColumn() {
         if (offHeap.cudfColumn == null) {
             assert rows <= Integer.MAX_VALUE;
