@@ -148,7 +148,8 @@ public class TableTest {
 
     @Test
     void testSettingNullVectors() {
-        assertThrows(AssertionError.class, () -> new Table(null));
+        ColumnVector[] columnVectors = null;
+        assertThrows(AssertionError.class, () -> new Table(columnVectors));
     }
 
     @Test
@@ -171,6 +172,56 @@ public class TableTest {
             v2.toDeviceBuffer();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(2, t.getNumberOfColumns());
+            }
+        }
+    }
+
+    @Test
+    void testReadCSVPrune() {
+        CSVReadArgument arg = CSVReadArgument.createBuilderWithFilePath("./src/test/resources/simple.csv").addColumn(DType.INT32).addColumn(DType.FLOAT64).skipColumn().build();
+        try (Table table = Table.readCSV(arg)) {
+            long rows = table.getRows();
+            assertEquals(10, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(2, len);
+
+            double[] doubleData = new double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,117.0,118.2,119.8};
+            int[] intData = new int[] {0,1,2,3,4,5,6,7,8,9};
+            try (IntColumnVector intOutput = (IntColumnVector) table.getColumn(0);
+                 DoubleColumnVector doubleOutput = (DoubleColumnVector) table.getColumn(1)) {
+                intOutput.toHostBuffer();
+                doubleOutput.toHostBuffer();
+                for (int i = 0; i < rows; i++) {
+                    assertEquals(intData[i], intOutput.get(i));
+                    assertEquals(doubleData[i], doubleOutput.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    void testReadCSV() {
+        CSVReadArgument arg = CSVReadArgument.createBuilderWithFilePath("./src/test/resources/simple.csv").addColumn(DType.INT32).addColumn(DType.FLOAT64).addColumn(DType.INT64).build();
+        try (Table table = Table.readCSV(arg)) {
+            long rows = table.getRows();
+            assertEquals(10, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(3, len);
+
+            int[] intData = new int[] {0,1,2,3,4,5,6,7,8,9};
+            double[] doubleData = new double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,117.0,118.2,119.8};
+            int[] LongData = new int[] {120,121,122,123,124,125,126,127,128,129};
+            try (IntColumnVector intOutput = (IntColumnVector) table.getColumn(0);
+                 DoubleColumnVector doubleOutput = (DoubleColumnVector) table.getColumn(1);
+                 LongColumnVector longOutput = (LongColumnVector) table.getColumn(2)) {
+                intOutput.toHostBuffer();
+                doubleOutput.toHostBuffer();
+                longOutput.toHostBuffer();
+                for (int i = 0; i < rows; i++) {
+                    assertEquals(intData[i], intOutput.get(i));
+                    assertEquals(doubleData[i], doubleOutput.get(i), 0.1);
+                    assertEquals(LongData[i], longOutput.get(i));
+                }
             }
         }
     }

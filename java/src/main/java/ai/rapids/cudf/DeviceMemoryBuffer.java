@@ -23,10 +23,7 @@ package ai.rapids.cudf;
  */
 class DeviceMemoryBuffer extends MemoryBuffer {
 
-    /**
-     * Private constructor
-     */
-    private DeviceMemoryBuffer(long address, long lengthInBytes) {
+    DeviceMemoryBuffer(long address, long lengthInBytes) {
         super(address, lengthInBytes);
     }
 

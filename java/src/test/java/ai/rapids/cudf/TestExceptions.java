@@ -38,9 +38,9 @@ public class TestExceptions {
 //    @Test
 //    public void testCudaCausedCudfException() {
 //        assumeTrue(NativeDepsLoader.libraryLoaded());
-//        try (CudfColumn badRHS = new CudfColumn(100, 0, 5, DType.CUDF_INT32);
-//             CudfColumn badLHS = new CudfColumn(200, 0, 5, DType.CUDF_INT32);
-//             CudfColumn badOutput = new CudfColumn(300, 0, 5, DType.CUDF_INT32)) {
+//        try (CudfColumn badRHS = new CudfColumn(100, 0, 5, DType.INT32);
+//             CudfColumn badLHS = new CudfColumn(200, 0, 5, DType.INT32);
+//             CudfColumn badOutput = new CudfColumn(300, 0, 5, DType.INT32)) {
 //            Cudf.gdfAddI32(badLHS, badRHS, badOutput);
 //            fail("An exception should have been thrown!!!");
 //        } catch (CudfException cudfe) {

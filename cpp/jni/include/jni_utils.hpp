@@ -98,6 +98,16 @@ namespace cudf {
        checkJavaException(env);
      }
 
+     native_jlongArray(JNIEnv * const env, jlong * arr, int len) :
+         env(env),
+         orig(env->NewLongArray(len)),
+         len(len),
+         data_ptr(NULL) {
+       checkJavaException(env);
+       env->SetLongArrayRegion(orig, 0, len, arr);
+       checkJavaException(env);
+     }
+
      int size() const noexcept {
        return len;
      }
@@ -124,6 +134,14 @@ namespace cudf {
      jlong * data() {
        init_data_ptr();
        return data_ptr;
+     }
+
+     const jlongArray get_jlongArray() const {
+       return orig;
+     }
+
+     jlongArray get_jlongArray() {
+       return orig;
      }
 
      /**
@@ -305,7 +323,7 @@ namespace cudf {
    */
   class native_jstring {
   private:
-      JNIEnv * const env;
+      JNIEnv * env;
       jstring orig;
       mutable const char * cstr;
 
@@ -334,12 +352,22 @@ namespace cudf {
         checkJavaException(env);
       }
 
+      native_jstring& operator=(native_jstring const && other) {
+        if (cstr != NULL) {
+          env->ReleaseStringUTFChars(orig, cstr);
+        }
+        this->env = other.env;
+        this->orig = other.orig;
+        this->cstr = other.cstr;
+        other.cstr = NULL;
+      }
+
       const char * get() const {
         init_cstr();
         return cstr;
       }
 
-      const jstring getJstring() const {
+      const jstring get_jstring() const {
         return orig;
       }
 
@@ -395,6 +423,41 @@ namespace cudf {
   private:
      JNIEnv * const env;
      native_jobjectArray<jstring> arr;
+     mutable std::vector<native_jstring> cache;
+     mutable std::vector<const char *> c_cache;
+
+     void init_cache() const {
+       if (cache.empty()) {
+         int size = this->size();
+         cache.reserve(size);
+         for (int i = 0; i < size; i++) {
+           cache.push_back(native_jstring(env, arr.get(i)));
+         }
+       }
+     }
+
+     void init_c_cache() const {
+       if (c_cache.empty()) {
+         init_cache();
+         int size = this->size();
+         c_cache.reserve(size);
+         for (int i = 0; i < size; i++) {
+           c_cache.push_back(cache[i].get());
+         }
+       }
+     }
+
+     void update_caches(int index, jstring val) {
+       if (!cache.empty()) {
+         cache[index] = native_jstring(env, val);
+         if (!c_cache.empty()) {
+           c_cache[index] = cache[index].get();
+         }
+       } else if (!c_cache.empty()) {
+         //Illegal state
+         throw std::logic_error("CACHING IS MESSED UP");
+       }
+     }
   public:
      native_jstringArray(JNIEnv * const env, jobjectArray orig) :
          env(env),
@@ -404,26 +467,35 @@ namespace cudf {
        return arr.size();
      }
 
-     native_jstring operator[](int index) const {
+     native_jstring& operator[](int index) const {
        return get(index);
      }
 
-     native_jstring get(int index) const {
-       return native_jstring(env, arr.get(index));
+     native_jstring& get(int index) const {
+       init_cache();
+       return cache[index];
+     }
+
+     const char ** const as_c_array() const {
+       init_c_cache();
+       return c_cache.data();
      }
 
      void set(int index, jstring val) {
        arr.set(index, val);
+       update_caches(index, val);
      }
 
      void set(int index, const native_jstring& val) {
-       arr.set(index, val.getJstring());
+       arr.set(index, val.get_jstring());
+       update_caches(index, val.get_jstring());
      }
 
      void set(int index, const char * val) {
        jstring str = env->NewStringUTF(val);
        checkJavaException(env);
        arr.set(index, str);
+       update_caches(index, str);
      }
   };
 

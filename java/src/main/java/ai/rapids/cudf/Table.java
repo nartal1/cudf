@@ -56,6 +56,17 @@ public final class Table implements AutoCloseable {
         this.rows = rows;
     }
 
+    Table(CudfColumn[] cudfColumns) {
+        assert cudfColumns != null : "CudfColumns can't be null";
+
+        this.columnVectors = new ColumnVector[cudfColumns.length];
+        for (int i = 0 ; i < cudfColumns.length ; i++) {
+            this.columnVectors[i] = ColumnVector.fromCudfColumn(cudfColumns[i]);
+        }
+        cudfTable = new CudfTable(cudfColumns);
+        this.rows = cudfColumns[0].getSize();
+    }
+
     /**
      * Orders the table using the sortkeys returning a new allocated table. The caller is responsible for cleaning up
      * the {@link ColumnVector} returned as part of the output {@link Table}
@@ -87,6 +98,12 @@ public final class Table implements AutoCloseable {
                     inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].type);
         }
         return new Table(outputColumnVectors);
+    }
+
+    public static Table readCSV(CSVReadArgument csvReadArgument) {
+        CudfColumn[] columns = CudfTable.readCSV(csvReadArgument.getColumnNames(), csvReadArgument.getDTypes(),
+                                        csvReadArgument.getFilterColumnNames(), csvReadArgument.getFilepath());
+        return new Table(columns);
     }
 
     /**

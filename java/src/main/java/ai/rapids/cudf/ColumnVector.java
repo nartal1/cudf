@@ -52,6 +52,26 @@ public abstract class ColumnVector implements AutoCloseable {
                         .collect(Collectors.toList()));
     }
 
+    protected ColumnVector(CudfColumn cudfColumn) {
+        assert cudfColumn != null;
+        ColumnVectorCleaner.register(this, offHeap);
+        this.type = cudfColumn.getDtype();
+        offHeap.hostData = null;
+        this.rows = cudfColumn.getSize();
+        this.nullCount = cudfColumn.getNullCount();
+        DeviceMemoryBuffer data = new DeviceMemoryBuffer(cudfColumn.getDataPtr(), this.rows * type.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (cudfColumn.getValidPtr() != 0) {
+            // We are not using the BitVectorHelper.getValidityAllocationSizeInBytes() because cudfColumn was
+            // initialized by cudf and not by cudfjni
+            valid = new DeviceMemoryBuffer(cudfColumn.getValidPtr(), BitVectorHelper.getValidityLengthInBytes(rows));
+        }
+        this.offHeap.deviceData = new BufferEncapsulator<>(data, valid);
+        this.offHeap.cudfColumn = cudfColumn;
+        this.refCount = 0;
+        incRefCount();
+    }
+
     protected ColumnVector(HostMemoryBuffer hostDataBuffer,
                            HostMemoryBuffer hostValidityBuffer, long rows, DType type, long nullCount) {
         if (nullCount > 0 && hostValidityBuffer == null) {
@@ -92,29 +112,61 @@ public abstract class ColumnVector implements AutoCloseable {
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
         ColumnVector columnVector = null;
         switch (type) {
-            case CUDF_INT32:
+            case INT32:
                 columnVector = IntColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case CUDF_INT64:
+            case INT64:
                 columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case CUDF_FLOAT32:
+            case FLOAT32:
                 columnVector = FloatColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case CUDF_FLOAT64:
+            case FLOAT64:
                 columnVector = DoubleColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case CUDF_INT16:
+            case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case CUDF_DATE32:
-            case CUDF_DATE64:
-            case CUDF_INT8:
-            case CUDF_TIMESTAMP:
+            case DATE32:
+            case DATE64:
+            case INT8:
+            case TIMESTAMP:
                 throw new UnsupportedOperationException();
-            case CUDF_INVALID:
+            case INVALID:
             default:
                 throw new IllegalArgumentException("Invalid type: " + type);
+        }
+        return columnVector;
+    }
+
+    static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
+        ColumnVector columnVector = null;
+        switch (cudfColumn.getDtype()) {
+            case INT32:
+                columnVector = new IntColumnVector(cudfColumn);
+                break;
+            case INT64:
+                columnVector = new LongColumnVector(cudfColumn);
+                break;
+            case FLOAT32:
+                columnVector = new FloatColumnVector(cudfColumn);
+                break;
+            case FLOAT64:
+                columnVector = new DoubleColumnVector(cudfColumn);
+                break;
+            case INT16:
+                columnVector = new ShortColumnVector(cudfColumn);
+                break;
+            case DATE32:
+                columnVector = new Date32ColumnVector(cudfColumn);
+                break;
+            case DATE64:
+            case INT8:
+            case TIMESTAMP:
+                throw new UnsupportedOperationException();
+            case INVALID:
+            default:
+                throw new IllegalArgumentException("Invalid type: " + cudfColumn.getDtype());
         }
         return columnVector;
     }
@@ -453,7 +505,7 @@ public abstract class ColumnVector implements AutoCloseable {
         }
 
         final void appendByte(byte value) {
-            assert type == DType.CUDF_INT8;
+            assert type == DType.INT8;
             assert currentIndex < rows;
             data.setByte(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
@@ -461,41 +513,41 @@ public abstract class ColumnVector implements AutoCloseable {
 
         final void appendBytes(byte value, long count) {
             assert (count + currentIndex) <= rows;
-            assert type == DType.CUDF_INT8;
+            assert type == DType.INT8;
             data.setMemory(currentIndex * type.sizeInBytes, count, value);
             currentIndex += count;
         }
 
         final void appendShort(short value) {
-            assert type == DType.CUDF_INT16;
+            assert type == DType.INT16;
             assert currentIndex < rows;
             data.setShort(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
         }
 
         final void appendInt(int value) {
-            assert (type == DType.CUDF_INT32 || type == DType.CUDF_DATE32);
+            assert (type == DType.INT32 || type == DType.DATE32);
             assert currentIndex < rows;
             data.setInt(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
         }
 
         final void appendLong(long value) {
-            assert type == DType.CUDF_INT64 || type == DType.CUDF_DATE64 || type == DType.CUDF_TIMESTAMP;
+            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
             assert currentIndex < rows;
             data.setLong(currentIndex * type.sizeInBytes, value);
             currentIndex++;
         }
 
         final void appendFloat(float value) {
-            assert type == DType.CUDF_FLOAT32;
+            assert type == DType.FLOAT32;
             assert currentIndex < rows;
             data.setFloat(currentIndex * type.sizeInBytes, value);
             currentIndex++;
         }
 
         final void appendDouble(double value) {
-            assert type == DType.CUDF_FLOAT64;
+            assert type == DType.FLOAT64;
             assert currentIndex < rows;
             data.setDouble(currentIndex * type.sizeInBytes, value);
             currentIndex++;

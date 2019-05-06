@@ -125,5 +125,118 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
     } CATCH_STD(env, );
 }
 
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* env,
+       jclass jClassObject,
+       jobjectArray colNames,
+       jobjectArray dataTypes,
+       jobjectArray filterColNames,
+       jstring inputfilepath) {
+    JNI_NULL_CHECK(env, colNames, "colNames is null", NULL);
+    JNI_NULL_CHECK(env, dataTypes, "dataTypes is null", NULL);
+    JNI_NULL_CHECK(env, inputfilepath, "inputFilePath is null", NULL);
+
+    try {
+      cudf::native_jstringArray nColNames(env, colNames);
+      int nameCount = nColNames.size();
+      cudf::native_jstringArray nDataTypes(env, dataTypes);
+      int dTypeCount = nDataTypes.size();
+
+      if (dTypeCount != nameCount) {
+        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "dataTypes and colNames should be the same size", NULL);
+      }
+      cudf::native_jstring filename(env, inputfilepath);
+      if (strlen(filename.get()) == 0) {
+        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
+      }
+
+      char const** nameParam = nColNames.as_c_array();
+      char const** dTypes = nDataTypes.as_c_array();
+
+      int numfiltercols = 0;
+      char const** filteredNames = NULL;
+      std::unique_ptr<cudf::native_jstringArray> nFilterColNames;
+
+      if (filterColNames != NULL) {
+        nFilterColNames.reset(new cudf::native_jstringArray(env, filterColNames));
+        numfiltercols = nFilterColNames->size();
+        filteredNames = nFilterColNames->as_c_array();
+      }
+
+      csv_read_arg read_arg;
+      memset(&read_arg, 0, sizeof(csv_read_arg));
+
+      read_arg.filepath_or_buffer = filename.get();
+
+      read_arg.input_data_form = FILE_PATH;
+      // don't use buffer, use file path
+      read_arg.buffer_size = 0;
+
+      read_arg.windowslinetermination = false;
+      read_arg.lineterminator = '\n';
+      // delimiter ideally passed in
+      read_arg.delimiter = ',';
+      read_arg.delim_whitespace = 0;
+      read_arg.skipinitialspace = 0;
+      read_arg.nrows = -1;
+      // default no header read from fail
+      read_arg.header = -1;
+      read_arg.num_cols = nameCount;
+
+      read_arg.names = nameParam;
+      read_arg.dtype = dTypes;
+
+      // leave blank
+      // read_arg.index_col
+
+      // only support picking columns by name
+      read_arg.use_cols_int = NULL;
+      read_arg.use_cols_int_len = 0;
+      read_arg.use_cols_char = filteredNames;
+
+      read_arg.use_cols_char_len = numfiltercols;
+
+      read_arg.skiprows = 0;
+      read_arg.skipfooter = 0;
+      read_arg.skip_blank_lines = true;
+
+      char const* trueVals[2] = {"True", "TRUE"};
+      char const* falseVals[2] = {"False", "FALSE"};
+      read_arg.true_values = trueVals;
+      read_arg.num_true_values = 2;
+      read_arg.false_values = falseVals;
+      read_arg.num_false_values = 2;
+
+      read_arg.num_na_values = 0;   ///< Number of values in the na_values list
+      read_arg.keep_default_na = false;  ///< Keep the default NA values
+      read_arg.na_filter = false;  ///< Detect missing values (empty strings and the values in na_values). Passing false can improve performance.
+
+      read_arg.prefix = NULL;
+      read_arg.mangle_dupe_cols = true;
+      read_arg.parse_dates = 1;
+      // read_arg.infer_datetime_format = true;
+      read_arg.dayfirst = 0;
+      read_arg.compression = nullptr;
+      // read_arg.thousands
+      read_arg.decimal = '.';
+      read_arg.quotechar = '"';
+      //read_arg.quoting = QUOTE_NONNUMERIC;
+      read_arg.quoting = QUOTE_MINIMAL;
+      read_arg.doublequote = true;
+      // read_arg.escapechar =
+      // read_arg.comment
+      read_arg.encoding = NULL;
+      read_arg.byte_range_offset = 0;
+      read_arg.byte_range_size = 0;
+
+      gdf_error gdfStatus = read_csv(&read_arg);
+      JNI_GDF_TRY(env, NULL, gdfStatus);
+
+      cudf::native_jlongArray nativeHandles(env,
+              reinterpret_cast<jlong*>(read_arg.data),
+              read_arg.num_cols_out);
+      return nativeHandles.get_jlongArray();
+    } CATCH_STD(env, NULL);
+}
+
 };
 

@@ -29,8 +29,8 @@ public class HostMemoryBufferTest {
     public void testGetInt() {
         try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
             long offset = 1;
-            hostMemoryBuffer.setInt(offset * DType.CUDF_INT32.sizeInBytes, 2);
-            assertEquals(2, hostMemoryBuffer.getInt(offset * DType.CUDF_INT32.sizeInBytes));
+            hostMemoryBuffer.setInt(offset * DType.INT32.sizeInBytes, 2);
+            assertEquals(2, hostMemoryBuffer.getInt(offset * DType.INT32.sizeInBytes));
         }
     }
 
@@ -38,8 +38,8 @@ public class HostMemoryBufferTest {
     public void testGetByte() {
         try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
             long offset = 1;
-            hostMemoryBuffer.setByte(offset * DType.CUDF_INT8.sizeInBytes, (byte) 2);
-            assertEquals((byte) 2, hostMemoryBuffer.getByte(offset * DType.CUDF_INT8.sizeInBytes));
+            hostMemoryBuffer.setByte(offset * DType.INT8.sizeInBytes, (byte) 2);
+            assertEquals((byte) 2, hostMemoryBuffer.getByte(offset * DType.INT8.sizeInBytes));
         }
     }
 
@@ -47,8 +47,8 @@ public class HostMemoryBufferTest {
     public void testGetLong() {
         try (HostMemoryBuffer hostMemoryBuffer = HostMemoryBuffer.allocate(16)) {
             long offset = 1;
-            hostMemoryBuffer.setLong(offset * DType.CUDF_INT64.sizeInBytes, 3);
-            assertEquals(3, hostMemoryBuffer.getLong(offset * DType.CUDF_INT64.sizeInBytes));
+            hostMemoryBuffer.setLong(offset * DType.INT64.sizeInBytes, 3);
+            assertEquals(3, hostMemoryBuffer.getLong(offset * DType.INT64.sizeInBytes));
         }
     }
 
