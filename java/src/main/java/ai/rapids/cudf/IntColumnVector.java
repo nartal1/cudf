@@ -26,11 +26,16 @@ public final class IntColumnVector extends ColumnVector {
      * Private constructor to use the BuilderPattern.
      */
     private IntColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_INT32, nullCount);
+        super(data, validity, rows, DType.INT32, nullCount);
     }
 
     private IntColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_INT32);
+        super(data, validity, rows, DType.INT32);
+    }
+
+    protected IntColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+        assert cudfColumn.getDtype() == DType.INT32;
     }
 
     /**
@@ -40,7 +45,7 @@ public final class IntColumnVector extends ColumnVector {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getInt(index * DType.CUDF_INT32.sizeInBytes);
+        return offHeap.hostData.data.getInt(index * DType.INT32.sizeInBytes);
     }
 
     /**
@@ -60,7 +65,7 @@ public final class IntColumnVector extends ColumnVector {
      * caller will populate it.
      */
     static IntColumnVector newOutputVector(long rows, boolean hasValidityVector) {
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT32.sizeInBytes);
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.INT32.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
@@ -135,7 +140,7 @@ public final class IntColumnVector extends ColumnVector {
          * @param rows number of rows to allocate.
          */
         private Builder(long rows) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT32, rows);
+            builder = new ColumnVector.Builder(DType.INT32, rows);
         }
 
 
@@ -147,7 +152,7 @@ public final class IntColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(int rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT32,rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.INT32,rows, testData, testValid);
         }
 
         /**

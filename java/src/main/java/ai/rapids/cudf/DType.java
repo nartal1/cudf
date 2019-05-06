@@ -15,35 +15,35 @@
  */
 package ai.rapids.cudf;
 
-enum DType {
-    CUDF_INVALID(0, 0),
-    CUDF_INT8(1, 1),
-    CUDF_INT16(2, 2),
-    CUDF_INT32(4, 3),
-    CUDF_INT64(8, 4),
-    CUDF_FLOAT32(4, 5),
-    CUDF_FLOAT64(8, 6),
+public enum DType {
+    INVALID(0, 0, "invalid"),
+    INT8(1, 1, "int"),
+    INT16(2, 2, "short"),
+    INT32(4, 3, "int32"),
+    INT64(8, 4, "int64"),
+    FLOAT32(4, 5, "float32"),
+    FLOAT64(8, 6, "float64"),
     /**
      * Days since the UNIX epoch
      */
-    CUDF_DATE32(4, 7),
+    DATE32(4, 7, "date32"),
     /**
      * ms since the UNIX epoch
      */
-    CUDF_DATE64(8, 8),
+    DATE64(8, 8, "date64"),
     /**
      * Exact timestamp encoded with int64 since the UNIX epoch (Default unit ms)
      */
-    CUDF_TIMESTAMP(8, 9);
-    //CUDF_CATEGORY(??, 10),
-    //CUDF_STRING(??, 11);
+    TIMESTAMP(8, 9, "timestamp");
 
-    public final int sizeInBytes;
-    public final int nativeId;
+    final int sizeInBytes;
+    final int nativeId;
+    final String simpleName;
 
-    DType(int sizeInBytes, int nativeId) {
+    DType(int sizeInBytes, int nativeId, String simpleName) {
         this.sizeInBytes = sizeInBytes;
         this.nativeId = nativeId;
+        this.simpleName = simpleName;
     }
 
     static final DType[] D_TYPES = DType.values();

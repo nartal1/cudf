@@ -26,6 +26,8 @@ class CudfColumn implements AutoCloseable {
     // Constructor will allocate gdf_column in native. And store the returned gdf_column pointer in
     // nativeHandle.
     private long nativeHandle = 0;
+    private DType type;
+    private Integer nullCount;
 
     CudfColumn(long data, long valid,
                      int size, DType dtype) {
@@ -111,16 +113,32 @@ class CudfColumn implements AutoCloseable {
 
 
     public DType getDtype() {
-        return DType.D_TYPES[getDtype(nativeHandle)];
+        if (type == null) {
+            type = DType.D_TYPES[getDtype(nativeHandle)];
+        }
+        return type;
     }
 
     private native int getDtype(long handle) throws CudfException;
 
 
     public int getNullCount() {
-        return getNullCount(nativeHandle);
+        if (nullCount == null) {
+            nullCount = getNullCount(nativeHandle);
+        }
+        return nullCount;
     }
 
     private native int getNullCount(long handle) throws CudfException;
 
+    @Override
+    public String toString() {
+        return "CudfColumn{" +
+                "nativeHandle=" + nativeHandle +
+                ", type=" + type +
+                ", data=" + Long.toHexString(getDataPtr()) +
+                ", valid=" + Long.toHexString(getValidPtr()) +
+                ", nullCount=" + getNullCount() +
+                '}';
+    }
 }

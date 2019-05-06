@@ -65,6 +65,17 @@ class CudfTable implements AutoCloseable {
     private static native void gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending, long outputTable,
                                                                         boolean areNullsSmallest) throws CudfException;
 
+    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) {
+        long[] cudfColumnNativeHandles = gdfReadCSV(columnNames, dTypes, filterColumnNames, filePath);
+        CudfColumn[] cudfColumns = new CudfColumn[cudfColumnNativeHandles.length];
+        for (int i = 0 ; i < cudfColumnNativeHandles.length ; i++) {
+            cudfColumns[i] = new CudfColumn(cudfColumnNativeHandles[i]);
+        }
+        return cudfColumns;
+    }
+
+    private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) throws CudfException;
+
     @Override
     public String toString() {
         return "CudfTable{" +

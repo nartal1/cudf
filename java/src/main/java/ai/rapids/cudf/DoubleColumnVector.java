@@ -26,11 +26,16 @@ public final class DoubleColumnVector extends ColumnVector {
      * Private constructor to use the BuilderPattern.
      */
     private DoubleColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_FLOAT64, nullCount);
+        super(data, validity, rows, DType.FLOAT64, nullCount);
     }
 
     private DoubleColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_FLOAT64);
+        super(data, validity, rows, DType.FLOAT64);
+    }
+
+    protected DoubleColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+        assert cudfColumn.getDtype() == DType.FLOAT64;
     }
 
     /**
@@ -40,7 +45,7 @@ public final class DoubleColumnVector extends ColumnVector {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getDouble(index * DType.CUDF_FLOAT64.sizeInBytes);
+        return offHeap.hostData.data.getDouble(index * DType.FLOAT64.sizeInBytes);
     }
 
     /**
@@ -60,7 +65,7 @@ public final class DoubleColumnVector extends ColumnVector {
      * caller will populate it.
      */
     static DoubleColumnVector newOutputVector(long rows, boolean hasValidityVector) {
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_FLOAT64.sizeInBytes);
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.FLOAT64.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
@@ -132,7 +137,7 @@ public final class DoubleColumnVector extends ColumnVector {
          * @param rows number of rows to allocate.
          */
         private Builder(long rows) {
-            builder = new ColumnVector.Builder(DType.CUDF_FLOAT64, rows);
+            builder = new ColumnVector.Builder(DType.FLOAT64, rows);
         }
 
         /**
@@ -143,7 +148,7 @@ public final class DoubleColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_FLOAT64, rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.FLOAT64, rows, testData, testValid);
         }
 
         /**

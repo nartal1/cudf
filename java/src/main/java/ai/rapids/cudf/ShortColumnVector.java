@@ -26,11 +26,16 @@ public final class ShortColumnVector extends ColumnVector {
      * Private constructor to use the BuilderPattern.
      */
     private ShortColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_INT16, nullCount);
+        super(data, validity, rows, DType.INT16, nullCount);
     }
 
     private ShortColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_INT16);
+        super(data, validity, rows, DType.INT16);
+    }
+
+    protected ShortColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+        assert cudfColumn.getDtype() == DType.INT16;
     }
 
     /**
@@ -40,7 +45,7 @@ public final class ShortColumnVector extends ColumnVector {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getShort(index * DType.CUDF_INT16.sizeInBytes);
+        return offHeap.hostData.data.getShort(index * DType.INT16.sizeInBytes);
     }
 
     /**
@@ -60,7 +65,7 @@ public final class ShortColumnVector extends ColumnVector {
      * caller will populate it.
      */
     static ShortColumnVector newOutputVector(long rows, boolean hasValidityVector) {
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.CUDF_INT16.sizeInBytes);
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.INT16.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidityVector) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
@@ -113,7 +118,7 @@ public final class ShortColumnVector extends ColumnVector {
          * Create a builder with a buffer of size rows
          * @param rows number of rows to allocate.
          */
-        private Builder(long rows) { builder = new ColumnVector.Builder(DType.CUDF_INT16, rows); }
+        private Builder(long rows) { builder = new ColumnVector.Builder(DType.INT16, rows); }
 
         /**
          * Create a builder with a buffer of size rows (for testing ONLY).
@@ -123,7 +128,7 @@ public final class ShortColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_INT16, rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.INT16, rows, testData, testValid);
         }
 
         /**

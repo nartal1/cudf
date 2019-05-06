@@ -26,11 +26,11 @@ public final class TimestampColumnVector extends ColumnVector {
      * Private constructor to use the BuilderPattern.
      */
     private TimestampColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_TIMESTAMP, nullCount);
+        super(data, validity, rows, DType.TIMESTAMP, nullCount);
     }
 
     private TimestampColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_TIMESTAMP);
+        super(data, validity, rows, DType.TIMESTAMP);
     }
 
     /**
@@ -40,7 +40,7 @@ public final class TimestampColumnVector extends ColumnVector {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getLong(index * DType.CUDF_TIMESTAMP.sizeInBytes);
+        return offHeap.hostData.data.getLong(index * DType.TIMESTAMP.sizeInBytes);
     }
 
     /**
@@ -170,7 +170,7 @@ public final class TimestampColumnVector extends ColumnVector {
          * @param rows number of rows to allocate.
          */
         private Builder(long rows) {
-            builder = new ColumnVector.Builder(DType.CUDF_TIMESTAMP, rows);
+            builder = new ColumnVector.Builder(DType.TIMESTAMP, rows);
         }
 
         /**
@@ -181,7 +181,7 @@ public final class TimestampColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_TIMESTAMP, rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.TIMESTAMP, rows, testData, testValid);
         }
 
         /**

@@ -26,11 +26,11 @@ public final class Date64ColumnVector extends ColumnVector {
      * Private constructor to use the BuilderPattern.
      */
     private Date64ColumnVector(HostMemoryBuffer data, HostMemoryBuffer validity, long rows, long nullCount) {
-        super(data, validity, rows, DType.CUDF_DATE64, nullCount);
+        super(data, validity, rows, DType.DATE64, nullCount);
     }
 
     private Date64ColumnVector(DeviceMemoryBuffer data, DeviceMemoryBuffer validity, long rows) {
-        super(data, validity, rows, DType.CUDF_DATE64);
+        super(data, validity, rows, DType.DATE64);
     }
 
     /**
@@ -40,7 +40,7 @@ public final class Date64ColumnVector extends ColumnVector {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
-        return offHeap.hostData.data.getLong(index * DType.CUDF_DATE64.sizeInBytes);
+        return offHeap.hostData.data.getLong(index * DType.DATE64.sizeInBytes);
     }
 
     /**
@@ -170,7 +170,7 @@ public final class Date64ColumnVector extends ColumnVector {
          * @param rows number of rows to allocate.
          */
         private Builder(long rows) {
-            builder = new ColumnVector.Builder(DType.CUDF_DATE64, rows);
+            builder = new ColumnVector.Builder(DType.DATE64, rows);
         }
 
         /**
@@ -181,7 +181,7 @@ public final class Date64ColumnVector extends ColumnVector {
          *                 rows entries or is null).
          */
         Builder(long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-            builder = new ColumnVector.Builder(DType.CUDF_DATE64, rows, testData, testValid);
+            builder = new ColumnVector.Builder(DType.DATE64, rows, testData, testValid);
         }
 
         /**
