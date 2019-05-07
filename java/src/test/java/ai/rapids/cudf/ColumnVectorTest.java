@@ -59,14 +59,15 @@ public class ColumnVectorTest {
 
     @Test
     void testRefCountLeak() throws InterruptedException {
+        assumeTrue(Boolean.getBoolean("ai.rapids.cudf.flaky-tests-enabled"));
         long expectedLeakCount = ColumnVectorCleaner.leakCount.get() + 1;
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, DType.INT32) {};
-        System.gc();
-        long maxTime = System.currentTimeMillis() + 1_000;
+        long maxTime = System.currentTimeMillis() + 10_000;
         long leakNow;
         do {
+            System.gc();
             Thread.sleep(50);
             leakNow = ColumnVectorCleaner.leakCount.get();
         } while(leakNow != expectedLeakCount && System.currentTimeMillis() < maxTime);
