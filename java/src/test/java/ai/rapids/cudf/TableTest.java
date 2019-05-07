@@ -20,6 +20,9 @@ package ai.rapids.cudf;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TableTest {
@@ -178,8 +181,58 @@ public class TableTest {
 
     @Test
     void testReadCSVPrune() {
-        CSVReadArgument arg = CSVReadArgument.createBuilderWithFilePath("./src/test/resources/simple.csv").addColumn(DType.INT32).addColumn(DType.FLOAT64).skipColumn().build();
-        try (Table table = Table.readCSV(arg)) {
+        Schema schema = Schema.builder()
+                .column(DType.INT32, "A")
+                .column(DType.FLOAT64, "B")
+                .column(DType.INT64, "C")
+                .build();
+        CSVOptions opts = CSVOptions.builder()
+                .includeColumn("A")
+                .includeColumn("B")
+                .build();
+        try (Table table = Table.readCSV(schema, opts, new File("./src/test/resources/simple.csv"))) {
+            long rows = table.getRows();
+            assertEquals(10, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(2, len);
+
+            double[] doubleData = new double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,117.0,118.2,119.8};
+            int[] intData = new int[] {0,1,2,3,4,5,6,7,8,9};
+            try (IntColumnVector intOutput = (IntColumnVector) table.getColumn(0);
+                 DoubleColumnVector doubleOutput = (DoubleColumnVector) table.getColumn(1)) {
+                intOutput.toHostBuffer();
+                doubleOutput.toHostBuffer();
+                for (int i = 0; i < rows; i++) {
+                    assertEquals(intData[i], intOutput.get(i));
+                    assertEquals(doubleData[i], doubleOutput.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    void testReadCSVBuffer() {
+        Schema schema = Schema.builder()
+                .column(DType.INT32, "A")
+                .column(DType.FLOAT64, "B")
+                .column(DType.INT64, "C")
+                .build();
+        CSVOptions opts = CSVOptions.builder()
+                .includeColumn("A")
+                .includeColumn("B")
+                .build();
+        byte [] data =
+                ("0,110.0,120\n" +
+                        "1,111.0,121\n" +
+                        "2,112.0,122\n" +
+                        "3,113.0,123\n" +
+                        "4,114.0,124\n" +
+                        "5,115.0,125\n" +
+                        "6,116.0,126\n" +
+                        "7,117.0,127\n" +
+                        "8,118.2,128\n" +
+                        "9,119.8,129").getBytes(StandardCharsets.UTF_8);
+        try (Table table = Table.readCSV(schema, opts, data, data.length)) {
             long rows = table.getRows();
             assertEquals(10, rows);
             int len = table.getNumberOfColumns();
@@ -201,8 +254,12 @@ public class TableTest {
 
     @Test
     void testReadCSV() {
-        CSVReadArgument arg = CSVReadArgument.createBuilderWithFilePath("./src/test/resources/simple.csv").addColumn(DType.INT32).addColumn(DType.FLOAT64).addColumn(DType.INT64).build();
-        try (Table table = Table.readCSV(arg)) {
+        Schema schema = Schema.builder()
+                .column(DType.INT32, "A")
+                .column(DType.FLOAT64, "B")
+                .column(DType.INT64, "C")
+                .build();
+        try (Table table = Table.readCSV(schema, new File("./src/test/resources/simple.csv"))) {
             long rows = table.getRows();
             assertEquals(10, rows);
             int len = table.getNumberOfColumns();

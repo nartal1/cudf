@@ -18,6 +18,8 @@
 
 package ai.rapids.cudf;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -100,9 +102,35 @@ public final class Table implements AutoCloseable {
         return new Table(outputColumnVectors);
     }
 
-    public static Table readCSV(CSVReadArgument csvReadArgument) {
-        CudfColumn[] columns = CudfTable.readCSV(csvReadArgument.getColumnNames(), csvReadArgument.getDTypes(),
-                                        csvReadArgument.getFilterColumnNames(), csvReadArgument.getFilepath());
+    public static Table readCSV(Schema schema, File path) {
+        return readCSV(schema, CSVOptions.DEFAULT, path);
+    }
+
+    public static Table readCSV(Schema schema, CSVOptions opts, File path) {
+        CudfColumn[] columns = CudfTable.readCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                                        opts.getIncludeColumnNames(), path.getAbsolutePath());
+        return new Table(columns);
+    }
+
+    public static Table readCSV(Schema schema, byte[] buffer) {
+        return readCSV(schema, CSVOptions.DEFAULT, buffer, buffer.length);
+    }
+
+    public static Table readCSV(Schema schema, CSVOptions opts, byte[] buffer, long len) {
+        if (len <= 0) {
+            len = buffer.length;
+        }
+        assert len > 0;
+        assert len <= buffer.length;
+        try (HostMemoryBuffer newBuf = HostMemoryBuffer.allocate(len)) {
+            newBuf.setBytes(0, buffer, len);
+            return readCSV(schema, opts, newBuf, len);
+        }
+    }
+
+    static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
+        CudfColumn[] columns = CudfTable.readCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                opts.getIncludeColumnNames(), buffer, len);
         return new Table(columns);
     }
 

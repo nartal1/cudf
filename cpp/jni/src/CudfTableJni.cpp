@@ -130,10 +130,19 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
        jobjectArray colNames,
        jobjectArray dataTypes,
        jobjectArray filterColNames,
-       jstring inputfilepath) {
+       jstring inputfilepath,
+       jlong buffer, jlong bufferLength) {
     JNI_NULL_CHECK(env, colNames, "colNames is null", NULL);
     JNI_NULL_CHECK(env, dataTypes, "dataTypes is null", NULL);
-    JNI_NULL_CHECK(env, inputfilepath, "inputFilePath is null", NULL);
+    bool read_buffer = true;
+    if (buffer == 0) {
+      JNI_NULL_CHECK(env, inputfilepath, "input file or buffer must be supplied", NULL);
+      read_buffer = false;
+    } else if (inputfilepath != NULL) {
+      JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "cannot pass in both a buffer and an inputfilepath", NULL);
+    } else if (bufferLength <= 0) {
+      JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "An empty buffer is not supported", NULL);
+    }
 
     try {
       cudf::native_jstringArray nColNames(env, colNames);
@@ -144,9 +153,13 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       if (dTypeCount != nameCount) {
         JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "dataTypes and colNames should be the same size", NULL);
       }
-      cudf::native_jstring filename(env, inputfilepath);
-      if (strlen(filename.get()) == 0) {
-        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
+
+      std::unique_ptr<cudf::native_jstring> filename;
+      if (!read_buffer) {
+        filename.reset(new cudf::native_jstring(env, inputfilepath));
+        if (strlen(filename->get()) == 0) {
+          JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
+        }
       }
 
       char const** nameParam = nColNames.as_c_array();
@@ -165,11 +178,17 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       csv_read_arg read_arg;
       memset(&read_arg, 0, sizeof(csv_read_arg));
 
-      read_arg.filepath_or_buffer = filename.get();
+      if (read_buffer) {
+        read_arg.filepath_or_buffer = reinterpret_cast<const char *>(buffer);
+        read_arg.input_data_form = HOST_BUFFER;
+        read_arg.buffer_size = bufferLength;
+      } else {
+        read_arg.filepath_or_buffer = filename->get();
 
-      read_arg.input_data_form = FILE_PATH;
-      // don't use buffer, use file path
-      read_arg.buffer_size = 0;
+        read_arg.input_data_form = FILE_PATH;
+        // don't use buffer, use file path
+        read_arg.buffer_size = 0;
+      }
 
       read_arg.windowslinetermination = false;
       read_arg.lineterminator = '\n';
