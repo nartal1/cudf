@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ai.rapids</groupId>
-    <artifactId>cudfjni</artifactId>
+    <artifactId>cudf</artifactId>
     <version>0.7-SNAPSHOT</version>
 
     <name>cudfjni</name>
@@ -45,11 +45,24 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <ai.rapids.refcount.debug>false</ai.rapids.refcount.debug>
+        <native.build.path>${basedir}/../cpp/build</native.build.path>
+        <skipNativeCopy>false</skipNativeCopy>
     </properties>
 
     <build>
+        <resources>
+            <resource>
+                <directory>${basedir}/target/native-deps/</directory>
+            </resource>
+        </resources>
         <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
             <plugins>
+                <plugin>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy-maven-plugin</artifactId>
+                    <version>2.1</version>
+                </plugin>
+
                 <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
@@ -111,6 +124,57 @@
 
         <plugins>
             <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>setproperty</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                            def sout = new StringBuffer(), serr = new StringBuffer()
+                            //This only works on linux
+                            def proc = 'ldd ${native.build.path}/jni/libcudfjni.so'.execute()
+                            proc.consumeProcessOutput(sout, serr)
+                            proc.waitForOrKill(10000)
+                            def librp = ~/librmm\\.so\\s+=>\\s+(.*)librmm.*\\.so\\s+.*/
+                            def m = librp.matcher(sout)
+                            if (m.find()) {
+                                pom.properties['native.deps.path'] = m.group(1)
+                            } else {
+                                fail("Could not find rmm as a dependency of libcudfjni out> $sout err> $serr")
+                            }
+                            def libcudart = ~/libcudart\\.so\\.(.*)\\s+=>.*/
+                            def cm = libcudart.matcher(sout)
+                            if (cm.find()) {
+                                switch(cm.group(1)) {
+                                    case ~/10\\.0.*/:
+                                        pom.properties['cuda.classifier'] = 'cuda10'
+                                        break
+                                    default:
+                                        pom.properties['cuda.classifier'] = ''
+                                        break
+                                }
+                            } else {
+                                fail("Could not find cudart as a dependency of libcudfjni out> $sout err> $serr")
+                            }
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <!--Set by groovy script-->
+                    <classifier>${cuda.classifier}</classifier>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>native-maven-plugin</artifactId>
                 <version>1.0-alpha-8</version>
@@ -137,7 +201,47 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-native-libs</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <overwrite>true</overwrite>
+                            <skip>${skipNativeCopy}</skip>
+                            <outputDirectory>${basedir}/target/native-deps/${os.arch}/${os.name}</outputDirectory>
+                            <resources>
+                                <!--TODO need a good way to strip the RPATH, like what happens on install.-->
+                                <resource>
+                                    <directory>${native.build.path}/jni</directory>
+                                    <includes>
+                                        <include>libcudfjni.so</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${native.build.path}</directory>
+                                    <includes>
+                                        <include>libcudf.so</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <!--Set by groovy script-->
+                                    <directory>${native.deps.path}</directory>
+                                    <includes>
+                                        <include>librmm.so</include>
+                                        <include>libNVCategory.so</include>
+                                        <include>libNVStrings.so</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
-
 </project>

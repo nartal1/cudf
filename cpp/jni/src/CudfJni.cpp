@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_cudf_Cudf.h"
 #include "jni_utils.hpp"
 
 extern "C" {

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_cudf_Rmm.h"
 #include "jni_utils.hpp"
 
 #include <rmm/rmm_api.h>

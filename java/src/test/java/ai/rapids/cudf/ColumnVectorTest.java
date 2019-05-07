@@ -23,12 +23,14 @@ import org.mockito.Mockito;
 
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
 
 public class ColumnVectorTest {
 
     @Test
     void testCudfColumnSize() {
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
 
