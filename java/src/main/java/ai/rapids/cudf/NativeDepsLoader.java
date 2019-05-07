@@ -57,12 +57,12 @@ public class NativeDepsLoader {
     }
 
     private static void loadDep(String os, String arch, String baseName) throws IOException {
-        String path = "/" + arch + "/" + os + "/" + System.mapLibraryName(baseName);
+        String path = arch + "/" + os + "/" + System.mapLibraryName(baseName);
         File loc;
         URL resource = loader.getResource(path);
         if (resource == null) {
             // It looks like we are not running from the jar, or there are issues with the jar
-            File f = new File("./target/native-deps" + path);
+            File f = new File("./target/native-deps/" + path);
             if (!f.exists()) {
                 throw new FileNotFoundException("Could not locate native dependency " + path);
             }
