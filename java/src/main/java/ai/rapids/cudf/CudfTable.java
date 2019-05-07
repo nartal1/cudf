@@ -42,6 +42,14 @@ class CudfTable implements AutoCloseable {
         nativeHandle = createCudfTable(cudfColumnPointers);
     }
 
+    private long[] getColumnNativeHandles() {
+        long[] nativeHandles = new long[cudfColumns.length];
+        for (int i = 0 ; i < nativeHandles.length ; i++) {
+            nativeHandles[i] = cudfColumns[i].getNativeHandle();
+        }
+        return nativeHandles;
+    }
+
     @Override
     public void close() {
         free(nativeHandle);
@@ -97,6 +105,19 @@ class CudfTable implements AutoCloseable {
      */
     private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
                                             String filePath, long address, long length) throws CudfException;
+
+    public static CudfColumn[] leftJoin(CudfTable leftTable, int[] leftJoinIndices, CudfTable rightTable, int[] rightJoinIndices) {
+        long[] resultCols = gdfLeftJoin(leftTable.getColumnNativeHandles(), leftJoinIndices,
+                                                        rightTable.getColumnNativeHandles(), rightJoinIndices);
+        CudfColumn[] cudfColumns = new CudfColumn[resultCols.length];
+        for (int i = 0 ; i < resultCols.length ; i++) {
+            cudfColumns[i] = new CudfColumn(resultCols[i]);
+        }
+        return cudfColumns;
+    }
+
+    private static native long[] gdfLeftJoin(long[] leftCols, int[] leftJoinCols, long[] rightCols,
+                                                                            int[] rightJoinCols) throws CudfException;
 
     @Override
     public String toString() {

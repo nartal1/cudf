@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -53,8 +54,8 @@ public class TableTest {
             sortKeys1.toDeviceBuffer();
             sortKeys2.toDeviceBuffer();
             values.toDeviceBuffer();
-            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values})) {
-                Table sortedTable = table.orderBy(true, Table.asc(0), Table.desc(1));
+            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values});
+                Table sortedTable = table.orderBy(true, Table.asc(0), Table.desc(1))) {
                 assertEquals(sortKeys1.rows, sortedTable.getRows());
                 IntColumnVector sortedKeys1 = (IntColumnVector) sortedTable.getColumn(0);
                 IntColumnVector sortedKeys2 = (IntColumnVector) sortedTable.getColumn(1);
@@ -73,8 +74,8 @@ public class TableTest {
                 }
             }
 
-            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values})) {
-                Table sortedTable = table.orderBy(true, Table.desc(0), Table.desc(1));
+            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values});
+                Table sortedTable = table.orderBy(true, Table.desc(0), Table.desc(1))) {
                 assertEquals(sortKeys1.rows, sortedTable.getRows());
                 IntColumnVector sortedKeys1 = (IntColumnVector) sortedTable.getColumn(0);
                 IntColumnVector sortedKeys2 = (IntColumnVector) sortedTable.getColumn(1);
@@ -274,6 +275,111 @@ public class TableTest {
                     assertEquals(intData[i], intOutput.get(i));
                     assertEquals(doubleData[i], doubleOutput.get(i), 0.1);
                     assertEquals(LongData[i], longOutput.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    void testLeftJoin() {
+        int length = 10;
+        try (IntColumnVector l0 = IntColumnVector.build(length, Range.appendInts(10));
+             IntColumnVector l1 = IntColumnVector.build(length, Range.appendInts(100, 110, 1));
+             IntColumnVector r0 = IntColumnVector.build(length, Range.appendInts(10));
+             IntColumnVector r1 = IntColumnVector.build(length, Range.appendInts(200, 210, 1))) {
+            l0.toDeviceBuffer();
+            l1.toDeviceBuffer();
+            r0.toDeviceBuffer();
+            r1.toDeviceBuffer();
+            try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
+                 Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
+
+                try (Table joinedTable = leftTable.leftJoin(Table.joinOn(0), rightTable, Table.joinOn(0))) {
+                    long rows = joinedTable.getRows();
+                    int cols = joinedTable.getNumberOfColumns();
+                    assertEquals(3, cols);
+                    IntColumnVector out0 = (IntColumnVector) joinedTable.getColumn(0);
+                    IntColumnVector out1 = (IntColumnVector) joinedTable.getColumn(1);
+                    IntColumnVector out2 = (IntColumnVector) joinedTable.getColumn(2);
+                    out0.toHostBuffer();
+                    out1.toHostBuffer();
+                    out2.toHostBuffer();
+
+                    int[] sortedOut0 = new int[(int) rows];
+                    int[] sortedOut1 = new int[(int) rows];
+                    int[] sortedOut2 = new int[(int) rows];
+                    for (int i = 0 ; i < rows ; i++) {
+                        sortedOut0[i] = out0.get(i);
+                        sortedOut1[i] = out1.get(i);
+                        sortedOut2[i] = out2.get(i);
+                    }
+                    Arrays.sort(sortedOut0);
+                    Arrays.sort(sortedOut1);
+                    Arrays.sort(sortedOut2);
+
+                    for (int i = 0; i < rows; i++) {
+                        assertEquals(i + 100, sortedOut0[i]);
+                        assertEquals(i, sortedOut1[i]);
+                        assertEquals(i  + 200, sortedOut2[i]);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void testLeftJoinWithNulls() {
+        int length = 10;
+        try (IntColumnVector l0 = IntColumnVector.build(length, Range.appendInts(10));
+             IntColumnVector l1 = IntColumnVector.build(length, Range.appendInts(100, 110, 1));
+             IntColumnVector r0 = IntColumnVector.build(length, Range.appendInts(5, 15));
+             IntColumnVector r1 = IntColumnVector.build(length, Range.appendInts(200, 210, 1))) {
+            l0.toDeviceBuffer();
+            l1.toDeviceBuffer();
+            r0.toDeviceBuffer();
+            r1.toDeviceBuffer();
+            try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
+                 Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
+
+                try (Table joinedTable = leftTable.leftJoin(Table.joinOn(0), rightTable, Table.joinOn(0))) {
+                    int cols = joinedTable.getNumberOfColumns();
+                    assertEquals(3, cols);
+                    IntColumnVector out0 = (IntColumnVector) joinedTable.getColumn(0);
+                    IntColumnVector out1 = (IntColumnVector) joinedTable.getColumn(1);
+                    IntColumnVector out2 = (IntColumnVector) joinedTable.getColumn(2);
+                    out0.toHostBuffer();
+                    out1.toHostBuffer();
+                    out2.toHostBuffer();
+                    long rows = joinedTable.getRows();
+
+                    int[] sortedOut0 = new int[(int) rows];
+                    int[] sortedOut1 = new int[(int) rows];
+                    int[] sortedOut2 = new int[(int) rows];
+                    for (int i = 0 ; i < rows ; i++) {
+                        sortedOut0[i] = out0.get(i);
+                        sortedOut1[i] = out1.get(i);
+                        if (!out2.isNull(i)) {
+                            sortedOut2[i] = out2.get(i);
+                        } else {
+                            sortedOut2[i] = -1;
+                        }
+                    }
+                    Arrays.sort(sortedOut0);
+                    Arrays.sort(sortedOut1);
+                    Arrays.sort(sortedOut2);
+                    System.out.println(Arrays.toString(sortedOut2));
+                    int nullCount = 0;
+                    for (int i = 0; i < rows; i++) {
+                        assertEquals(i + 100, sortedOut0[i]);
+                        assertEquals(i, sortedOut1[i]);
+                        if (i >= 5) {
+                            assertEquals(i + 195, sortedOut2[i]);
+                        } else {
+                            assertEquals(-1, sortedOut2[i]);
+                            nullCount++;
+                        }
+                    }
+                    assertEquals(5, nullCount);
                 }
             }
         }

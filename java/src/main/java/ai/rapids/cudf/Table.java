@@ -19,8 +19,9 @@
 package ai.rapids.cudf;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Class to represent a collection of ColumnVectors and operations that can be performed on them collectively.
@@ -91,6 +92,23 @@ public final class Table implements AutoCloseable {
         Table outputTable = Table.newOutputTable(this.columnVectors);
         cudfTable.gdfOrderBy(sortKeysIndices, isDescending, outputTable.cudfTable, areNullsSmallest);
         return outputTable;
+    }
+
+    public Table leftJoin(Table.JoinOn leftJoinIndices, Table rightTable, Table.JoinOn rightJoinIndices) {
+        assert leftJoinIndices.indices.size() == rightJoinIndices.indices.size() : "leftJoinIndices and rightJoinIndices should be equal";
+        final int size = leftJoinIndices.indices.size();
+        int[] leftJoinIndicesArray = new int[size];
+        int[] rightJoinIndicesArray = new int[size];
+        for (int i = 0 ; i < leftJoinIndices.indices.size() ; i++) {
+            leftJoinIndicesArray[i] = leftJoinIndices.indices.get(i);
+            rightJoinIndicesArray[i] = rightJoinIndices.indices.get(i);
+            assert leftJoinIndicesArray[i] >= 0 && leftJoinIndicesArray[i] < columnVectors.length :
+                    "left join index is out of range 0 <= " + leftJoinIndicesArray[i] + " < " + columnVectors.length;
+            assert rightJoinIndicesArray[i] >= 0 && rightJoinIndicesArray[i] < columnVectors.length :
+                    "right join index is out of range 0 <= " + rightJoinIndicesArray[i] + " < " + columnVectors.length;
+        }
+        CudfColumn[] columns = CudfTable.leftJoin(this.cudfTable, leftJoinIndicesArray, rightTable.cudfTable, rightJoinIndicesArray);
+        return new Table(columns);
     }
 
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
@@ -171,6 +189,10 @@ public final class Table implements AutoCloseable {
         return new OrderByArg(index, true);
     }
 
+    public static JoinOn joinOn(final int index) {
+        return new JoinOn(index);
+    }
+
     @Override
     public String toString() {
         return "Table{" +
@@ -187,6 +209,19 @@ public final class Table implements AutoCloseable {
         OrderByArg(int index, boolean isDescending) {
             this.index = index;
             this.isDescending = isDescending;
+        }
+    }
+
+    public static final class JoinOn {
+        private final List<Integer> indices;
+
+        JoinOn(final int index) {
+            indices = new ArrayList<Integer>(){{ add(index);}};
+        }
+
+        public JoinOn joinOn(final int index) {
+            indices.add(index);
+            return this;
         }
     }
 }

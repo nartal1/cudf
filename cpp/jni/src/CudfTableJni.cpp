@@ -256,5 +256,56 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
     } CATCH_STD(env, NULL);
 }
 
-};
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfLeftJoin(
+    JNIEnv *env, jclass clazz, jlongArray leftColPtrs,
+    jintArray leftColJoinIndices, jlongArray rightColPtrs,
+    jintArray rightColJoinIndices) {
+  JNI_NULL_CHECK(env, leftColPtrs, "leftColPtrs is null", NULL);
+  JNI_NULL_CHECK(env, leftColJoinIndices, "leftColJoinIndices is null", NULL);
+  JNI_NULL_CHECK(env, rightColPtrs, "rightColPtrs is null", NULL);
+  JNI_NULL_CHECK(env, rightColJoinIndices, "rightColJoinIndices is null", NULL);
 
+  try {
+    cudf::native_jlongArray const nLeftColPtrs(env, leftColPtrs);
+    jsize numLeftColumns = nLeftColPtrs.size();
+
+    cudf::native_jlongArray const nRightColPtrs(env, rightColPtrs);
+    jsize numRightColumns = nRightColPtrs.size();
+
+    std::vector<gdf_column *> left_columns = as_gdf_columns(nLeftColPtrs);
+    std::vector<gdf_column *> right_columns = as_gdf_columns(nRightColPtrs);
+
+    cudf::native_jintArray leftJoinColsArr(env, leftColJoinIndices);
+    cudf::native_jintArray rightJoinColsArr(env, rightColJoinIndices);
+
+    gdf_context context;
+    context.flag_sorted = 0;
+    context.flag_method = GDF_HASH;
+    context.flag_distinct = 0;
+    context.flag_sort_result = 1;
+    context.flag_sort_inplace = 0;
+
+    int resultNumCols =
+        nLeftColPtrs.size() + nRightColPtrs.size() - leftJoinColsArr.size();
+
+    // gdf_left_join is allocating the memory for the results so
+    // allocate the output column structures here when we get it back fill in
+    // the the outPtrs
+    cudf::native_jlongArray outputHandles(env, resultNumCols);
+    std::vector<gdf_column*> output_columns(resultNumCols);
+    for (int i = 0; i < resultNumCols; i++) {
+        output_columns[i] = new gdf_column();
+        outputHandles[i] = reinterpret_cast<jlong>(output_columns[i]);
+    }
+
+    JNI_GDF_TRY(env, NULL, gdf_left_join(
+        left_columns.data(), numLeftColumns, leftJoinColsArr.data(),
+        right_columns.data(), numRightColumns, rightJoinColsArr.data(),
+        leftJoinColsArr.size(), resultNumCols, reinterpret_cast<gdf_column**>(output_columns.data()), nullptr, nullptr,
+        &context));
+
+    return outputHandles.get_jlongArray();
+  }
+  CATCH_STD(env, NULL);
+}
+};
