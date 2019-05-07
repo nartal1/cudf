@@ -24,17 +24,13 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TableTest {
 
-    static {
-        NativeDepsLoader.loadNativeDeps();
-    }
-
     @Test
     void testOrderBy() {
-        System.loadLibrary("cudfjni");
-
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         try (
                 IntColumnVector sortKeys1 = IntColumnVector.build(5, (IntColumnVector.Builder b) ->
                 {
@@ -101,7 +97,7 @@ public class TableTest {
 
     @Test
     void testTableCreationIncreasesRefCount() {
-        NativeDepsLoader.libraryLoaded();
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         //tests the Table increases the refcount on column vectors
         assertThrows(IllegalStateException.class, () -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
@@ -120,7 +116,7 @@ public class TableTest {
 
     @Test
     void testGetColumnIncreasesRefCount() {
-        NativeDepsLoader.libraryLoaded();
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         assertDoesNotThrow(() -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
                  IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
@@ -138,7 +134,7 @@ public class TableTest {
 
     @Test
     void testGetRows() {
-        NativeDepsLoader.libraryLoaded();
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();
@@ -157,7 +153,7 @@ public class TableTest {
 
     @Test
     void testAllRowsSize() {
-        NativeDepsLoader.libraryLoaded();
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         try (IntColumnVector v1 = IntColumnVector.build(4, Range.appendInts(4));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();
@@ -168,7 +164,7 @@ public class TableTest {
 
     @Test
     void testGetNumberOfColumns() {
-        NativeDepsLoader.libraryLoaded();
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();

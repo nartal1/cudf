@@ -19,12 +19,13 @@
 package ai.rapids.cudf;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class Date32ColumnVectorTest {
 
     @Test
     public void getYear() {
-
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,
@@ -46,6 +47,7 @@ public class Date32ColumnVectorTest {
 
     @Test
     public void getMonth() {
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,
@@ -66,6 +68,7 @@ public class Date32ColumnVectorTest {
 
     @Test
     public void getDay() {
+        assumeTrue(NativeDepsLoader.libraryLoaded());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,

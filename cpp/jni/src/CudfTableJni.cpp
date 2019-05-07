@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "ai_rapids_cudf_CudfTable.h"
 #include "jni_utils.hpp"
 #include "types.hpp"
 #include "copying.hpp"
