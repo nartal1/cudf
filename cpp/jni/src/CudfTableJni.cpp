@@ -16,6 +16,7 @@
 
 #include "jni_utils.hpp"
 #include "types.hpp"
+#include "table.hpp"
 #include "copying.hpp"
 #include <cstring>
 
@@ -36,16 +37,12 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfTable_createCudfTable(JNIEnv *en
       std::memcpy(cols.get(), cudfColumnsData, sizeof(gdf_column*) * len);
 
       cudf::table* table = new cudf::table(cols.get(), len);
-      cols.release();
       return reinterpret_cast<jlong>(table);
     } CATCH_STD(env, 0);
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_free(JNIEnv *env, jclass classObject, jlong handle) {
     cudf::table* table = reinterpret_cast<cudf::table*>(handle);
-    if (table != NULL) {
-      delete[] table->begin();
-    }
     delete table;
 }
 
@@ -118,7 +115,19 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
         // construct column view
         cudf::jniCudfCheck(env, gdf_column_view(&intermediateOutput, col_data.get(), nullptr, columns[0]->size, gdf_dtype::GDF_INT32));
 
-        cudf::jniCudfCheck(env, gdf_order_by(columns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, static_cast<int>(jAreNullsSmallest)));
+        gdf_context context;
+        // Most of these are probably ignored, but just to be safe
+        context.flag_sorted = false;
+        context.flag_method = GDF_SORT;
+        context.flag_distinct = 0;
+        context.flag_sort_result = 1;
+        context.flag_sort_inplace = 0;
+        context.flag_groupby_include_nulls = true;
+        // There is also a MULTI COLUMN VERSION, that we may want to support in the future.
+        context.flag_null_sort_behavior = jAreNullsSmallest ? GDF_NULL_AS_SMALLEST : GDF_NULL_AS_LARGEST;
+
+
+        cudf::jniCudfCheck(env, gdf_order_by(columns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, &context));
         
         gather(inputTable, col_data.get(), outputTable);
     } CATCH_STD(env, );
