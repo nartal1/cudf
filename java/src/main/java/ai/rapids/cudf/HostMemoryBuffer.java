@@ -58,6 +58,20 @@ class HostMemoryBuffer extends MemoryBuffer {
     }
 
     /**
+     * Copy a set of bytes from an array into the buffer at offset.
+     * @param offset the offset from the address to start copying to
+     * @param data the data to be copied.
+     */
+    public void setBytes(long offset, byte[] data, long len) {
+        long requestedAddress = this.address + offset;
+        assert len > 0;
+        assert len <= data.length;
+        addressOutOfBoundsCheck(requestedAddress, len, "setBytes");
+        UnsafeMemoryAccessor.copyMemory(data, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET,
+                null, requestedAddress, len);
+    }
+
+    /**
      * Returns the Short value at that offset
      * @param offset - offset from the address
      * @return - value

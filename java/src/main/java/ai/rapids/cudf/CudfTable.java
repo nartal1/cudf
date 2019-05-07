@@ -65,16 +65,38 @@ class CudfTable implements AutoCloseable {
     private static native void gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending, long outputTable,
                                                                         boolean areNullsSmallest) throws CudfException;
 
-    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) {
-        long[] cudfColumnNativeHandles = gdfReadCSV(columnNames, dTypes, filterColumnNames, filePath);
-        CudfColumn[] cudfColumns = new CudfColumn[cudfColumnNativeHandles.length];
-        for (int i = 0 ; i < cudfColumnNativeHandles.length ; i++) {
-            cudfColumns[i] = new CudfColumn(cudfColumnNativeHandles[i]);
+    private static CudfColumn[] columnsArrayFromPointers(long[] pointers) {
+        CudfColumn[] cudfColumns = new CudfColumn[pointers.length];
+        for (int i = 0 ; i < pointers.length ; i++) {
+            cudfColumns[i] = new CudfColumn(pointers[i]);
         }
         return cudfColumns;
     }
 
-    private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) throws CudfException;
+    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) {
+        return columnsArrayFromPointers(gdfReadCSV(columnNames, dTypes, filterColumnNames, filePath, 0, 0));
+    }
+
+    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
+                                HostMemoryBuffer buffer, long len) {
+        assert len > 0;
+        assert len <= buffer.getLength();
+        return columnsArrayFromPointers(gdfReadCSV(columnNames, dTypes, filterColumnNames,
+                null, buffer.getAddress(), len));
+    }
+
+    /**
+     * Ugly long function to read CSV.  This is a long function to avoid the overhead of reaching into a java
+     * object to try and pull out all of the options.  If this becomes unwieldy we can change it.
+     * @param columnNames names of all of the columns, even the ones filtered out
+     * @param dTypes types of all of the columns as strings.  Why strings? who knows.
+     * @param filterColumnNames name of the columns to read, or an empty array if we want to read all of them
+     * @param filePath the path of the file to read, or null if no path should be read.
+     * @param address the address of the buffer to read from or 0 if we should not.
+     * @param length the length of the buffer to read from.
+     */
+    private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
+                                            String filePath, long address, long length) throws CudfException;
 
     @Override
     public String toString() {

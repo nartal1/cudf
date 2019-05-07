@@ -31,7 +31,7 @@ abstract class MemoryBuffer implements AutoCloseable {
      * @param address - location in memory
      * @param length - size of this buffer
      */
-    public MemoryBuffer(long address, long length) {
+    protected MemoryBuffer(long address, long length) {
         this.address = address;
         this.length = length;
     }
@@ -50,6 +50,14 @@ abstract class MemoryBuffer implements AutoCloseable {
                 " 0x" + Long.toHexString(address) + " < 0x" + Long.toHexString(this.address);
         assert (address + size) <= (this.address + length) : "End address is too high for " + type +
                 " 0x" + Long.toHexString(address + size) + " < 0x" + Long.toHexString(this.address + length);
+    }
+
+    /**
+     * Returns the location of the data pointed to by this buffer
+     * @return - data address
+     */
+    final long getAddress() {
+        return address;
     }
 
     /**

@@ -38,14 +38,6 @@ class DeviceMemoryBuffer extends MemoryBuffer {
     }
 
     /**
-     * Returns the location of the data pointed to by this buffer
-     * @return - data address
-     */
-    public final long getAddress() {
-        return address;
-    }
-
-    /**
      * Close this Buffer and free memory allocated
      */
     @Override

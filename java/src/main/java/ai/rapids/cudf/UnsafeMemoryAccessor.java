@@ -31,6 +31,7 @@ class UnsafeMemoryAccessor {
     private static Logger log = LoggerFactory.getLogger(UnsafeMemoryAccessor.class);
 
     private static final sun.misc.Unsafe UNSAFE;
+    public static final long BYTE_ARRAY_OFFSET;
 
     static {
         sun.misc.Unsafe unsafe = null;
@@ -38,6 +39,7 @@ class UnsafeMemoryAccessor {
             Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
             unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+            BYTE_ARRAY_OFFSET = unsafe.arrayBaseOffset(byte[].class);
         } catch (Throwable t) {
             log.error("Failed to get unsafe object, got this error: ", t);
             UNSAFE = null;

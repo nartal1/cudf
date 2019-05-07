@@ -31,6 +31,14 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_free
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy
   (JNIEnv *, jclass, jlong, jlongArray, jbooleanArray, jlong, jboolean);
 
+/*
+ * Class:     ai_rapids_cudf_CudfTable
+ * Method:    gdfReadCSV
+ * Signature: ([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;JJ)[J
+ */
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV
+  (JNIEnv *, jclass, jobjectArray, jobjectArray, jobjectArray, jstring, jlong, jlong);
+
 #ifdef __cplusplus
 }
 #endif
