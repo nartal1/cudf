@@ -23,7 +23,6 @@ public enum DType {
     INT64(8, 4, "int64"),
     FLOAT32(4, 5, "float32"),
     FLOAT64(8, 6, "float64"),
-    // BOOL8(1, 7, "NOT_SUPPORTED"),
     /**
      * Days since the UNIX epoch
      */
@@ -47,5 +46,14 @@ public enum DType {
         this.simpleName = simpleName;
     }
 
-    static final DType[] D_TYPES = DType.values();
+    private static final DType[] D_TYPES = DType.values();
+
+    static DType fromNative(int nativeId) {
+        for (DType type: D_TYPES) {
+            if (type.nativeId == nativeId) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Could not translate " + nativeId + " into a DType");
+    }
 }
