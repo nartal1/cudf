@@ -23,7 +23,7 @@ public enum DType {
     INT64(8, 4, "int64"),
     FLOAT32(4, 5, "float32"),
     FLOAT64(8, 6, "float64"),
-    BOOL8(1, 7, "NOT_SUPPORTED"),
+    // BOOL8(1, 7, "NOT_SUPPORTED"),
     /**
      * Days since the UNIX epoch
      */

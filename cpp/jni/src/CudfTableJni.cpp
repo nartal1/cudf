@@ -115,7 +115,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
         // construct column view
         cudf::jniCudfCheck(env, gdf_column_view(&intermediateOutput, col_data.get(), nullptr, columns[0]->size, gdf_dtype::GDF_INT32));
 
-        gdf_context context;
+        gdf_context context{};
         // Most of these are probably ignored, but just to be safe
         context.flag_sorted = false;
         context.flag_method = GDF_SORT;
