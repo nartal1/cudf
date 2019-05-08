@@ -107,8 +107,8 @@ class CudfTable implements AutoCloseable {
                                             String filePath, long address, long length) throws CudfException;
 
     public static CudfColumn[] leftJoin(CudfTable leftTable, int[] leftJoinIndices, CudfTable rightTable, int[] rightJoinIndices) {
-        long[] resultCols = gdfLeftJoin(leftTable.getColumnNativeHandles(), leftJoinIndices,
-                                                        rightTable.getColumnNativeHandles(), rightJoinIndices);
+        long[] resultCols = gdfLeftJoin(leftTable.nativeHandle, leftJoinIndices,
+                                                        rightTable.nativeHandle, rightJoinIndices);
         CudfColumn[] cudfColumns = new CudfColumn[resultCols.length];
         for (int i = 0 ; i < resultCols.length ; i++) {
             cudfColumns[i] = new CudfColumn(resultCols[i]);
@@ -116,7 +116,7 @@ class CudfTable implements AutoCloseable {
         return cudfColumns;
     }
 
-    private static native long[] gdfLeftJoin(long[] leftCols, int[] leftJoinCols, long[] rightCols,
+    private static native long[] gdfLeftJoin(long leftTable, int[] leftJoinCols, long rightTable,
                                                                             int[] rightJoinCols) throws CudfException;
 
     @Override

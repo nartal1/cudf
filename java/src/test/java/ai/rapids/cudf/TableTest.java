@@ -294,7 +294,7 @@ public class TableTest {
             try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
                  Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
 
-                try (Table joinedTable = leftTable.leftJoin(Table.joinOn(0), rightTable, Table.joinOn(0))) {
+                try (Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(new int[]{0}))) {
                     long rows = joinedTable.getRows();
                     int cols = joinedTable.getNumberOfColumns();
                     assertEquals(3, cols);
@@ -341,7 +341,7 @@ public class TableTest {
             try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
                  Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
 
-                try (Table joinedTable = leftTable.leftJoin(Table.joinOn(0), rightTable, Table.joinOn(0))) {
+                try (Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(0))) {
                     int cols = joinedTable.getNumberOfColumns();
                     assertEquals(3, cols);
                     IntColumnVector out0 = (IntColumnVector) joinedTable.getColumn(0);

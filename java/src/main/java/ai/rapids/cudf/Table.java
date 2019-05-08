@@ -19,9 +19,7 @@
 package ai.rapids.cudf;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Class to represent a collection of ColumnVectors and operations that can be performed on them collectively.
@@ -92,30 +90,6 @@ public final class Table implements AutoCloseable {
         Table outputTable = Table.newOutputTable(this.columnVectors);
         cudfTable.gdfOrderBy(sortKeysIndices, isDescending, outputTable.cudfTable, areNullsSmallest);
         return outputTable;
-    }
-
-    /**
-     * Joins two tables on the join columns that are passed in.
-     * @param leftJoinIndices - Indices of the left table to join on
-     * @param rightTable - Right table to join
-     * @param rightJoinIndices - Indices of the right table to join on
-     * @return Joined table
-     */
-    public Table leftJoin(Table.JoinOn leftJoinIndices, Table rightTable, Table.JoinOn rightJoinIndices) {
-        assert leftJoinIndices.indices.size() == rightJoinIndices.indices.size() : "leftJoinIndices and rightJoinIndices should be equal";
-        final int size = leftJoinIndices.indices.size();
-        int[] leftJoinIndicesArray = new int[size];
-        int[] rightJoinIndicesArray = new int[size];
-        for (int i = 0 ; i < leftJoinIndices.indices.size() ; i++) {
-            leftJoinIndicesArray[i] = leftJoinIndices.indices.get(i);
-            rightJoinIndicesArray[i] = rightJoinIndices.indices.get(i);
-            assert leftJoinIndicesArray[i] >= 0 && leftJoinIndicesArray[i] < columnVectors.length :
-                    "left join index is out of range 0 <= " + leftJoinIndicesArray[i] + " < " + columnVectors.length;
-            assert rightJoinIndicesArray[i] >= 0 && rightJoinIndicesArray[i] < columnVectors.length :
-                    "right join index is out of range 0 <= " + rightJoinIndicesArray[i] + " < " + columnVectors.length;
-        }
-        CudfColumn[] columns = CudfTable.leftJoin(this.cudfTable, leftJoinIndicesArray, rightTable.cudfTable, rightJoinIndicesArray);
-        return new Table(columns);
     }
 
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
@@ -196,8 +170,15 @@ public final class Table implements AutoCloseable {
         return new OrderByArg(index, true);
     }
 
-    public static JoinOn joinOn(final int index) {
-        return new JoinOn(index);
+    public JoinColumns joinColumns(int... indices) {
+        assert indices.length <= columnVectors.length : "join indices longer than columns";
+        int[] leftJoinIndicesArray = new int[indices.length];
+        for (int i = 0 ; i < indices.length ; i++) {
+            leftJoinIndicesArray[i] = indices[i];
+            assert leftJoinIndicesArray[i] >= 0 && leftJoinIndicesArray[i] < columnVectors.length :
+                    "join index is out of range 0 <= " + leftJoinIndicesArray[i] + " < " + columnVectors.length;
+        }
+        return new JoinColumns(this, leftJoinIndicesArray);
     }
 
     @Override
@@ -219,16 +200,27 @@ public final class Table implements AutoCloseable {
         }
     }
 
-    public static final class JoinOn {
-        private final List<Integer> indices;
+    public static final class JoinColumns {
+        private final int[] indices;
+        private final Table table;
 
-        JoinOn(final int index) {
-            indices = new ArrayList<Integer>(){{ add(index);}};
+        JoinColumns(final Table table, final int... indices) {
+            this.indices = indices;
+            this.table = table;
         }
 
-        public JoinOn joinOn(final int index) {
-            indices.add(index);
-            return this;
+        /**
+         * Joins two tables on the join columns that are passed in.
+         * Usage:
+         *      Table t1 ...
+         *      Table t2 ...
+         *      Table result = t1.joinColumns(0,1).leftJoin(t2.joinColumns(2,3));
+         * @param rightJoinIndices - Indices of the right table to join on
+         * @return Joined {@link Table}
+         */
+        public Table leftJoin(JoinColumns rightJoinIndices) {
+            CudfColumn[] columns = CudfTable.leftJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
+            return new Table(columns);
         }
     }
 }
