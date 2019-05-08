@@ -26,15 +26,15 @@ public enum DType {
     /**
      * Days since the UNIX epoch
      */
-    DATE32(4, 7, "date32"),
+    DATE32(4, 8, "date32"),
     /**
      * ms since the UNIX epoch
      */
-    DATE64(8, 8, "date64"),
+    DATE64(8, 9, "date64"),
     /**
      * Exact timestamp encoded with int64 since the UNIX epoch (Default unit ms)
      */
-    TIMESTAMP(8, 9, "timestamp");
+    TIMESTAMP(8, 10, "timestamp");
 
     final int sizeInBytes;
     final int nativeId;
@@ -46,5 +46,14 @@ public enum DType {
         this.simpleName = simpleName;
     }
 
-    static final DType[] D_TYPES = DType.values();
+    private static final DType[] D_TYPES = DType.values();
+
+    static DType fromNative(int nativeId) {
+        for (DType type: D_TYPES) {
+            if (type.nativeId == nativeId) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Could not translate " + nativeId + " into a DType");
+    }
 }

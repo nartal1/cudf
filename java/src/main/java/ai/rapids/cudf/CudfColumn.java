@@ -114,7 +114,7 @@ class CudfColumn implements AutoCloseable {
 
     public DType getDtype() {
         if (type == null) {
-            type = DType.D_TYPES[getDtype(nativeHandle)];
+            type = DType.fromNative(getDtype(nativeHandle));
         }
         return type;
     }
