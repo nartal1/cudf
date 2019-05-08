@@ -33,6 +33,10 @@ public final class Date64ColumnVector extends ColumnVector {
         super(data, validity, rows, DType.DATE64);
     }
 
+    protected Date64ColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+    }
+
     /**
      * Get the value at index.
      */
@@ -41,6 +45,19 @@ public final class Date64ColumnVector extends ColumnVector {
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
         return offHeap.hostData.data.getLong(index * DType.DATE64.sizeInBytes);
+    }
+
+    /**
+     * This is a factory method to create a vector on the GPU with the intention that the
+     * caller will populate it.
+     */
+    static Date64ColumnVector newOutputVector(long rows, boolean hasValidityVector) {
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.DATE64.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidityVector) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
+        }
+        return new Date64ColumnVector(data, valid, rows);
     }
 
     /**
