@@ -98,6 +98,14 @@ namespace cudf {
        checkJavaException(env);
      }
 
+     native_jlongArray(JNIEnv* const env, int len) :
+         env(env),
+         orig(env->NewLongArray(len)),
+         len(len),
+         data_ptr(NULL) {
+       checkJavaException(env);
+     }
+
      native_jlongArray(JNIEnv * const env, jlong * arr, int len) :
          env(env),
          orig(env->NewLongArray(len)),
