@@ -42,14 +42,6 @@ class CudfTable implements AutoCloseable {
         nativeHandle = createCudfTable(cudfColumnPointers);
     }
 
-    private long[] getColumnNativeHandles() {
-        long[] nativeHandles = new long[cudfColumns.length];
-        for (int i = 0 ; i < nativeHandles.length ; i++) {
-            nativeHandles[i] = cudfColumns[i].getNativeHandle();
-        }
-        return nativeHandles;
-    }
-
     @Override
     public void close() {
         free(nativeHandle);

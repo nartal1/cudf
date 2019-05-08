@@ -171,14 +171,13 @@ public final class Table implements AutoCloseable {
     }
 
     public JoinColumns joinColumns(int... indices) {
-        assert indices.length <= columnVectors.length : "join indices longer than columns";
-        int[] leftJoinIndicesArray = new int[indices.length];
+        int[] joinIndicesArray = new int[indices.length];
         for (int i = 0 ; i < indices.length ; i++) {
-            leftJoinIndicesArray[i] = indices[i];
-            assert leftJoinIndicesArray[i] >= 0 && leftJoinIndicesArray[i] < columnVectors.length :
-                    "join index is out of range 0 <= " + leftJoinIndicesArray[i] + " < " + columnVectors.length;
+            joinIndicesArray[i] = indices[i];
+            assert joinIndicesArray[i] >= 0 && joinIndicesArray[i] < columnVectors.length :
+                    "join index is out of range 0 <= " + joinIndicesArray[i] + " < " + columnVectors.length;
         }
-        return new JoinColumns(this, leftJoinIndicesArray);
+        return new JoinColumns(this, joinIndicesArray);
     }
 
     @Override
