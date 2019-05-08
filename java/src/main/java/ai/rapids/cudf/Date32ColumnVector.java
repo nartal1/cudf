@@ -159,7 +159,7 @@ public final class Date32ColumnVector extends ColumnVector {
         /**
          * Build the immutable @LongColumnVector. The rows of the vector will be equal to the appended values i.e. If a
          * larger buffer was allocated then the extra space will not be considered as part of the rows.
-         * @return  - The LongColumnVector based on this builder values
+         * @return  - The Date32ColumnVector based on this builder values
          */
         public final Date32ColumnVector build() {
             //do the magic
@@ -170,7 +170,7 @@ public final class Date32ColumnVector extends ColumnVector {
         /**
          * Append this vector to the end of this vector
          * @param date32ColumnVector - Vector to be added
-         * @return  - The LongColumnVector based on this builder values
+         * @return  - The Builder
          */
         public final Builder append(Date32ColumnVector date32ColumnVector) {
             builder.append(date32ColumnVector);
@@ -185,7 +185,6 @@ public final class Date32ColumnVector extends ColumnVector {
          */
         public final Builder append(int value, long count) {
             assert (count + builder.currentIndex) <= builder.rows;
-            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 builder.appendInt(value);
             }
@@ -195,7 +194,7 @@ public final class Date32ColumnVector extends ColumnVector {
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - Date32ColumnVector
+         * @return - this for chaining
          * @throws - {@link IndexOutOfBoundsException}
          */
         public final Builder append(int value) throws IndexOutOfBoundsException {

@@ -165,7 +165,7 @@ public final class FloatColumnVector extends ColumnVector {
         /**
          * Append this vector to the end of this vector
          * @param floatColumnVector - Vector to be added
-         * @return  - The FloatColumnVector based on this builder values
+         * @return  - The Builder
          */
         public final Builder append(FloatColumnVector floatColumnVector) {
             builder.append(floatColumnVector);
@@ -180,7 +180,6 @@ public final class FloatColumnVector extends ColumnVector {
          */
         public final Builder append(float value, long count) {
             assert (count + builder.currentIndex) <= builder.rows;
-            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 builder.appendFloat(value);
             }
@@ -190,7 +189,7 @@ public final class FloatColumnVector extends ColumnVector {
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - FloatColumnVector
+         * @return - this for chaining
          * @throws - {@link IndexOutOfBoundsException}
          */
         public final Builder append(float value) throws IndexOutOfBoundsException {

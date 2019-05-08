@@ -230,7 +230,6 @@ public final class TimestampColumnVector extends ColumnVector {
          */
         public final Builder append(long value, long count) {
             assert (count + builder.currentIndex) <= builder.rows;
-            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 builder.appendLong(value);
             }
