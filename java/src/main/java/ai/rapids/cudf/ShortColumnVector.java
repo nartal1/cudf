@@ -53,7 +53,7 @@ public final class ShortColumnVector extends ColumnVector {
      * nullCount will be set lazily in cases when both given vectors (v1 and v2) have a validity vector
      * @param v1 - vector 1
      * @param v2 - vector 2
-     * @return LongColumnVector big enough to store the result
+     * @return ShortColumnVector big enough to store the result
      */
     static ShortColumnVector newOutputVector(ShortColumnVector v1, ShortColumnVector v2) {
         assert v1.rows == v2.rows;
@@ -145,7 +145,7 @@ public final class ShortColumnVector extends ColumnVector {
         /**
          * Append this vector to the end of this vector
          * @param shortColumnVector - Vector to be added
-         * @return  - The ShortColumnVector based on this builder values
+         * @return  - The Builder
          */
         public final Builder append(ShortColumnVector shortColumnVector) {
             builder.append(shortColumnVector);
@@ -160,7 +160,6 @@ public final class ShortColumnVector extends ColumnVector {
          */
         public final Builder append(short value, long count) {
             assert (count + builder.currentIndex) <= builder.rows;
-            // If we are going to do this a lot we need a good way to memset more than a repeating byte.
             for (long i = 0; i < count; i++) {
                 builder.appendShort(value);
             }
