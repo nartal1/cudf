@@ -127,11 +127,18 @@ public abstract class ColumnVector implements AutoCloseable {
             case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
+	    case INT8:
+		columnVector = ByteColumnVector.newOutputVector(rows, hasValidity);
+		break;
             case DATE32:
+		columnVector = Date32ColumnVector.newOutputVector(rows, hasValidity);
+		break;
             case DATE64:
-            case INT8:
+		columnVector = Date64ColumnVector.newOutputVector(rows, hasValidity);
+		break;
             case TIMESTAMP:
-                throw new UnsupportedOperationException();
+		columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
+		break;
             case INVALID:
             default:
                 throw new IllegalArgumentException("Invalid type: " + type);
@@ -161,9 +168,14 @@ public abstract class ColumnVector implements AutoCloseable {
                 columnVector = new Date32ColumnVector(cudfColumn);
                 break;
             case DATE64:
+		columnVector = new Date64ColumnVector(cudfColumn);
+		break;
             case INT8:
+		columnVector = new IntColumnVector(cudfColumn);
+		break;
             case TIMESTAMP:
-                throw new UnsupportedOperationException();
+		columnVector = new TimestampColumnVector(cudfColumn);
+		break;
             case INVALID:
             default:
                 throw new IllegalArgumentException("Invalid type: " + cudfColumn.getDtype());

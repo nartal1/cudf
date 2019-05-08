@@ -33,6 +33,10 @@ public final class TimestampColumnVector extends ColumnVector {
         super(data, validity, rows, DType.TIMESTAMP);
     }
 
+    protected TimestampColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+    }
+
     /**
      * Get the value at index.
      */
@@ -41,6 +45,19 @@ public final class TimestampColumnVector extends ColumnVector {
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
         return offHeap.hostData.data.getLong(index * DType.TIMESTAMP.sizeInBytes);
+    }
+
+    /**
+     * This is a factory method to create a vector on the GPU with the intention that the
+     * caller will populate it.
+     */
+    static TimestampColumnVector newOutputVector(long rows, boolean hasValidityVector) {
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.TIMESTAMP.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidityVector) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
+        }
+        return new TimestampColumnVector(data, valid, rows);
     }
 
     /**

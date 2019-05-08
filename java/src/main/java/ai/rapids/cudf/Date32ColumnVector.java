@@ -48,6 +48,19 @@ public final class Date32ColumnVector extends ColumnVector {
     }
 
     /**
+     * This is a factory method to create a vector on the GPU with the intention that the
+     * caller will populate it.
+     */
+    static Date32ColumnVector newOutputVector(long rows, boolean hasValidityVector) {
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * DType.DATE32.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidityVector) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
+        }
+        return new Date32ColumnVector(data, valid, rows);
+    }
+
+    /**
      * Get year from Date32
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
