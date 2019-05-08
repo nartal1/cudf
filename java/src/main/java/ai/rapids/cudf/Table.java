@@ -94,6 +94,13 @@ public final class Table implements AutoCloseable {
         return outputTable;
     }
 
+    /**
+     * Joins two tables on the join columns that are passed in.
+     * @param leftJoinIndices - Indices of the left table to join on
+     * @param rightTable - Right table to join
+     * @param rightJoinIndices - Indices of the right table to join on
+     * @return Joined table
+     */
     public Table leftJoin(Table.JoinOn leftJoinIndices, Table rightTable, Table.JoinOn rightJoinIndices) {
         assert leftJoinIndices.indices.size() == rightJoinIndices.indices.size() : "leftJoinIndices and rightJoinIndices should be equal";
         final int size = leftJoinIndices.indices.size();
