@@ -53,8 +53,8 @@ public class TableTest {
             sortKeys1.toDeviceBuffer();
             sortKeys2.toDeviceBuffer();
             values.toDeviceBuffer();
-            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values});
-                Table sortedTable = table.orderBy(true, Table.asc(0), Table.desc(1))) {
+            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values})) {
+                Table sortedTable = table.orderBy(true, Table.asc(0), Table.desc(1));
                 assertEquals(sortKeys1.rows, sortedTable.getRows());
                 IntColumnVector sortedKeys1 = (IntColumnVector) sortedTable.getColumn(0);
                 IntColumnVector sortedKeys2 = (IntColumnVector) sortedTable.getColumn(1);
@@ -73,8 +73,8 @@ public class TableTest {
                 }
             }
 
-            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values});
-                Table sortedTable = table.orderBy(true, Table.desc(0), Table.desc(1))) {
+            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values})) {
+                Table sortedTable = table.orderBy(true, Table.desc(0), Table.desc(1));
                 assertEquals(sortKeys1.rows, sortedTable.getRows());
                 IntColumnVector sortedKeys1 = (IntColumnVector) sortedTable.getColumn(0);
                 IntColumnVector sortedKeys2 = (IntColumnVector) sortedTable.getColumn(1);
@@ -274,92 +274,6 @@ public class TableTest {
                     assertEquals(intData[i], intOutput.get(i));
                     assertEquals(doubleData[i], doubleOutput.get(i), 0.1);
                     assertEquals(LongData[i], longOutput.get(i));
-                }
-            }
-        }
-    }
-
-    @Test
-    void testLeftJoin() {
-        int length = 10;
-        try (IntColumnVector l0 = IntColumnVector.build(length, (b)->b.append(360).append(326).append(254).append(306)
-                                                                    .append(109).append(361).append(251).append(335)
-                                                                    .append(301).append(317));
-             IntColumnVector l1 = IntColumnVector.build(length, (b) -> b.append(323).append(172).append(11).append(243)
-                                                                    .append(57).append(143).append(305).append(95)
-                                                                    .append(147).append(58));
-             IntColumnVector r0 = IntColumnVector.build(length, (b)-> b.append(306).append(301).append(360).append(109)
-                                                                    .append(335).append(254).append(317).append(361)
-                                                                    .append(251).append(326));
-             IntColumnVector r1 = IntColumnVector.build(length, (b)-> b.append(84).append(257).append(80).append(93)
-                                                                    .append(231).append(193).append(22).append(12)
-                                                                    .append(186).append(184))) {
-            l0.toDeviceBuffer();
-            l1.toDeviceBuffer();
-            r0.toDeviceBuffer();
-            r1.toDeviceBuffer();
-            try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
-                 Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
-
-                try (Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(new int[]{0}));
-                     Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1))) {
-                    long rows = orderedJoinedTable.getRows();
-                    int cols = orderedJoinedTable.getNumberOfColumns();
-                    assertEquals(3, cols);
-                    IntColumnVector out0 = (IntColumnVector) orderedJoinedTable.getColumn(0);
-                    IntColumnVector out1 = (IntColumnVector) orderedJoinedTable.getColumn(1);
-                    IntColumnVector out2 = (IntColumnVector) orderedJoinedTable.getColumn(2);
-                    out0.toHostBuffer();
-                    out1.toHostBuffer();
-                    out2.toHostBuffer();
-
-                    int[] expectedOut0 = new int[]{57,305,11,147,243,58,172,95,323,143};
-                    int[] expectedOut1 = new int[]{109,251,254,301,306,317,326,335,360,361};
-                    int[] expectedOut2 = new int[]{93,186,193,257,84,22,184,231,80,12};
-                    for (int i = 0; i < rows; i++) {
-                        assertEquals(expectedOut0[i], out0.get(i));
-                        assertEquals(expectedOut1[i], out1.get(i));
-                        assertEquals(expectedOut2[i], out2.get(i));
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
-    void testLeftJoinWithNulls() {
-        int length = 10;
-        try (IntColumnVector l0 = IntColumnVector.build(length, (b)-> b.append(2).append(3).append(9).append(0).append(1)
-                                                                    .append(7).append(4).append(6).append(5).append(8));
-             IntColumnVector l1 = IntColumnVector.build(length, (b)-> b.append(102).append(103).append(19).append(100).append(101)
-                                                                    .append(4).append(104).append(1).append(3).append(1));
-             IntColumnVector r0 = IntColumnVector.build(length, (b)-> b.append(6).append(5).append(9).append(8).append(10).append(32));
-             IntColumnVector r1 = IntColumnVector.build(length, (b)-> b.append(199).append(211).append(321).append(1233).append(33).append(392))) {
-            l0.toDeviceBuffer();
-            l1.toDeviceBuffer();
-            r0.toDeviceBuffer();
-            r1.toDeviceBuffer();
-            try (Table leftTable = new Table(new ColumnVector[]{l0, l1});
-                 Table rightTable = new Table(new ColumnVector[]{r0, r1})) {
-
-                try (Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(0));
-                    Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1))) {
-                    int cols = orderedJoinedTable.getNumberOfColumns();
-                    assertEquals(3, cols);
-                    IntColumnVector out0 = (IntColumnVector) orderedJoinedTable.getColumn(0);
-                    IntColumnVector out1 = (IntColumnVector) orderedJoinedTable.getColumn(1);
-                    IntColumnVector out2 = (IntColumnVector) orderedJoinedTable.getColumn(2);
-                    out0.toHostBuffer();
-                    out1.toHostBuffer();
-                    out2.toHostBuffer();
-                    long rows = orderedJoinedTable.getRows();
-                    int[] expectedOut0 = new int[]{100, 101, 102, 103, 104, 3, 1, 4, 1, 19};
-                    int[] expectedOut2 = new int[]{0,0,0,0,0, 211, 199, 0, 1233, 321};
-                    for (int i = 0; i < rows; i++) {
-                        assertEquals(expectedOut0[i], out0.get(i));
-                        assertEquals(i, out1.get(i));
-                        assertEquals(expectedOut2[i], out2.get(i));
-                    }
                 }
             }
         }
