@@ -106,8 +106,7 @@ public final class Table implements AutoCloseable {
     }
 
     public static Table readCSV(Schema schema, CSVOptions opts, File path) {
-        CudfColumn[] columns = CudfTable.readCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
-                                        opts.getIncludeColumnNames(), path.getAbsolutePath());
+        CudfColumn[] columns = CudfTable.readCSV(schema, opts, path.getAbsolutePath());
         return new Table(columns);
     }
 
@@ -128,8 +127,7 @@ public final class Table implements AutoCloseable {
     }
 
     static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
-        CudfColumn[] columns = CudfTable.readCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
-                opts.getIncludeColumnNames(), buffer, len);
+        CudfColumn[] columns = CudfTable.readCSV(schema, opts, buffer, len);
         return new Table(columns);
     }
 
