@@ -161,7 +161,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testAdd() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (LongColumnVector longColumnVector1 = LongColumnVector.build(4, Range.appendLongs(1,5));
              LongColumnVector longColumnVector2 = LongColumnVector.build(4, Range.appendLongs(10,  50, 10))) {
 

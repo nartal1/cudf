@@ -160,7 +160,7 @@ public class FloatColumnVectorTest {
 
     @Test
     public void testAdd() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (FloatColumnVector floatColumnVector1 = FloatColumnVector.build(5, Range.appendFloats((float)1.1,(float)5.5));
              FloatColumnVector floatColumnVector2 = FloatColumnVector.build(5, Range.appendFloats(10,  60, 10))) {
 

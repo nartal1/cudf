@@ -24,7 +24,6 @@ import org.mockito.Mockito;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.spy;
 
 public class ByteColumnVectorTest {

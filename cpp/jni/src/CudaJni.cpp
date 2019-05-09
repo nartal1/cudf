@@ -47,4 +47,11 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cuda_memcpy
     JNI_CUDA_TRY(env, , cudaMemcpy((void *) dst, (const void *) src, count, (cudaMemcpyKind) kind));
 }
 
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_Cuda_getDevice
+        (JNIEnv *env, jclass) {
+    jint dev;
+    JNI_CUDA_TRY(env, -2, cudaGetDevice(&dev));
+    return dev;
+}
+
 }

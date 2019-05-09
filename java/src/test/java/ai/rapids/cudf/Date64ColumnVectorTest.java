@@ -25,7 +25,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getYear() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L,   //'1965-10-26 14:01:12.762'
                             1530705600000L,   //'2018-07-04 12:00:00.000'
@@ -48,7 +48,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getMonth() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L, 1530705600000L, 1674631932929L};
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(3,
@@ -69,7 +69,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getDay() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L, 1530705600000L, 1674631932929L};
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(3,
@@ -90,7 +90,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getHour() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L, 1530705600000L, 1674631932929L};
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(3,
@@ -111,7 +111,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getMinute() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L, 1530705600000L, 1674631932929L};
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(3,
@@ -132,7 +132,7 @@ public class Date64ColumnVectorTest {
 
     @Test
     public void getSecond() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 3;
         final long[] val = {-131968727238L, 1530705600000L, 1674631932929L};
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(3,

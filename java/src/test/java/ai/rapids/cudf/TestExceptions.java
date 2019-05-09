@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assumptions.*;
 public class TestExceptions {
     @Test
     public void testCudaCausedRmmException() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try {
             Rmm.free(100, 0);
             fail("An exception should have been thrown!!!");
@@ -37,7 +37,7 @@ public class TestExceptions {
     // and even when we clear it device synchronize brings it back again.
 //    @Test
 //    public void testCudaCausedCudfException() {
-//        assumeTrue(NativeDepsLoader.libraryLoaded());
+//        assumeTrue(Cuda.isEnvCompatibleForTesting());
 //        try (CudfColumn badRHS = new CudfColumn(100, 0, 5, DType.INT32);
 //             CudfColumn badLHS = new CudfColumn(200, 0, 5, DType.INT32);
 //             CudfColumn badOutput = new CudfColumn(300, 0, 5, DType.INT32)) {
