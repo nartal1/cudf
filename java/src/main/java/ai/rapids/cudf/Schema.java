@@ -26,18 +26,34 @@ import java.util.List;
  * The schema of data to be read in.
  */
 public class Schema {
+    public static final Schema INFERRED = new Schema();
     private final List<String> names;
     private final List<String> types;
+
     private Schema(List<String> names, List<String> types) {
         this.names = new ArrayList<>(names);
         this.types = new ArrayList<>(types);
     }
 
+    /**
+     * Inferred schema.
+     */
+    private Schema() {
+        names = null;
+        types = null;
+    }
+
     public String[] getColumnNames() {
+        if (names == null) {
+            return null;
+        }
         return names.toArray(new String[names.size()]);
     }
 
     String[] getTypesAsStrings() {
+        if (types == null) {
+            return null;
+        }
         return types.toArray(new String[types.size()]);
     }
 

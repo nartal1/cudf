@@ -212,6 +212,47 @@ public class TableTest {
     }
 
     @Test
+    void testReadCSVBufferInferred() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        CSVOptions opts = CSVOptions.builder()
+                .includeColumn("A")
+                .includeColumn("B")
+                .hasHeader()
+                .withComment('#')
+                .build();
+        byte [] data = ("A,B,C\n" +
+                "0,110.0,120'\n" +
+                "#0.5,1.0,200\n" +
+                "1,111.0,121\n" +
+                "2,112.0,122\n" +
+                "3,113.0,123\n" +
+                "4,114.0,124\n" +
+                "5,115.0,125\n" +
+                "6,116.0,126\n" +
+                "7,117.0,127\n" +
+                "8,118.2,128\n" +
+                "9,119.8,129").getBytes(StandardCharsets.UTF_8);
+        try (Table table = Table.readCSV(Schema.INFERRED, opts, data, data.length)) {
+            long rows = table.getRows();
+            assertEquals(10, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(2, len);
+
+            double[] doubleData = new double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,117.0,118.2,119.8};
+            int[] intData = new int[] {0,1,2,3,4,5,6,7,8,9};
+            try (LongColumnVector intOutput = (LongColumnVector) table.getColumn(0);
+                 DoubleColumnVector doubleOutput = (DoubleColumnVector) table.getColumn(1)) {
+                intOutput.toHostBuffer();
+                doubleOutput.toHostBuffer();
+                for (int i = 0; i < rows; i++) {
+                    assertEquals(intData[i], intOutput.get(i));
+                    assertEquals(doubleData[i], doubleOutput.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
     void testReadCSVBuffer() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         Schema schema = Schema.builder()
@@ -222,25 +263,29 @@ public class TableTest {
         CSVOptions opts = CSVOptions.builder()
                 .includeColumn("A")
                 .includeColumn("B")
+                .hasHeader()
+                .withDelim('|')
+                .withQuote('\'')
+                .withNullValue("NULL")
                 .build();
-        byte [] data =
-                ("0,110.0,120\n" +
-                        "1,111.0,121\n" +
-                        "2,112.0,122\n" +
-                        "3,113.0,123\n" +
-                        "4,114.0,124\n" +
-                        "5,115.0,125\n" +
-                        "6,116.0,126\n" +
-                        "7,117.0,127\n" +
-                        "8,118.2,128\n" +
-                        "9,119.8,129").getBytes(StandardCharsets.UTF_8);
+        byte [] data = ("A|B|C\n" +
+                "'0'|'110.0'|'120'\n" +
+                "1|111.0|121\n" +
+                "2|112.0|122\n" +
+                "3|113.0|123\n" +
+                "4|114.0|124\n" +
+                "5|115.0|125\n" +
+                "6|116.0|126\n" +
+                "7|NULL|127\n" +
+                "8|118.2|128\n" +
+                "9|119.8|129").getBytes(StandardCharsets.UTF_8);
         try (Table table = Table.readCSV(schema, opts, data, data.length)) {
             long rows = table.getRows();
             assertEquals(10, rows);
             int len = table.getNumberOfColumns();
             assertEquals(2, len);
 
-            double[] doubleData = new double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,117.0,118.2,119.8};
+            Double[] doubleData = new Double[] {110.0,111.0,112.0,113.0,114.0,115.0,116.0,null,118.2,119.8};
             int[] intData = new int[] {0,1,2,3,4,5,6,7,8,9};
             try (IntColumnVector intOutput = (IntColumnVector) table.getColumn(0);
                  DoubleColumnVector doubleOutput = (DoubleColumnVector) table.getColumn(1)) {
@@ -248,7 +293,11 @@ public class TableTest {
                 doubleOutput.toHostBuffer();
                 for (int i = 0; i < rows; i++) {
                     assertEquals(intData[i], intOutput.get(i));
-                    assertEquals(doubleData[i], doubleOutput.get(i));
+                    if (doubleData[i] == null) {
+                        assertTrue(doubleOutput.isNull(i));
+                    } else {
+                        assertEquals(doubleData[i], doubleOutput.get(i));
+                    }
                 }
             }
         }
@@ -288,6 +337,7 @@ public class TableTest {
 
     @Test
     void testReadParquet() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         ParquetOptions opts = ParquetOptions.builder()
                 .includeColumn("loan_id")
                 .includeColumn("zip")
@@ -309,6 +359,7 @@ public class TableTest {
 
     @Test
     void testReadParquetBuffer() throws IOException {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         ParquetOptions opts = ParquetOptions.builder()
                 .includeColumn("loan_id")
                 .includeColumn("coborrow_credit_score")
@@ -336,6 +387,7 @@ public class TableTest {
 
     @Test
     void testReadParquetFull() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Table table = Table.readParquet(TEST_PARQUET_FILE)) {
             long rows = table.getRows();
             assertEquals(1000, rows);

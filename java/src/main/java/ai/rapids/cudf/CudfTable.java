@@ -74,16 +74,31 @@ class CudfTable implements AutoCloseable {
         return cudfColumns;
     }
 
-    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames, String filePath) {
-        return columnsArrayFromPointers(gdfReadCSV(columnNames, dTypes, filterColumnNames, filePath, 0, 0));
+
+    static CudfColumn[] readCSV(Schema schema, CSVOptions opts, String filePath) {
+        return columnsArrayFromPointers(
+                gdfReadCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                        opts.getIncludeColumnNames(), filePath,
+                        0, 0,
+                        opts.getHeaderRow(),
+                        opts.getDelim(),
+                        opts.getQuote(),
+                        opts.getComment(),
+                        opts.getNullValues()));
     }
 
-    static CudfColumn[] readCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
-                                HostMemoryBuffer buffer, long len) {
+    static CudfColumn[] readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
         assert len > 0;
         assert len <= buffer.getLength();
-        return columnsArrayFromPointers(gdfReadCSV(columnNames, dTypes, filterColumnNames,
-                null, buffer.getAddress(), len));
+        return columnsArrayFromPointers(
+                gdfReadCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                        opts.getIncludeColumnNames(), null,
+                        buffer.getAddress(), len,
+                        opts.getHeaderRow(),
+                        opts.getDelim(),
+                        opts.getQuote(),
+                        opts.getComment(),
+                        opts.getNullValues()));
     }
 
     /**
@@ -95,9 +110,16 @@ class CudfTable implements AutoCloseable {
      * @param filePath the path of the file to read, or null if no path should be read.
      * @param address the address of the buffer to read from or 0 if we should not.
      * @param length the length of the buffer to read from.
+     * @param headerRow the 0 based index row of the header can be -1
+     * @param delim character deliminator (must be ASCII).
+     * @param quote character quote (must be ASCII).
+     * @param comment character that starts a comment line (must be ASCII) use '\0'
+     * @param nullValues values that should be treated as nulls
      */
     private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
-                                            String filePath, long address, long length) throws CudfException;
+                                            String filePath, long address, long length,
+                                            int headerRow, byte delim, byte quote,
+                                            byte comment, String[] nullValues) throws CudfException;
 
     static CudfColumn[] readParquet(ParquetOptions opts, File path) {
         return columnsArrayFromPointers(gdfReadParquet(opts.getIncludeColumnNames(),
