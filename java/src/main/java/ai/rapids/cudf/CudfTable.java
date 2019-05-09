@@ -141,6 +141,19 @@ class CudfTable implements AutoCloseable {
     private static native long[] gdfReadParquet(String[] filterColumnNames,
                                             String filePath, long address, long length) throws CudfException;
 
+    public static CudfColumn[] leftJoin(CudfTable leftTable, int[] leftJoinIndices, CudfTable rightTable, int[] rightJoinIndices) {
+        long[] resultCols = gdfLeftJoin(leftTable.nativeHandle, leftJoinIndices,
+                                                        rightTable.nativeHandle, rightJoinIndices);
+        CudfColumn[] cudfColumns = new CudfColumn[resultCols.length];
+        for (int i = 0 ; i < resultCols.length ; i++) {
+            cudfColumns[i] = new CudfColumn(resultCols[i]);
+        }
+        return cudfColumns;
+    }
+
+    private static native long[] gdfLeftJoin(long leftTable, int[] leftJoinCols, long rightTable,
+                                                                            int[] rightJoinCols) throws CudfException;
+
     @Override
     public String toString() {
         return "CudfTable{" +
