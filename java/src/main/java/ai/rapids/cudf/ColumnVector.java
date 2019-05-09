@@ -346,13 +346,14 @@ public abstract class ColumnVector implements AutoCloseable {
      * exact same version of libcudf as this is released for.
      */
     public final long getNativeCudfColumnAddress() {
-        return offHeap.cudfColumn.getNativeHandle();
+        return getCudfColumn().getNativeHandle();
     }
 
     protected final CudfColumn getCudfColumn() {
         if (offHeap.cudfColumn == null) {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
+            checkDeviceData();
             offHeap.cudfColumn = new CudfColumn(offHeap.deviceData.data.getAddress(),
                     (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress()),
                     (int)rows,

@@ -46,6 +46,22 @@ public class ColumnVectorTest {
     }
 
     @Test
+    void testCudfColumnFromHostVector() {
+        HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class);
+        try (ColumnVector v = new ColumnVector(mockDataBuffer, null, 10, DType.INT32, 0) {}) {
+            assertThrows(IllegalStateException.class, () -> v.getCudfColumn());
+        }
+    }
+
+    @Test
+    void testGetNativeAddressFromHostVector() {
+        HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class);
+        try (ColumnVector v = new ColumnVector(mockDataBuffer, null, 10, DType.INT32, 0) {}) {
+            assertThrows(IllegalStateException.class, () -> v.getNativeCudfColumnAddress());
+        }
+    }
+
+    @Test
     void testRefCount() {
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
