@@ -163,7 +163,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testAdd() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector intColumnVector1 = IntColumnVector.build(4, Range.appendInts(1, 5));
              IntColumnVector intColumnVector2 = IntColumnVector.build(4, Range.appendInts(10, 50, 10))) {
 

@@ -19,7 +19,6 @@
 package ai.rapids.cudf;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**

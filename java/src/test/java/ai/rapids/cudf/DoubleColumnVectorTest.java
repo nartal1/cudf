@@ -160,7 +160,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testAdd() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (DoubleColumnVector doubleColumnVector1 = DoubleColumnVector.build(5, Range.appendDoubles(1.1,5.5));
              DoubleColumnVector doubleColumnVector2 = DoubleColumnVector.build(5, Range.appendDoubles(10,  60, 10))) {
 

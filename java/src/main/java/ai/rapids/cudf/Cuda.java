@@ -15,10 +15,14 @@
  */
 package ai.rapids.cudf;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Cuda {
     static {
         NativeDepsLoader.loadNativeDeps();
     }
+    private static final Logger log = LoggerFactory.getLogger(Cuda.class);
 
     // Defined in driver_types.h in cuda library.
     static final int CPU_DEVICE_ID = -1;
@@ -43,4 +47,37 @@ public class Cuda {
     }
 
     private static native void memcpy(long dst, long src, long count, int kind) throws CudaException;
+
+    /**
+     * Get the id of the current device.
+     * @return the id of the current device
+     * @throws CudaException on any error
+     */
+    public static native int getDevice() throws CudaException;
+
+
+    private static Boolean isCompat = null;
+    /**
+     * This should only be used for tests, to enable or disable tests if the current environment
+     * is not compatible with this version of the library.  Currently it only does some very
+     * basic checks, but these may be expanded in the future depending on needs.
+     * @return true if it is compatible else false.
+     */
+    public static synchronized boolean isEnvCompatibleForTesting() {
+        if (isCompat == null) {
+            if (NativeDepsLoader.libraryLoaded()) {
+                try {
+                    int device = getDevice();
+                    if (device >= 0) {
+                        isCompat = true;
+                        return isCompat;
+                    }
+                } catch (Throwable e) {
+                    log.error("Error trying to detect device", e);
+                }
+            }
+            isCompat = false;
+        }
+        return isCompat;
+    }
 }

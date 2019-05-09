@@ -30,7 +30,7 @@ public class TableTest {
 
     @Test
     void testOrderBy() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (
                 IntColumnVector sortKeys1 = IntColumnVector.build(5, (IntColumnVector.Builder b) ->
                 {
@@ -97,7 +97,7 @@ public class TableTest {
 
     @Test
     void testTableCreationIncreasesRefCount() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         //tests the Table increases the refcount on column vectors
         assertThrows(IllegalStateException.class, () -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
@@ -116,7 +116,7 @@ public class TableTest {
 
     @Test
     void testGetColumnIncreasesRefCount() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         assertDoesNotThrow(() -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
                  IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
@@ -134,7 +134,7 @@ public class TableTest {
 
     @Test
     void testGetRows() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();
@@ -153,7 +153,7 @@ public class TableTest {
 
     @Test
     void testAllRowsSize() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(4, Range.appendInts(4));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();
@@ -164,7 +164,7 @@ public class TableTest {
 
     @Test
     void testGetNumberOfColumns() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
             v1.toDeviceBuffer();
@@ -177,6 +177,7 @@ public class TableTest {
 
     @Test
     void testReadCSVPrune() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         Schema schema = Schema.builder()
                 .column(DType.INT32, "A")
                 .column(DType.FLOAT64, "B")
@@ -208,6 +209,7 @@ public class TableTest {
 
     @Test
     void testReadCSVBuffer() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         Schema schema = Schema.builder()
                 .column(DType.INT32, "A")
                 .column(DType.FLOAT64, "B")
@@ -250,6 +252,7 @@ public class TableTest {
 
     @Test
     void testReadCSV() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         Schema schema = Schema.builder()
                 .column(DType.INT32, "A")
                 .column(DType.FLOAT64, "B")

@@ -25,7 +25,7 @@ public class Date32ColumnVectorTest {
 
     @Test
     public void getYear() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,
@@ -47,7 +47,7 @@ public class Date32ColumnVectorTest {
 
     @Test
     public void getMonth() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,
@@ -68,7 +68,7 @@ public class Date32ColumnVectorTest {
 
     @Test
     public void getDay() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         int length = 5;
         final int val=17897; //Jan 01, 2019
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(5,

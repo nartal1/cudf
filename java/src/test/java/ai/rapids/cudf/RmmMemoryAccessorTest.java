@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class RmmMemoryAccessorTest {
     @Test
     public void allocate() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         long address = Rmm.alloc(10, 0);
         try {
             assertNotEquals(0, address);

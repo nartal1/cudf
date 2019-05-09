@@ -62,7 +62,7 @@ public class HostMemoryBufferTest {
 
     @Test
     public void testCopyFromDeviceBuffer() {
-        assumeTrue(NativeDepsLoader.libraryLoaded());
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (HostMemoryBuffer init = HostMemoryBuffer.allocate(16);
              DeviceMemoryBuffer tmp = DeviceMemoryBuffer.allocate(16);
              HostMemoryBuffer to = HostMemoryBuffer.allocate(16)) {
