@@ -33,6 +33,11 @@ public final class ByteColumnVector extends ColumnVector {
         super(data, validity, rows, DType.INT8);
     }
 
+    protected ByteColumnVector(CudfColumn cudfColumn) {
+        super(cudfColumn);
+        assert cudfColumn.getDtype() == DType.INT8;
+    }
+
     /**
      * Get the value at index.
      */

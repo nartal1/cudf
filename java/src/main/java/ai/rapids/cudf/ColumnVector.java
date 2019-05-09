@@ -171,7 +171,7 @@ public abstract class ColumnVector implements AutoCloseable {
 		columnVector = new Date64ColumnVector(cudfColumn);
 		break;
             case INT8:
-		columnVector = new IntColumnVector(cudfColumn);
+		columnVector = new ByteColumnVector(cudfColumn);
 		break;
             case TIMESTAMP:
 		columnVector = new TimestampColumnVector(cudfColumn);
