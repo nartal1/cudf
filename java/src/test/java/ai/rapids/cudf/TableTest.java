@@ -21,12 +21,16 @@ package ai.rapids.cudf;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TableTest {
+    private static final File TEST_PARQUET_FILE = new File("src/test/resources/acq.parquet");
 
     @Test
     void testOrderBy() {
@@ -274,6 +278,99 @@ public class TableTest {
                     assertEquals(intData[i], intOutput.get(i));
                     assertEquals(doubleData[i], doubleOutput.get(i), 0.1);
                     assertEquals(LongData[i], longOutput.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    void testReadParquet() {
+        ParquetOptions opts = ParquetOptions.builder()
+                .includeColumn("loan_id")
+                .includeColumn("zip")
+                .includeColumn("num_units")
+                .build();
+        try (Table table = Table.readParquet(opts, TEST_PARQUET_FILE)) {
+            long rows = table.getRows();
+            assertEquals(1000, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(3, len);
+
+            try (LongColumnVector loadId = (LongColumnVector) table.getColumn(0);
+                 IntColumnVector zip = (IntColumnVector)table.getColumn(1);
+                 IntColumnVector numUnits = (IntColumnVector)table.getColumn(2)) {
+                // Empty
+            }
+        }
+    }
+
+    @Test
+    void testReadParquetBuffer() throws IOException {
+        ParquetOptions opts = ParquetOptions.builder()
+                .includeColumn("loan_id")
+                .includeColumn("coborrow_credit_score")
+                .includeColumn("borrower_credit_score")
+                .build();
+
+        byte [] buffer = new byte[(int)TEST_PARQUET_FILE.length() + 1024];
+        int bufferLen = 0;
+        try (FileInputStream in = new FileInputStream(TEST_PARQUET_FILE)) {
+            bufferLen = in.read(buffer);
+        }
+        try (Table table = Table.readParquet(opts, buffer, bufferLen)) {
+            long rows = table.getRows();
+            assertEquals(1000, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(3, len);
+
+            try (LongColumnVector loadId = (LongColumnVector) table.getColumn(0);
+                 DoubleColumnVector cocs = (DoubleColumnVector)table.getColumn(1);
+                 DoubleColumnVector bcs = (DoubleColumnVector)table.getColumn(2)) {
+                // Empty
+            }
+        }
+    }
+
+    @Test
+    void testReadParquetFull() {
+        try (Table table = Table.readParquet(TEST_PARQUET_FILE)) {
+            long rows = table.getRows();
+            assertEquals(1000, rows);
+            int len = table.getNumberOfColumns();
+            assertEquals(26, len);
+
+            DType [] expectedTypes = new DType[] {
+                    DType.INT64, // loan_id
+                    DType.INT32, // orig_channel
+                    DType.FLOAT64, // orig_interest_rate
+                    DType.INT32, // orig_upb
+                    DType.INT32, // orig_loan_term
+                    DType.DATE32, // orig_date
+                    DType.DATE32, // first_pay_date
+                    DType.FLOAT64, // orig_ltv
+                    DType.FLOAT64, // orig_cltv
+                    DType.FLOAT64, // num_borrowers
+                    DType.FLOAT64, // dti
+                    DType.FLOAT64, // borrower_credit_score
+                    DType.INT32, // first_home_buyer
+                    DType.INT32, // loan_purpose
+                    DType.INT32, // property_type
+                    DType.INT32, // num_units
+                    DType.INT32, // occupancy_status
+                    DType.INT32, // property_state
+                    DType.INT32, // zip
+                    DType.FLOAT64, // mortgage_insurance_percent
+                    DType.INT32, // product_type
+                    DType.FLOAT64, // coborrow_credit_score
+                    DType.FLOAT64, // mortgage_insurance_type
+                    DType.INT32, // relocation_mortgage_indicator
+                    DType.INT32, // quarter
+                    DType.INT32 // seller_id
+            };
+
+            for (int i = 0; i < len; i++) {
+                try (ColumnVector vec = table.getColumn(i)) {
+                    assertEquals(expectedTypes[i], vec.getType(), "Types don't match at " + i);
                 }
             }
         }

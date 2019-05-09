@@ -134,6 +134,40 @@ public final class Table implements AutoCloseable {
         return new Table(columns);
     }
 
+    public static Table readParquet(File path) {
+        return readParquet(ParquetOptions.DEFAULT, path);
+    }
+
+    public static Table readParquet(ParquetOptions opts, File path) {
+        CudfColumn[] columns = CudfTable.readParquet(opts, path);
+        return new Table(columns);
+    }
+
+    public static Table readParquet(byte[] buffer) {
+        return readParquet(ParquetOptions.DEFAULT, buffer, buffer.length);
+    }
+
+    public static Table readParquet(ParquetOptions opts, byte[] buffer) {
+        return readParquet(opts, buffer, buffer.length);
+    }
+
+    public static Table readParquet(ParquetOptions opts, byte[] buffer, long len) {
+        if (len <= 0) {
+            len = buffer.length;
+        }
+        assert len > 0;
+        assert len <= buffer.length;
+        try (HostMemoryBuffer newBuf = HostMemoryBuffer.allocate(len)) {
+            newBuf.setBytes(0, buffer, len);
+            return readParquet(opts, newBuf, len);
+        }
+    }
+
+    static Table readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
+        CudfColumn[] columns = CudfTable.readParquet(opts, buffer, len);
+        return new Table(columns);
+    }
+
     /**
      * Return the {@link ColumnVector} at the specified index. The caller is responsible to close it once done to free
      * resources
