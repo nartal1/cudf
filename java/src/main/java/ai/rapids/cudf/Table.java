@@ -89,6 +89,11 @@ public final class Table implements AutoCloseable {
             isDescending[i] = args[i].isDescending;}
         Table outputTable = Table.newOutputTable(this.columnVectors);
         cudfTable.gdfOrderBy(sortKeysIndices, isDescending, outputTable.cudfTable, areNullsSmallest);
+        // We allocated the ColumnVectors in Java before the output was calculated therefore
+        // we have to update them from native values
+        for (ColumnVector columnVector : outputTable.columnVectors ) {
+            columnVector.updateFromNative();
+        }
         return outputTable;
     }
 
