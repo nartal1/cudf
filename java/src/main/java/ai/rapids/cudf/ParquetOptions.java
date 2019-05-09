@@ -19,13 +19,13 @@
 package ai.rapids.cudf;
 
 /**
- * Options for reading a CSV file
+ * Options for reading a parquet file
  */
-public class CSVOptions extends ColumnFilterOptions {
+public class ParquetOptions extends ColumnFilterOptions {
 
-    public static CSVOptions DEFAULT = new CSVOptions(new Builder());
+    public static ParquetOptions DEFAULT = new ParquetOptions(new Builder());
 
-    private CSVOptions(Builder builder) {
+    private ParquetOptions(Builder builder) {
         super(builder);
     }
 
@@ -34,8 +34,8 @@ public class CSVOptions extends ColumnFilterOptions {
     }
 
     public static class Builder extends ColumnFilterOptions.Builder<Builder> {
-        public CSVOptions build() {
-            return new CSVOptions(this);
+        public ParquetOptions build() {
+            return new ParquetOptions(this);
         }
     }
 }

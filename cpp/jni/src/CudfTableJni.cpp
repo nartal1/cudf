@@ -265,5 +265,71 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
     } CATCH_STD(env, NULL);
 }
 
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv* env,
+       jclass jClassObject,
+       jobjectArray filterColNames,
+       jstring inputfilepath,
+       jlong buffer, jlong bufferLength) {
+    bool read_buffer = true;
+    if (buffer == 0) {
+      JNI_NULL_CHECK(env, inputfilepath, "input file or buffer must be supplied", NULL);
+      read_buffer = false;
+    } else if (inputfilepath != NULL) {
+      JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "cannot pass in both a buffer and an inputfilepath", NULL);
+    } else if (bufferLength <= 0) {
+      JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "An empty buffer is not supported", NULL);
+    }
+
+    try {
+      std::unique_ptr<cudf::native_jstring> filename;
+      if (!read_buffer) {
+        filename.reset(new cudf::native_jstring(env, inputfilepath));
+        if (strlen(filename->get()) == 0) {
+          JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
+        }
+      }
+
+      int numfiltercols = 0;
+      char const** filteredNames = NULL;
+      std::unique_ptr<cudf::native_jstringArray> nFilterColNames;
+
+      if (filterColNames != NULL) {
+        nFilterColNames.reset(new cudf::native_jstringArray(env, filterColNames));
+        numfiltercols = nFilterColNames->size();
+        filteredNames = nFilterColNames->as_c_array();
+      }
+
+      pq_read_arg read_arg{};
+
+      if (read_buffer) {
+        read_arg.source = reinterpret_cast<const char *>(buffer);
+        read_arg.source_type = HOST_BUFFER;
+        read_arg.buffer_size = bufferLength;
+      } else {
+        read_arg.source = filename->get();
+        read_arg.source_type = FILE_PATH;
+        // don't use buffer, use file path
+        read_arg.buffer_size = 0;
+      }
+
+      read_arg.use_cols = filteredNames;
+      read_arg.use_cols_len = numfiltercols; 
+
+      read_arg.row_group = -1;
+      read_arg.skip_rows = 0;
+      read_arg.num_rows = -1;
+      read_arg.strings_to_categorical = false;
+
+      gdf_error gdfStatus = read_parquet(&read_arg);
+      JNI_GDF_TRY(env, NULL, gdfStatus);
+
+      cudf::native_jlongArray nativeHandles(env,
+              reinterpret_cast<jlong*>(read_arg.data),
+              read_arg.num_cols_out);
+      return nativeHandles.get_jlongArray();
+    } CATCH_STD(env, NULL);
+}
+
+
 };
 

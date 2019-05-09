@@ -18,6 +18,7 @@
 
 package ai.rapids.cudf;
 
+import java.io.File;
 import java.util.Arrays;
 
 /**
@@ -96,6 +97,26 @@ class CudfTable implements AutoCloseable {
      * @param length the length of the buffer to read from.
      */
     private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
+                                            String filePath, long address, long length) throws CudfException;
+
+    static CudfColumn[] readParquet(ParquetOptions opts, File path) {
+        return columnsArrayFromPointers(gdfReadParquet(opts.getIncludeColumnNames(),
+                path.getAbsolutePath(), 0, 0));
+    }
+
+    static CudfColumn[] readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
+        return columnsArrayFromPointers(gdfReadParquet(opts.getIncludeColumnNames(),
+                null, buffer.getAddress(), len));
+    }
+
+    /**
+     * Read in Parquet formatted data.
+     * @param filterColumnNames name of the columns to read, or an empty array if we want to read all of them
+     * @param filePath the path of the file to read, or null if no path should be read.
+     * @param address the address of the buffer to read from or 0 if we should not.
+     * @param length the length of the buffer to read from.
+     */
+    private static native long[] gdfReadParquet(String[] filterColumnNames,
                                             String filePath, long address, long length) throws CudfException;
 
     @Override
