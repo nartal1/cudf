@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
@@ -93,6 +92,61 @@ public class TableTest {
                 for (int i = 0 ; i < sortedKeys2.rows; i++) {
                     assertEquals(expectedSortedKeys1[i], sortedKeys1.get(i));
                     assertEquals(expectedSortedKeys2[i], sortedKeys2.get(i));
+                    assertEquals(expectedValues[i], sortedValues.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    void testOrderByWithNulls() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (
+                IntColumnVector sortKeys1 = IntColumnVector.build(5, (IntColumnVector.Builder b) ->
+                {
+                    b.append(5);
+                    b.appendNull();
+                    b.append(3);
+                    b.append(1);
+                    b.append(1);
+                });
+                IntColumnVector sortKeys2 = IntColumnVector.build(5, (IntColumnVector.Builder b) ->
+                {
+                    b.append(5);
+                    b.append(3);
+                    b.append(4);
+                    b.appendNull();
+                    b.appendNull();
+                });
+                IntColumnVector values = IntColumnVector.build(5, Range.appendInts(1, 10, 2))
+        ) {
+            sortKeys1.toDeviceBuffer();
+            sortKeys2.toDeviceBuffer();
+            values.toDeviceBuffer();
+            try (Table table = new Table(new ColumnVector[]{sortKeys1, sortKeys2, values})) {
+                Table sortedTable = table.orderBy(false, Table.asc(0), Table.desc(1));
+                assertEquals(sortKeys1.rows, sortedTable.getRows());
+                IntColumnVector sortedKeys1 = (IntColumnVector) sortedTable.getColumn(0);
+                IntColumnVector sortedKeys2 = (IntColumnVector) sortedTable.getColumn(1);
+                IntColumnVector sortedValues = (IntColumnVector) sortedTable.getColumn(2);
+                assertEquals(sortedKeys2.rows, sortedValues.getRows());
+                sortedKeys2.toHostBuffer();
+                sortedValues.toHostBuffer();
+                sortedKeys1.toHostBuffer();
+                int[] expectedSortedKeys1 = {1, 1, 3, 5, 0};
+                int[] expectedSortedKeys2 = {0, 0, 4, 5, 3};
+                int[] expectedValues = {7,9,5,1,3};
+                for (int i = 0 ; i < sortedKeys2.rows; i++) {
+                    if (expectedSortedKeys1[i] == 0) {
+                        assertTrue(sortedKeys1.isNull(i));
+                    } else {
+                        assertEquals(expectedSortedKeys1[i], sortedKeys1.get(i));
+                    }
+                    if (expectedSortedKeys2[i] == 0) {
+                        assertTrue(sortedKeys2.isNull(i));
+                    } else {
+                        assertEquals(expectedSortedKeys2[i], sortedKeys2.get(i));
+                    }
                     assertEquals(expectedValues[i], sortedValues.get(i));
                 }
             }
