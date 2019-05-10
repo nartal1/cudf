@@ -207,6 +207,16 @@ public final class Table implements AutoCloseable {
         return new OrderByArg(index, true);
     }
 
+    public JoinColumns joinColumns(int... indices) {
+        int[] joinIndicesArray = new int[indices.length];
+        for (int i = 0 ; i < indices.length ; i++) {
+            joinIndicesArray[i] = indices[i];
+            assert joinIndicesArray[i] >= 0 && joinIndicesArray[i] < columnVectors.length :
+                    "join index is out of range 0 <= " + joinIndicesArray[i] + " < " + columnVectors.length;
+        }
+        return new JoinColumns(this, joinIndicesArray);
+    }
+
     @Override
     public String toString() {
         return "Table{" +
@@ -223,6 +233,30 @@ public final class Table implements AutoCloseable {
         OrderByArg(int index, boolean isDescending) {
             this.index = index;
             this.isDescending = isDescending;
+        }
+    }
+
+    public static final class JoinColumns {
+        private final int[] indices;
+        private final Table table;
+
+        JoinColumns(final Table table, final int... indices) {
+            this.indices = indices;
+            this.table = table;
+        }
+
+        /**
+         * Joins two tables on the join columns that are passed in.
+         * Usage:
+         *      Table t1 ...
+         *      Table t2 ...
+         *      Table result = t1.joinColumns(0,1).leftJoin(t2.joinColumns(2,3));
+         * @param rightJoinIndices - Indices of the right table to join on
+         * @return Joined {@link Table}
+         */
+        public Table leftJoin(JoinColumns rightJoinIndices) {
+            CudfColumn[] columns = CudfTable.leftJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
+            return new Table(columns);
         }
     }
 }
