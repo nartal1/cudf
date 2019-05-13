@@ -40,8 +40,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(3,
-                (b) -> b.append(2).append(3).append(5))) {
+        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
             assertEquals(intColumnVector.get(0), 2);
             assertEquals(intColumnVector.get(1), 3);
@@ -51,8 +50,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(3,
-                (b) -> b.append(2).append(3).append(5))) {
+        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
             assertThrows(AssertionError.class, () -> intColumnVector.get(3));
             assertFalse(intColumnVector.hasNulls());
         }
@@ -60,8 +58,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(3,
-                (b) -> b.append(2).append(3).append(5))) {
+        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> intColumnVector.get(-1));
         }
@@ -69,25 +66,21 @@ public class IntColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(72,
-                (b) -> {
-                    for (int i = 0; i < 70; i += 2) {
-                        b.append(2).append(5);
-                    }
-                    b.append(2).appendNull();
-                })) {
-            for (int i = 0; i < 71; i++) {
-                assertFalse(intColumnVector.isNull(i));
+        try (IntColumnVector cv = IntColumnVector.buildBoxed(2,3,4,5,6,7,null,null)) {
+            assertTrue(cv.hasNulls());
+            assertEquals(2, cv.getNullCount());
+            for (int i = 0; i < 6; i++) {
+                assertFalse(cv.isNull(i));
             }
-            assertTrue(intColumnVector.isNull(71));
-            assertTrue(intColumnVector.hasNulls());
+            assertTrue(cv.isNull(6));
+            assertTrue(cv.isNull(7));
         }
     }
 
     @Test
     public void testOverrunningTheBuffer() {
         try (IntColumnVector.Builder builder = IntColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append(2).appendNull().append(5).append(4).build());
+            assertThrows(AssertionError.class, () -> builder.append(2).appendNull().appendArray(5, 4).build());
         }
     }
 
@@ -154,7 +147,7 @@ public class IntColumnVectorTest {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 4));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
             try (IntColumnVector.Builder builder = IntColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.append(2).append(3).append(5).appendNull();
+                builder.appendArray(2, 3, 5).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

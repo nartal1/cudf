@@ -32,6 +32,11 @@ class UnsafeMemoryAccessor {
 
     private static final sun.misc.Unsafe UNSAFE;
     public static final long BYTE_ARRAY_OFFSET;
+    public static final long SHORT_ARRAY_OFFSET;
+    public static final long INT_ARRAY_OFFSET;
+    public static final long LONG_ARRAY_OFFSET;
+    public static final long FLOAT_ARRAY_OFFSET;
+    public static final long DOUBLE_ARRAY_OFFSET;
 
     static {
         sun.misc.Unsafe unsafe = null;
@@ -40,6 +45,11 @@ class UnsafeMemoryAccessor {
             unsafeField.setAccessible(true);
             unsafe = (sun.misc.Unsafe) unsafeField.get(null);
             BYTE_ARRAY_OFFSET = unsafe.arrayBaseOffset(byte[].class);
+            SHORT_ARRAY_OFFSET = unsafe.arrayBaseOffset(short[].class);
+            INT_ARRAY_OFFSET = unsafe.arrayBaseOffset(int[].class);
+            LONG_ARRAY_OFFSET = unsafe.arrayBaseOffset(long[].class);
+            FLOAT_ARRAY_OFFSET = unsafe.arrayBaseOffset(float[].class);
+            DOUBLE_ARRAY_OFFSET = unsafe.arrayBaseOffset(double[].class);
         } catch (Throwable t) {
             log.error("Failed to get unsafe object, got this error: ", t);
             UNSAFE = null;
@@ -47,7 +57,6 @@ class UnsafeMemoryAccessor {
         }
         UNSAFE = unsafe;
     }
-
 
     /**
      * Allocate bytes on host
@@ -59,6 +68,25 @@ class UnsafeMemoryAccessor {
     }
 
     /**
+     * Free memory at that location
+     * @param address - memory location
+     */
+    public static void free(long address) {
+        UNSAFE.freeMemory(address);
+    }
+
+    /**
+     * Sets the values at this address repeatedly
+     * @param address - memory location
+     * @param size - number of bytes to set
+     * @param value - value to be set
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setMemory(long address, long size, byte value) {
+        UNSAFE.setMemory(address, size, value);
+    }
+
+    /**
      * Sets the Byte value at that address
      * @param address - memory address
      * @param value - value to be set
@@ -66,6 +94,18 @@ class UnsafeMemoryAccessor {
      */
     public static void setByte(long address, byte value) {
         UNSAFE.putByte(address, value);
+    }
+
+    /**
+     * Sets an array of bytes.
+     * @param address - memory address
+     * @param values to be set
+     * @param len the number of bytes to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setBytes(long address, byte [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET,
+                null, address, len);
     }
 
     /**
@@ -89,17 +129,6 @@ class UnsafeMemoryAccessor {
     }
 
     /**
-     * Sets the values at this address repeatedly
-     * @param address - memory location
-     * @param size - number of bytes to set
-     * @param value - value to be set
-     * @throws IndexOutOfBoundsException
-     */
-    public static void setMemory(long address, long size, byte value) {
-        UNSAFE.setMemory(address, size, value);
-    }
-
-    /**
      * Sets the Integer value at that address
      * @param address - memory address
      * @param value - value to be set
@@ -110,11 +139,15 @@ class UnsafeMemoryAccessor {
     }
 
     /**
-     * Free memory at that location
-     * @param address - memory location
+     * Sets an array of ints.
+     * @param address memory address
+     * @param values to be set
+     * @param len the number of ints to copy
+     * @throws IndexOutOfBoundsException
      */
-    public static void free(long address) {
-        UNSAFE.freeMemory(address);
+    public static void setInts(long address, int [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.INT_ARRAY_OFFSET,
+                null, address, len * 4);
     }
 
     /**
@@ -125,6 +158,18 @@ class UnsafeMemoryAccessor {
      */
     public static void setLong(long address, long value) {
         UNSAFE.putLong(address, value);
+    }
+
+    /**
+     * Sets an array of longs.
+     * @param address memory address
+     * @param values to be set
+     * @param len the number of longs to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setLongs(long address, long [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.LONG_ARRAY_OFFSET,
+                null, address, len * 8);
     }
 
     /**
@@ -158,6 +203,18 @@ class UnsafeMemoryAccessor {
     }
 
     /**
+     * Sets an array of shorts.
+     * @param address memory address
+     * @param values to be set
+     * @param len the number of shorts to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setShorts(long address, short [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.SHORT_ARRAY_OFFSET,
+                null, address, len * 2);
+    }
+
+    /**
      * Sets the Double value at that address
      * @param address - memory address
      * @param value - value to be set
@@ -165,6 +222,18 @@ class UnsafeMemoryAccessor {
      */
     public static void setDouble(long address, double value) {
         UNSAFE.putDouble(address, value);
+    }
+
+    /**
+     * Sets an array of doubles.
+     * @param address memory address
+     * @param values to be set
+     * @param len the number of doubles to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setDoubles(long address, double [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.DOUBLE_ARRAY_OFFSET,
+                null, address, len * 8);
     }
 
     /**
@@ -198,18 +267,25 @@ class UnsafeMemoryAccessor {
     }
 
     /**
+     * Sets an array of floats.
+     * @param address memory address
+     * @param values to be set
+     * @param len the number of floats to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void setFloats(long address, float [] values, long len) {
+        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.FLOAT_ARRAY_OFFSET,
+                null, address, len * 4);
+    }
+
+    /**
      * Limits the number of bytes to copy per {@link sun.misc.Unsafe#copyMemory(long, long, long)} to
      * allow safepoint polling during a large copy.
      */
     private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
     /**
-     * Copy memory from one address to the other
-     * @param src
-     * @param srcOffset
-     * @param dst
-     * @param dstOffset
-     * @param length
+     * Copy memory from one address to the other.
      */
     public static void copyMemory(Object src, long srcOffset, Object dst, long dstOffset, long length) {
         // Check if dstOffset is before or after srcOffset to determine if we should copy

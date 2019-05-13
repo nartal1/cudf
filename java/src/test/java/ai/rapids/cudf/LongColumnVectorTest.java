@@ -38,8 +38,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(3,
-                (b) -> b.append(2).append(3).append(5))) {
+        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
             assertFalse(longColumnVector.hasNulls());
             assertEquals(longColumnVector.get(0), 2);
             assertEquals(longColumnVector.get(1), 3);
@@ -49,8 +48,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(3,
-                (b) -> b.append(2).append(3).append((5)))) {
+        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
             assertThrows(AssertionError.class, () -> longColumnVector.get(3));
             assertFalse(longColumnVector.hasNulls());
         }
@@ -58,8 +56,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(3,
-                (b) -> b.append(2).append(3).append(5))) {
+        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
             assertFalse(longColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> longColumnVector.get(-1));
         }
@@ -67,18 +64,14 @@ public class LongColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(72,
-                (b) -> {
-                    for (int i = 0; i < 70; i += 2) {
-                        b.append(2).append(5);
-                    }
-                    b.append(2).appendNull();
-                })) {
-            for (int i = 0; i < 71; i++) {
-                assertFalse(longColumnVector.isNull(i));
+        try (LongColumnVector cv = LongColumnVector.buildBoxed(2L,3L,4L,5L,6L,7L, null,null)) {
+            assertTrue(cv.hasNulls());
+            assertEquals(2, cv.getNullCount());
+            for (int i = 0; i < 6; i++) {
+                assertFalse(cv.isNull(i));
             }
-            assertTrue(longColumnVector.isNull(71));
-            assertTrue(longColumnVector.hasNulls());
+            assertTrue(cv.isNull(6));
+            assertTrue(cv.isNull(7));
         }
     }
 
@@ -152,7 +145,7 @@ public class LongColumnVectorTest {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
             try (LongColumnVector.Builder builder = LongColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.append(2).append(3).append(5).appendNull();
+                builder.appendArray(2, 3, 5).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

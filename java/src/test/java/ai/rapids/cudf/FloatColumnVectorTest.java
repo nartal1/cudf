@@ -37,8 +37,7 @@ public class FloatColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (FloatColumnVector floatColumnVector = FloatColumnVector.build(3,
-                (b) -> b.append((float)2.1).append((float)3.02).append((float)5.003))) {
+        try (FloatColumnVector floatColumnVector = FloatColumnVector.build((float)2.1, (float)3.02, (float)5.003)) {
             assertFalse(floatColumnVector.hasNulls());
             assertEquals(floatColumnVector.get(0), 2.1, 0.01);
             assertEquals(floatColumnVector.get(1), 3.02,0.01);
@@ -48,8 +47,7 @@ public class FloatColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (FloatColumnVector floatColumnVector = FloatColumnVector.build(3,
-                (b) -> b.append((float)2.1).append((float)3.02).append(((float)5.003)))) {
+        try (FloatColumnVector floatColumnVector = FloatColumnVector.build((float)2.1, (float)3.02, (float)5.003)) {
             assertThrows(AssertionError.class, () -> floatColumnVector.get(3));
             assertFalse(floatColumnVector.hasNulls());
         }
@@ -57,8 +55,7 @@ public class FloatColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (FloatColumnVector floatColumnVector = FloatColumnVector.build(3,
-                (b) -> b.append((float)2.1).append((float)3.02).append((float)5.003))) {
+        try (FloatColumnVector floatColumnVector = FloatColumnVector.build((float)2.1, (float)3.02, (float)5.003)) {
             assertFalse(floatColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> floatColumnVector.get(-1));
         }
@@ -66,25 +63,22 @@ public class FloatColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (FloatColumnVector floatColumnVector = FloatColumnVector.build(72,
-                (b) -> {
-                    for (int i = 0; i < 70; i += 2) {
-                        b.append((float)2.1).append((float)5.003);
-                    }
-                    b.append((float)2.1).appendNull();
-                })) {
-            for (int i = 0; i < 71; i++) {
-                assertFalse(floatColumnVector.isNull(i));
+        try (FloatColumnVector cv = FloatColumnVector.buildBoxed(
+                new Float[] {2f,3f,4f,5f,6f,7f,null,null})) {
+            assertTrue(cv.hasNulls());
+            assertEquals(2, cv.getNullCount());
+            for (int i = 0; i < 6; i++) {
+                assertFalse(cv.isNull(i));
             }
-            assertTrue(floatColumnVector.isNull(71));
-            assertTrue(floatColumnVector.hasNulls());
+            assertTrue(cv.isNull(6));
+            assertTrue(cv.isNull(7));
         }
     }
 
     @Test
     public void testOverrunningTheBuffer() {
         try (FloatColumnVector.Builder builder = FloatColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append((float)2.1).appendNull().append((float)5.003).append((float)4.0).build());
+            assertThrows(AssertionError.class, () -> builder.append((float)2.1).appendNull().appendArray((float)5.003, (float)4.0).build());
         }
     }
 
@@ -151,7 +145,7 @@ public class FloatColumnVectorTest {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
             try (FloatColumnVector.Builder builder = FloatColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.append((float)2.1).append((float)3.02).append((float)5.004).appendNull();
+                builder.appendArray((float)2.1, (float)3.02, (float)5.004).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

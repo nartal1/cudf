@@ -85,12 +85,20 @@ final class BitVectorHelper {
         return ((numBytes + 7) / 8) * 8;
     }
 
-    static void appendNull(HostMemoryBuffer valid, long index) {
+    /**
+     * Set the validity bit to null for the given index.
+     * @param valid the buffer to set it in.
+     * @param index the index to set it at.
+     * @return 1 if validity changed else 0 if it already was null.
+     */
+    static int setNullAt(HostMemoryBuffer valid, long index) {
         long bucket = index / 8;
         byte currentByte = valid.getByte(bucket);
         int bitmask = ~(1 << (index % 8));
+        int ret = (currentByte >> index) & 0x1;
         currentByte &= bitmask;
         valid.setByte(bucket, currentByte);
+        return ret;
     }
 
     static boolean isNull(HostMemoryBuffer valid, long index) {

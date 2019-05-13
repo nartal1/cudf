@@ -37,8 +37,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(3,
-                (b) -> b.append((byte)2).append((byte)3).append((byte)5))) {
+        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
             assertEquals(byteColumnVector.get(0), 2);
             assertEquals(byteColumnVector.get(1), 3);
@@ -59,8 +58,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(3,
-                (b) -> b.append((byte)2).append((byte) 3).append(((byte)5)))) {
+        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
             assertThrows(AssertionError.class, () -> byteColumnVector.get(3));
             assertFalse(byteColumnVector.hasNulls());
         }
@@ -68,8 +66,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(3,
-                (b) -> b.append((byte)2).append((byte)3).append((byte)5))) {
+        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> byteColumnVector.get(-1));
         }
@@ -77,25 +74,22 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(72,
-                (b) -> {
-                    for (int i = 0; i < 70; i += 2) {
-                        b.append((byte)2).append((byte)5);
-                    }
-                    b.append((byte)2).appendNull();
-                })) {
-            for (int i = 0; i < 71; i++) {
+        try (ByteColumnVector byteColumnVector = ByteColumnVector.buildBoxed(
+                new Byte[] {2,3,4,5,6,7,null,null})) {
+            assertTrue(byteColumnVector.hasNulls());
+            assertEquals(2, byteColumnVector.getNullCount());
+            for (int i = 0; i < 6; i++) {
                 assertFalse(byteColumnVector.isNull(i));
             }
-            assertTrue(byteColumnVector.isNull(71));
-            assertTrue(byteColumnVector.hasNulls());
+            assertTrue(byteColumnVector.isNull(6));
+            assertTrue(byteColumnVector.isNull(7));
         }
     }
 
     @Test
     public void testOverrunningTheBuffer() {
         try (ByteColumnVector.Builder builder = ByteColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append((byte)2).appendNull().append((byte)5).append((byte)4).build());
+            assertThrows(AssertionError.class, () -> builder.append((byte)2).appendNull().appendArray((byte)5, (byte)4).build());
         }
     }
 
@@ -162,7 +156,7 @@ public class ByteColumnVectorTest {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
             try (ByteColumnVector.Builder builder = ByteColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.append((byte)2).append((byte)3).append((byte)5).appendNull();
+                builder.appendArray((byte)2, (byte)3, (byte)5).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

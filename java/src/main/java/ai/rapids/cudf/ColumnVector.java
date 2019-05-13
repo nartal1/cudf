@@ -127,18 +127,18 @@ public abstract class ColumnVector implements AutoCloseable {
             case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
-	    case INT8:
-		columnVector = ByteColumnVector.newOutputVector(rows, hasValidity);
-		break;
+            case INT8:
+                columnVector = ByteColumnVector.newOutputVector(rows, hasValidity);
+                break;
             case DATE32:
-		columnVector = Date32ColumnVector.newOutputVector(rows, hasValidity);
-		break;
+                columnVector = Date32ColumnVector.newOutputVector(rows, hasValidity);
+                break;
             case DATE64:
-		columnVector = Date64ColumnVector.newOutputVector(rows, hasValidity);
-		break;
+                columnVector = Date64ColumnVector.newOutputVector(rows, hasValidity);
+                break;
             case TIMESTAMP:
-		columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
-		break;
+                columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
+                break;
             case INVALID:
             default:
                 throw new IllegalArgumentException("Invalid type: " + type);
@@ -168,14 +168,14 @@ public abstract class ColumnVector implements AutoCloseable {
                 columnVector = new Date32ColumnVector(cudfColumn);
                 break;
             case DATE64:
-		columnVector = new Date64ColumnVector(cudfColumn);
-		break;
+                columnVector = new Date64ColumnVector(cudfColumn);
+                break;
             case INT8:
-		columnVector = new ByteColumnVector(cudfColumn);
-		break;
+                columnVector = new ByteColumnVector(cudfColumn);
+                break;
             case TIMESTAMP:
-		columnVector = new TimestampColumnVector(cudfColumn);
-		break;
+                columnVector = new TimestampColumnVector(cudfColumn);
+                break;
             case INVALID:
             default:
                 throw new IllegalArgumentException("Invalid type: " + cudfColumn.getDtype());
@@ -531,11 +531,25 @@ public abstract class ColumnVector implements AutoCloseable {
             currentIndex += count;
         }
 
+        final void appendBytes(byte[] values) {
+            assert (values.length + currentIndex) <= rows;
+            assert type == DType.INT8;
+            data.setBytes(currentIndex * type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+        }
+
         final void appendShort(short value) {
             assert type == DType.INT16;
             assert currentIndex < rows;
             data.setShort(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
+        }
+
+        public void appendShorts(short[] values) {
+            assert type == DType.INT16;
+            assert (values.length + currentIndex) <= rows;
+            data.setShorts(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
         }
 
         final void appendInt(int value) {
@@ -545,11 +559,25 @@ public abstract class ColumnVector implements AutoCloseable {
             currentIndex++;
         }
 
+        public void appendInts(int[] values) {
+            assert (type == DType.INT32 || type == DType.DATE32);
+            assert (values.length + currentIndex) <= rows;
+            data.setInts(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+        }
+
         final void appendLong(long value) {
             assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
             assert currentIndex < rows;
             data.setLong(currentIndex * type.sizeInBytes, value);
             currentIndex++;
+        }
+
+        public void appendLongs(long[] values) {
+            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
+            assert (values.length + currentIndex) <= rows;
+            data.setLongs(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
         }
 
         final void appendFloat(float value) {
@@ -559,11 +587,25 @@ public abstract class ColumnVector implements AutoCloseable {
             currentIndex++;
         }
 
+        public void appendFloats(float[] values) {
+            assert type == DType.FLOAT32;
+            assert (values.length + currentIndex) <= rows;
+            data.setFloats(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+        }
+
         final void appendDouble(double value) {
             assert type == DType.FLOAT64;
             assert currentIndex < rows;
             data.setDouble(currentIndex * type.sizeInBytes, value);
             currentIndex++;
+        }
+
+        public void appendDoubles(double[] values) {
+            assert type == DType.FLOAT64;
+            assert (values.length + currentIndex) <= rows;
+            data.setDoubles(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
         }
 
         void allocateBitmaskAndSetDefaultValues() {
@@ -602,15 +644,22 @@ public abstract class ColumnVector implements AutoCloseable {
          * Append null value.
          */
         void appendNull() {
-            assert currentIndex < rows;
+            setNullAt(currentIndex);
+            currentIndex++;
+        }
+
+        /**
+         * Set a specific index to null.
+         * @param index
+         */
+        void setNullAt(long index) {
+            assert index < rows;
 
             // add null
             if (this.valid == null) {
                 allocateBitmaskAndSetDefaultValues();
             }
-            BitVectorHelper.appendNull(valid,currentIndex);
-            currentIndex++;
-            nullCount++;
+            nullCount += BitVectorHelper.setNullAt(valid, index);
         }
 
         /**

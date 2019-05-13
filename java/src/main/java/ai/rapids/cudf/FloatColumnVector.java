@@ -128,6 +128,22 @@ public final class FloatColumnVector extends ColumnVector {
         }
     }
 
+    /**
+     * Create a new vector from the given values.
+     */
+    public static FloatColumnVector build(float ... values) {
+        return build(values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static FloatColumnVector buildBoxed(Float ... values) {
+        return build(values.length, (b) -> b.appendBoxed(values));
+    }
+
     public static final class Builder implements AutoCloseable {
 
         private final ColumnVector.Builder builder;
@@ -189,20 +205,57 @@ public final class FloatColumnVector extends ColumnVector {
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - this for chaining
-         * @throws - {@link IndexOutOfBoundsException}
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
          */
         public final Builder append(float value) throws IndexOutOfBoundsException {
             builder.appendFloat(value);
             return this;
         }
 
+        /**
+         * Append multiple values
+         * @param values to append
+         * @return - this for chaining
+         * @throws - {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendArray(float ... values) throws IndexOutOfBoundsException {
+            builder.appendFloats(values);
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Float ... values) throws IndexOutOfBoundsException {
+            for (Float b: values) {
+                if (b == null) {
+                    builder.appendNull();
+                } else {
+                    builder.appendFloat(b);
+                }
+            }
+            return this;
+        }
 
         /**
          * Append null value.
          */
         public final Builder appendNull(){
             builder.appendNull();
+            return this;
+        }
+
+        /**
+         * Set a specific value to null
+         * @param index the index to set it at.
+         * @return this
+         */
+        public final Builder setNullAt(long index) {
+            builder.setNullAt(index);
             return this;
         }
 

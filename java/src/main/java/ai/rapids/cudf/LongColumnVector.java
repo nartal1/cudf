@@ -128,6 +128,22 @@ public final class LongColumnVector extends ColumnVector {
         }
     }
 
+    /**
+     * Create a new vector from the given values.
+     */
+    public static LongColumnVector build(long ... values) {
+        return build(values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static LongColumnVector buildBoxed(Long ... values) {
+        return build(values.length, (b) -> b.appendBoxed(values));
+    }
+
     public static final class Builder implements AutoCloseable {
 
         private final ColumnVector.Builder builder;
@@ -197,12 +213,49 @@ public final class LongColumnVector extends ColumnVector {
             return this;
         }
 
+        /**
+         * Append multiple values
+         * @param values to append
+         * @return - this for chaining
+         * @throws - {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendArray(long ... values) throws IndexOutOfBoundsException {
+            builder.appendLongs(values);
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Long ... values) throws IndexOutOfBoundsException {
+            for (Long b: values) {
+                if (b == null) {
+                    builder.appendNull();
+                } else {
+                    builder.appendLong(b);
+                }
+            }
+            return this;
+        }
 
         /**
          * Append null value.
          */
         public final Builder appendNull(){
             builder.appendNull();
+            return this;
+        }
+
+        /**
+         * Set a specific value to null
+         * @param index the index to set it at.
+         * @return this
+         */
+        public final Builder setNullAt(long index) {
+            builder.setNullAt(index);
             return this;
         }
 

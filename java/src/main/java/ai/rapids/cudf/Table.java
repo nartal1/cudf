@@ -19,7 +19,9 @@
 package ai.rapids.cudf;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Class to represent a collection of ColumnVectors and operations that can be performed on them collectively.
@@ -257,6 +259,122 @@ public final class Table implements AutoCloseable {
         public Table leftJoin(JoinColumns rightJoinIndices) {
             CudfColumn[] columns = CudfTable.leftJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
             return new Table(columns);
+        }
+    }
+
+    /**
+     * Create a table on the GPU with data from the CPU.  This is not fast and intended mostly for
+     * tests.
+     */
+    public static final class TestBuilder {
+        private final List<DType> types = new ArrayList<>();
+        private final List<Object> typeErasedData = new ArrayList<>();
+
+        public TestBuilder column(Byte... values) {
+            types.add(DType.INT8);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder column(Short... values) {
+            types.add(DType.INT16);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder column(Integer... values) {
+            types.add(DType.INT32);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder column(Long... values) {
+            types.add(DType.INT64);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder column(Float... values) {
+            types.add(DType.FLOAT32);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder column(Double... values) {
+            types.add(DType.FLOAT64);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder date32Column(Integer... values) {
+            types.add(DType.DATE32);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder date64Column(Long... values) {
+            types.add(DType.DATE64);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        public TestBuilder timestampColumn(Long... values) {
+            types.add(DType.TIMESTAMP);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        private static ColumnVector from(DType type, Object dataArray) {
+            ColumnVector ret;
+            switch(type) {
+                case INT8:
+                    ret = ByteColumnVector.buildBoxed((Byte[]) dataArray);
+                    break;
+                case INT16:
+                    ret = ShortColumnVector.buildBoxed((Short[]) dataArray);
+                    break;
+                case INT32:
+                    ret = IntColumnVector.buildBoxed((Integer[]) dataArray);
+                    break;
+                case INT64:
+                    ret = LongColumnVector.buildBoxed((Long[]) dataArray);
+                    break;
+                case DATE32:
+                    ret = Date32ColumnVector.buildBoxed((Integer[]) dataArray);
+                    break;
+                case DATE64:
+                    ret = Date64ColumnVector.buildBoxed((Long[]) dataArray);
+                    break;
+                case TIMESTAMP:
+                    ret = TimestampColumnVector.buildBoxed((Long[]) dataArray);
+                    break;
+                case FLOAT32:
+                    ret = FloatColumnVector.buildBoxed((Float[]) dataArray);
+                    break;
+                case FLOAT64:
+                    ret = DoubleColumnVector.buildBoxed((Double[]) dataArray);
+                    break;
+                default:
+                    throw new IllegalArgumentException(type + " is not supported yet");
+            }
+            return ret;
+        }
+
+        public Table build() {
+            List<ColumnVector> columns = new ArrayList<>(types.size());
+            try {
+                for (int i = 0; i < types.size(); i++) {
+                    columns.add(from(types.get(i), typeErasedData.get(i)));
+                }
+                for (ColumnVector cv: columns) {
+                    cv.toDeviceBuffer();
+                }
+                return new Table(columns.toArray(new ColumnVector[columns.size()]));
+            } finally {
+                for (ColumnVector cv: columns) {
+                    cv.close();
+                }
+            }
         }
     }
 }

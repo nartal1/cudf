@@ -37,8 +37,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(3,
-                (b) -> b.append(2.1).append(3.02).append(5.003))) {
+        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
             assertEquals(doubleColumnVector.get(0), 2.1, 0.01);
             assertEquals(doubleColumnVector.get(1), 3.02,0.01);
@@ -48,8 +47,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(3,
-                (b) -> b.append(2.1).append(3.02).append(5.003))) {
+        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
             assertThrows(AssertionError.class, () -> doubleColumnVector.get(3));
             assertFalse(doubleColumnVector.hasNulls());
         }
@@ -57,8 +55,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(3,
-                (b) -> b.append(2.1).append(3.02).append(5.003))) {
+        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> doubleColumnVector.get(-1));
         }
@@ -66,25 +63,22 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(72,
-                (b) -> {
-                    for (int i = 0; i < 70; i += 2) {
-                        b.append(2.1).append(5.003);
-                    }
-                    b.append(2.1).appendNull();
-                })) {
-            for (int i = 0; i < 71; i++) {
-                assertFalse(doubleColumnVector.isNull(i));
+        try (DoubleColumnVector cv =
+                     DoubleColumnVector.buildBoxed(2.0,3.0,4.0,5.0,6.0,7.0,null,null)) {
+            assertTrue(cv.hasNulls());
+            assertEquals(2, cv.getNullCount());
+            for (int i = 0; i < 6; i++) {
+                assertFalse(cv.isNull(i));
             }
-            assertTrue(doubleColumnVector.isNull(71));
-            assertTrue(doubleColumnVector.hasNulls());
+            assertTrue(cv.isNull(6));
+            assertTrue(cv.isNull(7));
         }
     }
 
     @Test
     public void testOverrunningTheBuffer() {
         try (DoubleColumnVector.Builder builder = DoubleColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append(2.1).appendNull().append(5.003).append(4.0).build());
+            assertThrows(AssertionError.class, () -> builder.append(2.1).appendNull().appendArray(5.003, 4.0).build());
         }
     }
 
@@ -151,7 +145,7 @@ public class DoubleColumnVectorTest {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
             try (DoubleColumnVector.Builder builder = DoubleColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.append(2.1).append(3.02).append(5.004).appendNull();
+                builder.appendArray(2.1, 3.02, 5.004).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();
@@ -161,7 +155,7 @@ public class DoubleColumnVectorTest {
     @Test
     public void testAdd() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (DoubleColumnVector doubleColumnVector1 = DoubleColumnVector.build(5, Range.appendDoubles(1.1,5.5));
+        try (DoubleColumnVector doubleColumnVector1 = DoubleColumnVector.build(5, Range.appendDoubles(1.1, 5.5));
              DoubleColumnVector doubleColumnVector2 = DoubleColumnVector.build(5, Range.appendDoubles(10,  60, 10))) {
 
             doubleColumnVector1.toDeviceBuffer();

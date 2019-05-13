@@ -133,6 +133,22 @@ public final class Date32ColumnVector extends ColumnVector {
         }
     }
 
+    /**
+     * Create a new vector from the given values.
+     */
+    public static Date32ColumnVector build(int ... values) {
+        return build(values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static Date32ColumnVector buildBoxed(Integer ... values) {
+        return build(values.length, (b) -> b.appendBoxed(values));
+    }
+
     public static final class Builder implements AutoCloseable {
 
         private final ColumnVector.Builder builder;
@@ -194,20 +210,57 @@ public final class Date32ColumnVector extends ColumnVector {
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - this for chaining
-         * @throws - {@link IndexOutOfBoundsException}
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
          */
         public final Builder append(int value) throws IndexOutOfBoundsException {
             builder.appendInt(value);
             return this;
         }
 
+        /**
+         * Append multiple values
+         * @param values to be appended
+         * @return - this for chaining
+         * @throws - {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendArray(int ... values) throws IndexOutOfBoundsException {
+            builder.appendInts(values);
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Integer ... values) throws IndexOutOfBoundsException {
+            for (Integer b: values) {
+                if (b == null) {
+                    builder.appendNull();
+                } else {
+                    builder.appendInt(b);
+                }
+            }
+            return this;
+        }
 
         /**
          * Append null value.
          */
         public final Builder appendNull(){
             builder.appendNull();
+            return this;
+        }
+
+        /**
+         * Set a specific value to null
+         * @param index the index to set it at.
+         * @return this
+         */
+        public final Builder setNullAt(long index) {
+            builder.setNullAt(index);
             return this;
         }
 
