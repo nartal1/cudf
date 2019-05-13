@@ -14,7 +14,7 @@ CUDA 9.2:
 <dependency>
     <groupId>ai.rapids</groupId>
     <artifactId>cudf</artifactId>
-    <version>0.7-SNAPSHOT</version>
+    <version>0.8-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -24,7 +24,7 @@ CUDA 10.0:
     <groupId>ai.rapids</groupId>
     <artifactId>cudf</artifactId>
     <classifier>cuda10</classifier>
-    <version>0.7-SNAPSHOT</version>
+    <version>0.8-SNAPSHOT</version>
 </dependency>
 ```
 
