@@ -43,3 +43,7 @@ cpp/thirdparty/googletest/
 
 ## Doxygen
 cpp/doxygen/html
+
+#Java 
+target
+*.log
