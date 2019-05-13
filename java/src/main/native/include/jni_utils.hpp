@@ -23,16 +23,6 @@
 #include <string>
 #include <utility>
 
-#define JNI_THROW_NEW(env, clazz_name, message, ret_val) \
-{\
-  jclass exClass = env->FindClass(clazz_name); \
-  if (exClass == NULL) { \
-    return ret_val; \
-  } \
-  env->ThrowNew(exClass, message); \
-  return ret_val; \
-}
-
 namespace cudf {
 
   /**
@@ -81,7 +71,7 @@ namespace cudf {
      mutable jlong *data_ptr;
 
      void init_data_ptr() const {
-       if (data_ptr == NULL) {
+       if (orig != NULL && data_ptr == NULL) {
          data_ptr = env->GetLongArrayElements(orig, NULL);
          checkJavaException(env);
        }
@@ -93,9 +83,12 @@ namespace cudf {
      native_jlongArray(JNIEnv * const env, jlongArray orig) :
          env(env),
          orig(orig),
-         len(env->GetArrayLength(orig)),
+         len(0),
          data_ptr(NULL) {
-       checkJavaException(env);
+       if (orig != NULL) {
+         len = env->GetArrayLength(orig);
+         checkJavaException(env);
+       }
      }
 
      native_jlongArray(JNIEnv* const env, int len) :
@@ -116,11 +109,18 @@ namespace cudf {
        checkJavaException(env);
      }
 
+     bool isNull() const noexcept {
+       return orig == NULL;
+     }
+
      int size() const noexcept {
        return len;
      }
 
      jlong operator[](int index) const {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -128,6 +128,9 @@ namespace cudf {
      }
 
      jlong& operator[](int index) {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -157,19 +160,18 @@ namespace cudf {
       * it.
       */
      void cancel() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseLongArrayElements(orig, data_ptr, JNI_ABORT);
          data_ptr = NULL;
        }
      }
 
      ~native_jlongArray() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseLongArrayElements(orig, data_ptr, 0);
        }
      }
   };
-
 
   /**
    * @brief RAII for jintArray to be sure it is handled correctly. 
@@ -185,7 +187,7 @@ namespace cudf {
      mutable jint *data_ptr;
 
      void init_data_ptr() const {
-       if (data_ptr == NULL) {
+       if (orig != NULL && data_ptr == NULL) {
          data_ptr = env->GetIntArrayElements(orig, NULL);
          checkJavaException(env);
        }
@@ -197,9 +199,16 @@ namespace cudf {
      native_jintArray(JNIEnv * const env, jintArray orig) :
          env(env),
          orig(orig),
-         len(env->GetArrayLength(orig)),
+         len(0),
          data_ptr(NULL) {
-       checkJavaException(env);
+       if (orig != NULL) {
+         len = env->GetArrayLength(orig);
+         checkJavaException(env);
+       }
+     }
+
+     bool isNull() const noexcept {
+       return orig == NULL;
      }
 
      int size() const noexcept {
@@ -207,6 +216,9 @@ namespace cudf {
      }
 
      jint operator[](int index) const {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -214,6 +226,9 @@ namespace cudf {
      }
 
      jint& operator[](int index) {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -235,14 +250,14 @@ namespace cudf {
       * it.
       */
      void cancel() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseIntArrayElements(orig, data_ptr, JNI_ABORT);
          data_ptr = NULL;
        }
      }
 
      ~native_jintArray() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseIntArrayElements(orig, data_ptr, 0);
        }
      }
@@ -262,7 +277,7 @@ namespace cudf {
      mutable jboolean *data_ptr;
 
      void init_data_ptr() const {
-       if (data_ptr == NULL) {
+       if (orig != NULL && data_ptr == NULL) {
          data_ptr = env->GetBooleanArrayElements(orig, NULL);
          checkJavaException(env);
        }
@@ -274,9 +289,16 @@ namespace cudf {
      native_jbooleanArray(JNIEnv * const env, jbooleanArray orig) :
          env(env),
          orig(orig),
-         len(env->GetArrayLength(orig)),
+         len(0),
          data_ptr(NULL) {
-       checkJavaException(env);
+       if (orig != NULL) {
+         len = env->GetArrayLength(orig);
+         checkJavaException(env);
+       }
+     }
+
+     bool isNull() const noexcept {
+       return orig == NULL;
      }
 
      int size() const noexcept {
@@ -284,6 +306,9 @@ namespace cudf {
      }
 
      jboolean operator[](int index) const {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -291,6 +316,9 @@ namespace cudf {
      }
 
      jboolean& operator[](int index) {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
+       }
        if (index < 0 || index >= len) {
          throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
        }
@@ -312,19 +340,18 @@ namespace cudf {
       * it.
       */
      void cancel() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseBooleanArrayElements(orig, data_ptr, JNI_ABORT);
          data_ptr = NULL;
        }
      }
 
      ~native_jbooleanArray() {
-       if (data_ptr != NULL) {
+       if (data_ptr != NULL && orig != NULL) {
          env->ReleaseBooleanArrayElements(orig, data_ptr, 0);
        }
      }
   };
-
 
   /**
    * @brief RAII for jstring to be sure it is handled correctly.
@@ -336,7 +363,7 @@ namespace cudf {
       mutable const char * cstr;
 
      void init_cstr() const {
-       if (cstr == NULL) {
+       if (orig != NULL && cstr == NULL) {
          cstr = env->GetStringUTFChars(orig, 0);
          checkJavaException(env);
        }
@@ -357,17 +384,20 @@ namespace cudf {
           env(env),
           orig(orig),
           cstr(NULL) {
-        checkJavaException(env);
       }
 
       native_jstring& operator=(native_jstring const && other) {
-        if (cstr != NULL) {
+        if (orig != NULL && cstr != NULL) {
           env->ReleaseStringUTFChars(orig, cstr);
         }
         this->env = other.env;
         this->orig = other.orig;
         this->cstr = other.cstr;
         other.cstr = NULL;
+      }
+
+      bool isNull() const noexcept {
+        return orig == NULL;
       }
 
       const char * get() const {
@@ -380,7 +410,7 @@ namespace cudf {
       }
 
       ~native_jstring() {
-        if (cstr != NULL) {
+        if (orig != NULL && cstr != NULL) {
           env->ReleaseStringUTFChars(orig, cstr);
         }
       }
@@ -399,8 +429,15 @@ namespace cudf {
      native_jobjectArray(JNIEnv * const env, jobjectArray orig) :
          env(env),
          orig(orig),
-         len(env->GetArrayLength(orig)) {
-       checkJavaException(env);
+         len(0) {
+       if (orig != NULL) {
+         len = env->GetArrayLength(orig);
+         checkJavaException(env);
+       }
+     }
+
+     bool isNull() const noexcept {
+       return orig == NULL;
      }
 
      int size() const noexcept {
@@ -412,12 +449,18 @@ namespace cudf {
      }
 
      T get(int index) const {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
+       }
        T ret = static_cast<T>(env->GetObjectArrayElement(orig, index));
        checkJavaException(env);
        return ret;
      }
 
      void set(int index, const T& val) {
+       if (orig == NULL) {
+         throwJavaException(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
+       }
        env->SetObjectArrayElement(orig, index, val);
        checkJavaException(env);
      }
@@ -435,7 +478,7 @@ namespace cudf {
      mutable std::vector<const char *> c_cache;
 
      void init_cache() const {
-       if (cache.empty()) {
+       if (!arr.isNull() && cache.empty()) {
          int size = this->size();
          cache.reserve(size);
          for (int i = 0; i < size; i++) {
@@ -445,7 +488,7 @@ namespace cudf {
      }
 
      void init_c_cache() const {
-       if (c_cache.empty()) {
+       if (!arr.isNull() && c_cache.empty()) {
          init_cache();
          int size = this->size();
          c_cache.reserve(size);
@@ -471,6 +514,10 @@ namespace cudf {
          env(env),
          arr(env, orig) {}
 
+     bool isNull() const noexcept {
+       return arr.isNull();
+     }
+
      int size() const noexcept {
        return arr.size();
      }
@@ -480,6 +527,9 @@ namespace cudf {
      }
 
      native_jstring& get(int index) const {
+       if (arr.isNull()) {
+         throwJavaException(env, "java/lang/NullPointerException", "jstringArray pointer is NULL");
+       }
        init_cache();
        return cache[index];
      }
@@ -668,6 +718,16 @@ namespace cudf {
     }
   }
 
+}
+
+#define JNI_THROW_NEW(env, clazz_name, message, ret_val) \
+{\
+  jclass exClass = env->FindClass(clazz_name); \
+  if (exClass == NULL) { \
+    return ret_val; \
+  } \
+  env->ThrowNew(exClass, message); \
+  return ret_val; \
 }
 
 #define JNI_CUDA_TRY(env, ret_val, call) \
