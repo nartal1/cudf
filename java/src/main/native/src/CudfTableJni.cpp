@@ -157,37 +157,30 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "An empty buffer is not supported", NULL);
     }
 
-    // The number of output columns is determined dynamically when set to 0
+    // This is the length of colNames and also the length of dataTypes.  If both are set
+    // the lengths must be equal, but either or both of them can be NULL.  The csv reader
+    // will infer the colNames if it is NULL and dataTypes if it is NULL. If both are NULL
+    // nColumns needs to be 0.
     int nColumns = 0;
     try {
-      std::unique_ptr<cudf::native_jstringArray> nColNames;
-      char const** nameParam = NULL;
-      if (colNames != NULL) {
-        nColNames.reset(new cudf::native_jstringArray(env, colNames));
-        nameParam = nColNames->as_c_array();
-        nColumns = nColNames->size();
-      }
+      cudf::native_jstringArray nColNames(env, colNames);
+      cudf::native_jstringArray nDataTypes(env, dataTypes);
 
-      std::unique_ptr<cudf::native_jstringArray> nDataTypes;
-      char const** dTypes = NULL;
-      if (dataTypes != NULL) {
-        nDataTypes.reset(new cudf::native_jstringArray(env, dataTypes));
-        dTypes = nDataTypes->as_c_array();
-        nColumns = nDataTypes->size();
-      }
-
-      if (nDataTypes != NULL && nColNames != NULL) {
-        int dTypeCount = nDataTypes->size();
-        int nameCount = nColNames->size();
-        if (dTypeCount != nameCount) {
+      if (!nDataTypes.isNull() && !nColNames.isNull()) {
+        if (nDataTypes.size() != nColNames.size()) {
           JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "dataTypes and colNames should be the same size", NULL);
         }
       }
 
-      std::unique_ptr<cudf::native_jstring> filename;
+      if (!nColNames.isNull()) {
+        nColumns = nColNames.size();
+      } else if (!nDataTypes.isNull()) {
+        nColumns = nDataTypes.size();
+      }
+
+      cudf::native_jstring filename(env, inputfilepath);
       if (!read_buffer) {
-        filename.reset(new cudf::native_jstring(env, inputfilepath));
-        if (strlen(filename->get()) == 0) {
+        if (strlen(filename.get()) == 0) {
           JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
         }
       }
@@ -199,15 +192,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
         c_null_values = nNullValues.as_c_array();
       } 
 
-      int numfiltercols = 0;
-      char const** filteredNames = NULL;
-      std::unique_ptr<cudf::native_jstringArray> nFilterColNames;
-
-      if (filterColNames != NULL) {
-        nFilterColNames.reset(new cudf::native_jstringArray(env, filterColNames));
-        numfiltercols = nFilterColNames->size();
-        filteredNames = nFilterColNames->as_c_array();
-      }
+      cudf::native_jstringArray nFilterColNames(env, filterColNames);
 
       csv_read_arg read_arg{};
 
@@ -216,7 +201,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
         read_arg.input_data_form = HOST_BUFFER;
         read_arg.buffer_size = bufferLength;
       } else {
-        read_arg.filepath_or_buffer = filename->get();
+        read_arg.filepath_or_buffer = filename.get();
 
         read_arg.input_data_form = FILE_PATH;
         // don't use buffer, use file path
@@ -233,8 +218,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       read_arg.header = headerRow;
       read_arg.num_cols = nColumns;
 
-      read_arg.names = nameParam;
-      read_arg.dtype = dTypes;
+      read_arg.names = nColNames.as_c_array();
+      read_arg.dtype = nDataTypes.as_c_array();
 
       // leave blank
       // read_arg.index_col
@@ -242,9 +227,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       // only support picking columns by name
       read_arg.use_cols_int = NULL;
       read_arg.use_cols_int_len = 0;
-      read_arg.use_cols_char = filteredNames;
-
-      read_arg.use_cols_char_len = numfiltercols;
+      read_arg.use_cols_char = nFilterColNames.as_c_array();
+      read_arg.use_cols_char_len = nFilterColNames.size();
 
       read_arg.skiprows = 0;
       read_arg.skipfooter = 0;
@@ -306,23 +290,14 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv
     }
 
     try {
-      std::unique_ptr<cudf::native_jstring> filename;
+      cudf::native_jstring filename(env, inputfilepath);
       if (!read_buffer) {
-        filename.reset(new cudf::native_jstring(env, inputfilepath));
-        if (strlen(filename->get()) == 0) {
+        if (strlen(filename.get()) == 0) {
           JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
         }
       }
 
-      int numfiltercols = 0;
-      char const** filteredNames = NULL;
-      std::unique_ptr<cudf::native_jstringArray> nFilterColNames;
-
-      if (filterColNames != NULL) {
-        nFilterColNames.reset(new cudf::native_jstringArray(env, filterColNames));
-        numfiltercols = nFilterColNames->size();
-        filteredNames = nFilterColNames->as_c_array();
-      }
+      cudf::native_jstringArray nFilterColNames(env, filterColNames);
 
       pq_read_arg read_arg{};
 
@@ -331,14 +306,14 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv
         read_arg.source_type = HOST_BUFFER;
         read_arg.buffer_size = bufferLength;
       } else {
-        read_arg.source = filename->get();
+        read_arg.source = filename.get();
         read_arg.source_type = FILE_PATH;
         // don't use buffer, use file path
         read_arg.buffer_size = 0;
       }
 
-      read_arg.use_cols = filteredNames;
-      read_arg.use_cols_len = numfiltercols; 
+      read_arg.use_cols = nFilterColNames.as_c_array();
+      read_arg.use_cols_len = nFilterColNames.size();
 
       read_arg.row_group = -1;
       read_arg.skip_rows = 0;
