@@ -94,4 +94,11 @@ class Cudf {
     }
 
     private static native long gdfExtractDatetimeSecond(long input) throws CudfException;
+
+    static void gdfCastTo(CudfColumn input, CudfColumn output) {
+        gdfCastTo(input.getNativeHandle(), output.getNativeHandle());
+    }
+
+    private static native void gdfCastTo(long input, long output) throws CudfException;
+
 }
