@@ -131,15 +131,13 @@ public class ColumnVector implements AutoCloseable {
                 break;
             case INT8:
             case DATE32:
+            case DATE64:
                 DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
                 DeviceMemoryBuffer valid = null;
                 if (hasValidity) {
                     valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
                 }
                 columnVector = new ColumnVector(data, valid, rows, type);
-                break;
-            case DATE64:
-                columnVector = Date64ColumnVector.newOutputVector(rows, hasValidity);
                 break;
             case TIMESTAMP:
                 columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
@@ -171,8 +169,6 @@ public class ColumnVector implements AutoCloseable {
                 columnVector = new ShortColumnVector(cudfColumn);
                 break;
             case DATE64:
-                columnVector = new Date64ColumnVector(cudfColumn);
-                break;
             case DATE32:
             case INT8:
                 columnVector = new ColumnVector(cudfColumn);
@@ -350,7 +346,18 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get year from Date32
+     * Get the value at index.
+     */
+    public final long getLong(long index) {
+        assert type == DType.INT64 || type == DType.DATE64;
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert offHeap.hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
+        return offHeap.hostData.data.getLong(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get year from DATE32 or DATE64
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -358,7 +365,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new vector allocated on the GPU.
      */
     public ShortColumnVector year() {
-        assert type == DType.DATE32;
+        assert type == DType.DATE32 || type == DType.DATE64;
         ShortColumnVector result = ShortColumnVector.newOutputVector(this);
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -366,7 +373,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get month from Date32
+     * Get month from DATE32 or DATE64
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -374,7 +381,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new vector allocated on the GPU.
      */
     public ShortColumnVector month() {
-        assert type == DType.DATE32;
+        assert type == DType.DATE32 || type == DType.DATE64;
         ShortColumnVector result = ShortColumnVector.newOutputVector(this);
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -382,7 +389,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get day from Date32
+     * Get day from DATE32 or DATE64
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -390,9 +397,57 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new vector allocated on the GPU.
      */
     public ShortColumnVector day() {
-        assert type == DType.DATE32;
+        assert type == DType.DATE32 || type == DType.DATE64;
         ShortColumnVector result = ShortColumnVector.newOutputVector(this);
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get hour from DATE64
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
+     *                  its lifecycle.
+     *
+     * @return - A new vector allocated on the GPU.
+     */
+    public ShortColumnVector hour() {
+        assert type == DType.DATE64;
+        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get minute from DATE64
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
+     *                  its lifecycle.
+     *
+     * @return - A new vector allocated on the GPU.
+     */
+    public ShortColumnVector minute() {
+        assert type == DType.DATE64;
+        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get second from DATE64
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
+     *                  its lifecycle.
+     *
+     * @return - A new vector allocated on the GPU.
+     */
+    public ShortColumnVector second() {
+        assert type == DType.DATE64;
+        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
     }
@@ -600,6 +655,22 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector buildDate(long ... values) {
+        return build(DType.DATE64, values.length, (b) -> b.appendLongs(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxed(Byte ... values) {
+        return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
      * Create a new vector from the given values.  This API supports inline nulls,
      * but is much slower than using a regular array and should really only be used
      * for tests.
@@ -613,8 +684,8 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Byte ... values) {
-        return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    public static ColumnVector buildBoxedDate(Long ... values) {
+        return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**
@@ -788,6 +859,23 @@ public class ColumnVector implements AutoCloseable {
                     appendNull();
                 } else {
                     appendInt(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Long ... values) throws IndexOutOfBoundsException {
+            for (Long b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    appendLong(b);
                 }
             }
             return this;

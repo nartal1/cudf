@@ -30,7 +30,7 @@ public class Date64ColumnVectorTest {
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.year()) {
                 result.ensureOnHost();
@@ -44,7 +44,7 @@ public class Date64ColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.month()) {
                 result.ensureOnHost();
@@ -58,7 +58,7 @@ public class Date64ColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.day()) {
                 result.ensureOnHost();
@@ -72,7 +72,7 @@ public class Date64ColumnVectorTest {
     @Test
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.hour()) {
                 result.ensureOnHost();
@@ -86,7 +86,7 @@ public class Date64ColumnVectorTest {
     @Test
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try(ShortColumnVector result= date64ColumnVector.minute()) {
                 result.ensureOnHost();
@@ -100,7 +100,7 @@ public class Date64ColumnVectorTest {
     @Test
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
+        try (ColumnVector date64ColumnVector = ColumnVector.buildDate(DATES)) {
             date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.second()) {
                 result.ensureOnHost();

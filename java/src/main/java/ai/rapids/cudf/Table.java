@@ -343,7 +343,7 @@ public final class Table implements AutoCloseable {
                     ret = ColumnVector.buildBoxedDate((Integer[]) dataArray);
                     break;
                 case DATE64:
-                    ret = Date64ColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.buildBoxedDate((Long[]) dataArray);
                     break;
                 case TIMESTAMP:
                     ret = TimestampColumnVector.buildBoxed((Long[]) dataArray);
