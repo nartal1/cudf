@@ -158,11 +158,11 @@ public class FloatColumnVectorTest {
         try (FloatColumnVector floatColumnVector1 = FloatColumnVector.build(5, Range.appendFloats((float)1.1,(float)5.5));
              FloatColumnVector floatColumnVector2 = FloatColumnVector.build(5, Range.appendFloats(10,  60, 10))) {
 
-            floatColumnVector1.toDeviceBuffer();
-            floatColumnVector2.toDeviceBuffer();
+            floatColumnVector1.ensureOnDevice();
+            floatColumnVector2.ensureOnDevice();
 
             try (FloatColumnVector floatColumnVector3 = floatColumnVector1.add(floatColumnVector2)) {
-                floatColumnVector3.toHostBuffer();
+                floatColumnVector3.ensureOnHost();
                 assertEquals(5, floatColumnVector3.getRows());
                 assertEquals(0, floatColumnVector3.getNullCount());
                 for (int i = 0; i < 5; i++) {

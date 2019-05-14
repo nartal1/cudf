@@ -158,11 +158,11 @@ public class LongColumnVectorTest {
         try (LongColumnVector longColumnVector1 = LongColumnVector.build(4, Range.appendLongs(1,5));
              LongColumnVector longColumnVector2 = LongColumnVector.build(4, Range.appendLongs(10,  50, 10))) {
 
-            longColumnVector1.toDeviceBuffer();
-            longColumnVector2.toDeviceBuffer();
+            longColumnVector1.ensureOnDevice();
+            longColumnVector2.ensureOnDevice();
 
             try (LongColumnVector longColumnVector3 = longColumnVector1.add(longColumnVector2)) {
-                longColumnVector3.toHostBuffer();
+                longColumnVector3.ensureOnHost();
                 assertEquals(4, longColumnVector3.getRows());
                 assertEquals(0, longColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {

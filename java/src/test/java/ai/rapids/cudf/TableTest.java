@@ -40,16 +40,15 @@ public class TableTest {
                 assertEquals(expect.getType(), cv.getType(), "Column " + col);
                 assertEquals(expect.getRows(), cv.getRows(), "Column " + col); // Yes this might be redundant
                 assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
-                expect.toHostBuffer();
-                cv.toHostBuffer();
+                expect.ensureOnHost();
+                cv.ensureOnHost();
                 DType type = expect.getType();
                 for (long row = 0; row < expect.getRows(); row++) {
                     assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
                     if (!expect.isNull(row)) {
                         switch(type) {
                             case INT8:
-                                assertEquals(((ByteColumnVector)expect).get(row),
-                                        ((ByteColumnVector)cv).get(row),
+                                assertEquals(expect.getByte(row), cv.getByte(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT16:
@@ -109,10 +108,11 @@ public class TableTest {
             try (ColumnVector vec = t.getColumn(i)) {
                 DType type = vec.getType();
                 assertEquals(expectedTypes[i], type, "Types don't match at " + i);
-                Class c;
+                // TODO when done delete this...
+                Class c = ColumnVector.class;
                 switch(type) {
                     case INT8:
-                        c = ByteColumnVector.class;
+                        // Ignored
                         break;
                     case INT16:
                         c = ShortColumnVector.class;
@@ -207,8 +207,8 @@ public class TableTest {
         assertThrows(IllegalStateException.class, () -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
                  IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-                v1.toDeviceBuffer();
-                v2.toDeviceBuffer();
+                v1.ensureOnDevice();
+                v2.ensureOnDevice();
                 assertDoesNotThrow(() -> {
                     try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                         v1.close();
@@ -225,8 +225,8 @@ public class TableTest {
         assertDoesNotThrow(() -> {
             try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
                  IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-                v1.toDeviceBuffer();
-                v2.toDeviceBuffer();
+                v1.ensureOnDevice();
+                v2.ensureOnDevice();
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                     ColumnVector vector1 = t.getColumn(0);
                     ColumnVector vector2 = t.getColumn(1);
@@ -242,8 +242,8 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(5, t.getRows());
             }
@@ -261,8 +261,8 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(4, Range.appendInts(4));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             assertThrows(AssertionError.class, () -> {
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 }
@@ -275,8 +275,8 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
              IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(2, t.getNumberOfColumns());
             }

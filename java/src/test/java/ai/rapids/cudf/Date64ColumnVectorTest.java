@@ -31,9 +31,9 @@ public class Date64ColumnVectorTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.year()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(1965, result.get(0));
                 assertEquals(2018, result.get(1));
                 assertEquals(2023, result.get(2));
@@ -45,9 +45,9 @@ public class Date64ColumnVectorTest {
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.month()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(10, result.get(0));
                 assertEquals(7, result.get(1));
                 assertEquals(1, result.get(2));
@@ -59,9 +59,9 @@ public class Date64ColumnVectorTest {
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.day()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(26, result.get(0));
                 assertEquals(4, result.get(1));
                 assertEquals(25, result.get(2));
@@ -73,9 +73,9 @@ public class Date64ColumnVectorTest {
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.hour()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(14, result.get(0));
                 assertEquals(12, result.get(1));
                 assertEquals(7, result.get(2));
@@ -87,9 +87,9 @@ public class Date64ColumnVectorTest {
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try(ShortColumnVector result= date64ColumnVector.minute()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(1, result.get(0));
                 assertEquals(0, result.get(1));
                 assertEquals(32, result.get(2));
@@ -101,9 +101,9 @@ public class Date64ColumnVectorTest {
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
+            date64ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date64ColumnVector.second()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 assertEquals(12, result.get(0));
                 assertEquals(0, result.get(1));
                 assertEquals(12, result.get(2));

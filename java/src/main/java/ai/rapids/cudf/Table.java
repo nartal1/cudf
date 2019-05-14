@@ -39,11 +39,11 @@ public final class Table implements AutoCloseable {
      */
     public Table(ColumnVector[] columnVectors) {
         assert columnVectors != null : "ColumnVectors can't be null";
-        final long rows = columnVectors[0].rows;
+        final long rows = columnVectors[0].getRows();
 
         for (ColumnVector columnVector : columnVectors) {
             assert (null != columnVector) : "ColumnVectors can't be null";
-            assert (rows == columnVector.rows) : "All columns should have the same number of rows";
+            assert (rows == columnVector.getRows()) : "All columns should have the same number of rows";
         }
         this.columnVectors = new ColumnVector[columnVectors.length];
         // Since Arrays are mutable objects make a copy
@@ -102,8 +102,8 @@ public final class Table implements AutoCloseable {
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].rows,
-                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].type);
+            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRows(),
+                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].getType());
         }
         return new Table(outputColumnVectors);
     }
@@ -328,7 +328,7 @@ public final class Table implements AutoCloseable {
             ColumnVector ret;
             switch(type) {
                 case INT8:
-                    ret = ByteColumnVector.buildBoxed((Byte[]) dataArray);
+                    ret = ColumnVector.buildBoxed((Byte[]) dataArray);
                     break;
                 case INT16:
                     ret = ShortColumnVector.buildBoxed((Short[]) dataArray);
@@ -367,7 +367,7 @@ public final class Table implements AutoCloseable {
                     columns.add(from(types.get(i), typeErasedData.get(i)));
                 }
                 for (ColumnVector cv: columns) {
-                    cv.toDeviceBuffer();
+                    cv.ensureOnDevice();
                 }
                 return new Table(columns.toArray(new ColumnVector[columns.size()]));
             } finally {

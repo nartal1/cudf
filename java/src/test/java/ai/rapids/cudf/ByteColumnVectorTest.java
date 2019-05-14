@@ -30,51 +30,51 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (ByteColumnVector shortColumnVector = ByteColumnVector.build(3, (b) -> b.append((byte)1))) {
+        try (ColumnVector shortColumnVector = ColumnVector.build(DType.INT8,3, (b) -> b.appendByte((byte)1))) {
             assertFalse(shortColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testArrayAllocation() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
+        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
-            assertEquals(byteColumnVector.get(0), 2);
-            assertEquals(byteColumnVector.get(1), 3);
-            assertEquals(byteColumnVector.get(2), 5);
+            assertEquals(byteColumnVector.getByte(0), 2);
+            assertEquals(byteColumnVector.getByte(1), 3);
+            assertEquals(byteColumnVector.getByte(2), 5);
         }
     }
 
     @Test
     public void testAppendRepeatingValues() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(3,
-                (b) -> b.append((byte)2,(long)3))) {
+        try (ColumnVector byteColumnVector = ColumnVector.build(DType.INT8, 3,
+                (b) -> b.appendBytes((byte)2,(long)3))) {
             assertFalse(byteColumnVector.hasNulls());
-            assertEquals(byteColumnVector.get(0), 2);
-            assertEquals(byteColumnVector.get(1), 2);
-            assertEquals(byteColumnVector.get(2), 2);
+            assertEquals(byteColumnVector.getByte(0), 2);
+            assertEquals(byteColumnVector.getByte(1), 2);
+            assertEquals(byteColumnVector.getByte(2), 2);
         }
     }
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
-            assertThrows(AssertionError.class, () -> byteColumnVector.get(3));
+        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
+            assertThrows(AssertionError.class, () -> byteColumnVector.getByte(3));
             assertFalse(byteColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.build(new byte[] {2, 3, 5})) {
+        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
-            assertThrows(AssertionError.class, () -> byteColumnVector.get(-1));
+            assertThrows(AssertionError.class, () -> byteColumnVector.getByte(-1));
         }
     }
 
     @Test
     public void testAddingNullValues() {
-        try (ByteColumnVector byteColumnVector = ByteColumnVector.buildBoxed(
+        try (ColumnVector byteColumnVector = ColumnVector.buildBoxed(
                 new Byte[] {2,3,4,5,6,7,null,null})) {
             assertTrue(byteColumnVector.hasNulls());
             assertEquals(2, byteColumnVector.getNullCount());
@@ -88,8 +88,8 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testOverrunningTheBuffer() {
-        try (ByteColumnVector.Builder builder = ByteColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append((byte)2).appendNull().appendArray((byte)5, (byte)4).build());
+        try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT8, 3)) {
+            assertThrows(AssertionError.class, () -> builder.appendByte((byte)2).appendNull().appendBytes((byte)5, (byte)4).build());
         }
     }
 
@@ -100,17 +100,17 @@ public class ByteColumnVectorTest {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
-                    try (ByteColumnVector.Builder dst = ByteColumnVector.builder(dstSize);
-                         ByteColumnVector src = ByteColumnVector.build(srcSize, (b) -> {
+                    try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT8, dstSize);
+                         ColumnVector src = ColumnVector.build(DType.INT8, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
                                  } else {
-                                     b.append((byte)random.nextInt());
+                                     b.appendByte((byte)random.nextInt());
                                  }
                              }
                          });
-                         ByteColumnVector.Builder gtBuilder = ByteColumnVector.builder(dstPrefilledSize)) {
+                         ColumnVector.Builder gtBuilder = ColumnVector.builder(DType.INT8, dstPrefilledSize)) {
                         assertEquals(dstSize, srcSize + dstPrefilledSize);
                         //add the first half of the prefilled list
                         for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
@@ -119,24 +119,24 @@ public class ByteColumnVectorTest {
                                 gtBuilder.appendNull();
                             } else {
                                 byte a = (byte)random.nextInt();
-                                dst.append(a);
-                                gtBuilder.append(a);
+                                dst.appendByte(a);
+                                gtBuilder.appendByte(a);
                             }
                         }
                         // append the src vector
                         dst.append(src);
-                        try (ByteColumnVector dstVector = dst.build();
-                             ByteColumnVector gt = gtBuilder.build()) {
+                        try (ColumnVector dstVector = dst.build();
+                             ColumnVector gt = gtBuilder.build()) {
                             for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                 assertEquals(gt.isNull(i), dstVector.isNull(i));
                                 if (!gt.isNull(i)) {
-                                    assertEquals(gt.get(i), dstVector.get(i));
+                                    assertEquals(gt.getByte(i), dstVector.getByte(i));
                                 }
                             }
                             for (int i = dstPrefilledSize - sizeOfDataNotToAdd, j = 0; i < dstSize - sizeOfDataNotToAdd && j < srcSize; i++, j++) {
                                 assertEquals(src.isNull(j), dstVector.isNull(i));
                                 if (!src.isNull(j)) {
-                                    assertEquals(src.get(j), dstVector.get(i));
+                                    assertEquals(src.getByte(j), dstVector.getByte(i));
                                 }
                             }
                             if (dstVector.offHeap.hostData.valid != null) {
@@ -155,8 +155,8 @@ public class ByteColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ByteColumnVector.Builder builder = ByteColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.appendArray((byte)2, (byte)3, (byte)5).appendNull();
+            try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT8, 4, mockDataBuffer, mockValidBuffer)) {
+                builder.appendBytes(new byte[] {2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

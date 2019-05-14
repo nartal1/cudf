@@ -158,11 +158,11 @@ public class DoubleColumnVectorTest {
         try (DoubleColumnVector doubleColumnVector1 = DoubleColumnVector.build(5, Range.appendDoubles(1.1, 5.5));
              DoubleColumnVector doubleColumnVector2 = DoubleColumnVector.build(5, Range.appendDoubles(10,  60, 10))) {
 
-            doubleColumnVector1.toDeviceBuffer();
-            doubleColumnVector2.toDeviceBuffer();
+            doubleColumnVector1.ensureOnDevice();
+            doubleColumnVector2.ensureOnDevice();
 
             try (DoubleColumnVector doubleColumnVector3 = doubleColumnVector1.add(doubleColumnVector2)) {
-                doubleColumnVector3.toHostBuffer();
+                doubleColumnVector3.ensureOnHost();
                 assertEquals(5, doubleColumnVector3.getRows());
                 assertEquals(0, doubleColumnVector3.getNullCount());
                 for (int i = 0; i < 5; i++) {

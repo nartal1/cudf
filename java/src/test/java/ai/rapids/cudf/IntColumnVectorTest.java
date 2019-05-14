@@ -23,8 +23,6 @@ import org.mockito.Mockito;
 
 import java.util.Random;
 
-import java.util.Random;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.spy;
@@ -160,11 +158,11 @@ public class IntColumnVectorTest {
         try (IntColumnVector intColumnVector1 = IntColumnVector.build(4, Range.appendInts(1, 5));
              IntColumnVector intColumnVector2 = IntColumnVector.build(4, Range.appendInts(10, 50, 10))) {
 
-            intColumnVector1.toDeviceBuffer();
-            intColumnVector2.toDeviceBuffer();
+            intColumnVector1.ensureOnDevice();
+            intColumnVector2.ensureOnDevice();
 
             try (IntColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
-                intColumnVector3.toHostBuffer();
+                intColumnVector3.ensureOnHost();
                 assertEquals(4, intColumnVector3.getRows());
                 assertEquals(0, intColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {

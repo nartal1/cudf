@@ -39,9 +39,9 @@ public class Date32ColumnVectorTest {
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES)) {
-            date32ColumnVector.toDeviceBuffer();
+            date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date32ColumnVector.year()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 int expected = 2019;
                 for (int i = 0; i < DATES.length; i++) {
                     assertEquals(expected - i, result.get(i)); //2019 to 2015
@@ -54,9 +54,9 @@ public class Date32ColumnVectorTest {
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES)) {
-            date32ColumnVector.toDeviceBuffer();
+            date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result = date32ColumnVector.month()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 for (int i = 0; i < DATES.length; i++) {
                     assertEquals(1, result.get(i)); //Jan of every year
                 }
@@ -68,9 +68,9 @@ public class Date32ColumnVectorTest {
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES_2)) {
-            date32ColumnVector.toDeviceBuffer();
+            date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date32ColumnVector.day()) {
-                result.toHostBuffer();
+                result.ensureOnHost();
                 for (int i = 0; i < DATES_2.length; i++) {
                     assertEquals(i + 1, result.get(i)); //1 to 5
                 }
