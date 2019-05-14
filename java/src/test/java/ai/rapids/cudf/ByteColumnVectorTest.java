@@ -87,6 +87,24 @@ public class ByteColumnVectorTest {
     }
 
     @Test
+    public void testCast() {
+        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(new double[] {4.3,3.8,8});
+             ShortColumnVector shortColumnVector = ShortColumnVector.build(new short[] {100,50,20})){
+            doubleColumnVector.toDeviceBuffer();
+            shortColumnVector.toDeviceBuffer();
+            try (ByteColumnVector byteColumnVector1 = ByteColumnVector.CastToByte(doubleColumnVector);
+                 ByteColumnVector byteColumnVector2 = ByteColumnVector.CastToByte(shortColumnVector)){
+                byteColumnVector1.toHostBuffer();
+                byteColumnVector2.toHostBuffer();
+                assertEquals(byteColumnVector1.get(0), 4);
+                assertEquals(byteColumnVector1.get(1), 3);
+                assertEquals(byteColumnVector1.get(2), 8);
+                assertEquals(byteColumnVector2.get(0), 100);
+            }
+        }
+    }
+
+    @Test
     public void testOverrunningTheBuffer() {
         try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT8, 3)) {
             assertThrows(AssertionError.class, () -> builder.append((byte)2).appendNull().append((byte)5, (byte)4).build());

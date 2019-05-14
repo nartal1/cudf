@@ -200,4 +200,15 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
     } CATCH_STD(env, 0);
 }
 
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfCastTo
+        (JNIEnv * env, jclass, jlong inputPtr, jlong outputPtr) {
+    JNI_NULL_CHECK(env, inputPtr, "input is null",);
+    JNI_NULL_CHECK(env, outputPtr, "output is null",);
+    try {
+      JNI_GDF_TRY(env, ,
+                gdf_cast((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+    } CATCH_STD(env, );
+}
+
+
 }
