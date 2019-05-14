@@ -72,8 +72,7 @@ public class TableTest {
                                         "Column " + col + " Row " + row);
                                 break;
                             case FLOAT64:
-                                assertEquals(((DoubleColumnVector)expect).get(row),
-                                        ((DoubleColumnVector)cv).get(row), 0.0001,
+                                assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
                                         "Column " + col + " Row " + row);
                                 break;
                             case DATE32:
@@ -112,6 +111,7 @@ public class TableTest {
                     case INT8:
                     case DATE32:
                     case DATE64:
+                    case FLOAT64:
                         // Ignored
                         break;
                     case INT16:
@@ -125,9 +125,6 @@ public class TableTest {
                         break;
                     case FLOAT32:
                         c = FloatColumnVector.class;
-                        break;
-                    case FLOAT64:
-                        c = DoubleColumnVector.class;
                         break;
                     case TIMESTAMP:
                         c = TimestampColumnVector.class;

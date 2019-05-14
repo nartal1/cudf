@@ -111,6 +111,13 @@ public class ColumnVector implements AutoCloseable {
         offHeap.addRef();
     }
 
+    // TODO this should be private
+    static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
+        assert v1.rows == v2.rows;
+        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
+    }
+
+    //TODO this should be private
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
         ColumnVector columnVector = null;
         switch (type) {
@@ -123,15 +130,13 @@ public class ColumnVector implements AutoCloseable {
             case FLOAT32:
                 columnVector = FloatColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case FLOAT64:
-                columnVector = DoubleColumnVector.newOutputVector(rows, hasValidity);
-                break;
             case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
             case INT8:
             case DATE32:
             case DATE64:
+            case FLOAT64:
                 DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
                 DeviceMemoryBuffer valid = null;
                 if (hasValidity) {
@@ -162,15 +167,13 @@ public class ColumnVector implements AutoCloseable {
             case FLOAT32:
                 columnVector = new FloatColumnVector(cudfColumn);
                 break;
-            case FLOAT64:
-                columnVector = new DoubleColumnVector(cudfColumn);
-                break;
             case INT16:
                 columnVector = new ShortColumnVector(cudfColumn);
                 break;
-            case DATE64:
-            case DATE32:
             case INT8:
+            case DATE32:
+            case DATE64:
+            case FLOAT64:
                 columnVector = new ColumnVector(cudfColumn);
                 break;
             case TIMESTAMP:
@@ -357,6 +360,17 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Get the value at index.
+     */
+    public final double getDouble(long index) {
+        assert type == DType.FLOAT64;
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert offHeap.hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
+        return offHeap.hostData.data.getDouble(index * type.sizeInBytes);
+    }
+
+    /**
      * Get year from DATE32 or DATE64
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
@@ -448,6 +462,41 @@ public class ColumnVector implements AutoCloseable {
         assert type == DType.DATE64;
         ShortColumnVector result = ShortColumnVector.newOutputVector(this);
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Add two vectors.
+     * Preconditions - vectors have to be the same size
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
+     *                  its lifecycle.
+     * Example:
+     *          try (ColumnVector v1 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.appendDouble(1.2).appendDouble(5.1)...);
+     *               ColumnVector v2 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.appendDouble(5.1).appendDouble(13.1)...);
+     *               ColumnVector v3 = v1.add(v2);
+     *            ...
+     *          }
+     *
+     * @param v1 - vector to be added to this vector.
+     * @return - A new vector allocated on the GPU.
+     */
+    public ColumnVector add(ColumnVector v1) {
+        assert type == v1.getType();
+        assert type == DType.FLOAT64; // TODO need others...
+        assert v1.getRows() == getRows(); // cudf will check this too.
+        assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
+        assert getNullCount() == 0;
+
+        ColumnVector result = newOutputVector(v1, this, type);
+        switch (type) {
+            case FLOAT64:
+                Cudf.gdfAddF64(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+                break;
+            default:
+                throw new IllegalArgumentException(type + " is not yet supported");
+        }
         result.updateFromNative();
         return result;
     }
@@ -648,6 +697,13 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Create a new byte vector from the given values.
+     */
+    public static ColumnVector build(double ... values) {
+        return build(DType.FLOAT64, values.length, (b) -> b.appendDoubles(values));
+    }
+
+    /**
      * Create a new vector from the given values.
      */
     public static ColumnVector buildDate(int ... values) {
@@ -668,6 +724,15 @@ public class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector buildBoxed(Byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxed(Double ... values) {
+        return build(DType.FLOAT64, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**
@@ -876,6 +941,23 @@ public class ColumnVector implements AutoCloseable {
                     appendNull();
                 } else {
                     appendLong(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Double ... values) throws IndexOutOfBoundsException {
+            for (Double b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    appendDouble(b);
                 }
             }
             return this;

@@ -352,7 +352,7 @@ public final class Table implements AutoCloseable {
                     ret = FloatColumnVector.buildBoxed((Float[]) dataArray);
                     break;
                 case FLOAT64:
-                    ret = DoubleColumnVector.buildBoxed((Double[]) dataArray);
+                    ret = ColumnVector.buildBoxed((Double[]) dataArray);
                     break;
                 default:
                     throw new IllegalArgumentException(type + " is not supported yet");

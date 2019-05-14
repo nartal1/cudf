@@ -206,12 +206,12 @@ public final class Range {
      * @param step how must to step by.
      * @return the builder for chaining.
      */
-    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double start, double end, double step) {
+    public static final Consumer<ColumnVector.Builder> appendDoubles(double start, double end, double step) {
         assert step > 0;
         assert start <= end;
         return (b) -> {
             for (double i = start; i < end; i += step) {
-                b.append(i);
+                b.appendDouble(i);
             }
         };
     }
@@ -221,7 +221,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double end) {
+    public static final Consumer<ColumnVector.Builder> appendDoubles(double end) {
         return appendDoubles(0, end, 1);
     }
 
@@ -231,7 +231,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<DoubleColumnVector.Builder> appendDoubles(double start, double end) {
+    public static final Consumer<ColumnVector.Builder> appendDoubles(double start, double end) {
         return appendDoubles(start, end, 1);
     }
 
