@@ -166,9 +166,182 @@ namespace cudf {
        }
      }
 
-     ~native_jlongArray() {
+     void commit() {
        if (data_ptr != NULL && orig != NULL) {
          env->ReleaseLongArrayElements(orig, data_ptr, 0);
+         data_ptr = NULL;
+       }
+     }
+
+     ~native_jlongArray() {
+       commit();
+     }
+  };
+
+  /**
+   * @brief wrapper around native_jlongArray to make it take pointers instead.
+   *
+   * By default any changes to the array will be committed back when
+   * the destructor is called unless cancel is called first.
+   */
+  template<typename T>
+  class native_jpointerArray {
+  private:
+     native_jlongArray wrapped;
+
+  public:
+     native_jpointerArray(native_jpointerArray const&) = delete;
+     native_jpointerArray& operator=(native_jpointerArray const&) = delete;
+
+     native_jpointerArray(JNIEnv * const env, jlongArray orig) :
+         wrapped(env, orig) {
+     }
+
+     native_jpointerArray(JNIEnv* const env, int len) :
+         wrapped(env, len) {
+     }
+
+     native_jpointerArray(JNIEnv * const env, T * arr, int len) :
+         wrapped(env, arr, len) {
+     }
+
+     bool isNull() const noexcept {
+       return wrapped.isNull();
+     }
+
+     int size() const noexcept {
+       return wrapped.size();
+     }
+
+     T* operator[](int index) const {
+       return data()[index];
+     }
+
+     T*& operator[](int index) {
+       return data()[index];
+     }
+
+     T* const * data() const {
+       return reinterpret_cast<T**>(wrapped.data());
+     }
+
+     T** data() {
+       return reinterpret_cast<T**>(wrapped.data());
+     }
+
+     const jlongArray get_jlongArray() const {
+       return wrapped.get_jlongArray();
+     }
+
+     jlongArray get_jlongArray() {
+       return wrapped.get_jlongArray();
+     }
+
+     /**
+      * @brief if data has been written back into this array, don't commit
+      * it.
+      */
+     void cancel() {
+       wrapped.cancel();
+     }
+
+     void commit() {
+       wrapped.commit();
+     }
+  };
+
+  /**
+   * @brief wrapper around native_jlongArray to hold pointers that are deleted
+   * if not released, like std::unique_ptr.
+   *
+   * By default any changes to the array will be committed back when
+   * released unless cancel is called first.
+   */
+  template<typename T, typename D = std::default_delete<T>>
+  class unique_jpointerArray {
+  private:
+     std::unique_ptr<native_jpointerArray<T>> wrapped;
+     D del;
+
+  public:
+     unique_jpointerArray(unique_jpointerArray const&) = delete;
+     unique_jpointerArray& operator=(unique_jpointerArray const&) = delete;
+
+     unique_jpointerArray(JNIEnv * const env, jlongArray orig) :
+         wrapped(new native_jpointerArray<T>(env, orig)) {
+     }
+
+     unique_jpointerArray(JNIEnv * const env, jlongArray orig, const D & del) :
+         wrapped(new native_jpointerArray<T>(env, orig)),
+         del(del) {
+     }
+
+     unique_jpointerArray(JNIEnv* const env, int len) :
+         wrapped(new native_jpointerArray<T>(env, len)) {
+     }
+
+     unique_jpointerArray(JNIEnv* const env, int len, const D & del) :
+         wrapped(new native_jpointerArray<T>(env, len)),
+         del(del) {
+     }
+
+     unique_jpointerArray(JNIEnv * const env, T * arr, int len) :
+         wrapped(new native_jpointerArray<T>(env, arr, len)) {
+     }
+
+     unique_jpointerArray(JNIEnv * const env, T * arr, int len, const D & del) :
+         wrapped(new native_jpointerArray<T>(env, arr, len)),
+         del(del) {
+     }
+
+     bool isNull() const noexcept {
+       return wrapped == NULL || wrapped->isNull();
+     }
+
+     int size() const noexcept {
+       return wrapped == NULL ? 0 : wrapped->size();
+     }
+
+     void reset(int index, T* new_ptr = NULL) {
+       if (wrapped == NULL) {
+         throw std::logic_error("using unique_jpointerArray after release");
+       }
+       T* old = (*wrapped)[index];
+       if (old != new_ptr) {
+         (*wrapped)[index] = new_ptr;
+         del(old);
+       }
+     }
+
+     T* get(int index) {
+       if (wrapped == NULL) {
+         throw std::logic_error("using unique_jpointerArray after release");
+       }
+       return (*wrapped)[index];
+     }
+
+     T* const * get() {
+       if (wrapped == NULL) {
+         throw std::logic_error("using unique_jpointerArray after release");
+       }
+       return wrapped->data();
+     }
+
+     jlongArray release() {
+       if (wrapped == NULL) {
+         return NULL;
+       }
+       wrapped->commit();
+       jlongArray ret = wrapped->get_jlongArray();
+       wrapped.reset(NULL);
+       return ret;
+     }
+
+     ~unique_jpointerArray() {
+       if (wrapped != NULL) {
+         for (int i = 0; i < wrapped->size(); i++) {
+           reset(i, NULL);
+         }
        }
      }
   };
@@ -256,10 +429,15 @@ namespace cudf {
        }
      }
 
-     ~native_jintArray() {
+     void commit() {
        if (data_ptr != NULL && orig != NULL) {
          env->ReleaseIntArrayElements(orig, data_ptr, 0);
+         data_ptr = NULL;
        }
+     }
+
+     ~native_jintArray() {
+       commit();
      }
   };
 
@@ -346,10 +524,15 @@ namespace cudf {
        }
      }
 
-     ~native_jbooleanArray() {
+     void commit() {
        if (data_ptr != NULL && orig != NULL) {
          env->ReleaseBooleanArrayElements(orig, data_ptr, 0);
+         data_ptr = NULL;
        }
+     }
+
+     ~native_jbooleanArray() {
+       commit();
      }
   };
 
@@ -361,13 +544,15 @@ namespace cudf {
       JNIEnv * env;
       jstring orig;
       mutable const char * cstr;
+      mutable size_t cstr_length;
 
-     void init_cstr() const {
-       if (orig != NULL && cstr == NULL) {
-         cstr = env->GetStringUTFChars(orig, 0);
-         checkJavaException(env);
-       }
-     }
+      void init_cstr() const {
+        if (orig != NULL && cstr == NULL) {
+          cstr_length = env->GetStringUTFLength(orig);
+          cstr = env->GetStringUTFChars(orig, 0);
+          checkJavaException(env);
+        }
+      }
 
   public:
       native_jstring(native_jstring const&) = delete;
@@ -376,14 +561,16 @@ namespace cudf {
       native_jstring(native_jstring && other) noexcept :
           env(other.env),
           orig(other.orig),
-          cstr(other.cstr) {
+          cstr(other.cstr),
+          cstr_length(other.cstr_length) {
         other.cstr = NULL;
       }
 
       native_jstring(JNIEnv * const env, jstring orig) : 
           env(env),
           orig(orig),
-          cstr(NULL) {
+          cstr(NULL),
+          cstr_length(0) {
       }
 
       native_jstring& operator=(native_jstring const && other) {
@@ -393,6 +580,7 @@ namespace cudf {
         this->env = other.env;
         this->orig = other.orig;
         this->cstr = other.cstr;
+        this->cstr_length = other.cstr_length;
         other.cstr = NULL;
       }
 
@@ -403,6 +591,22 @@ namespace cudf {
       const char * get() const {
         init_cstr();
         return cstr;
+      }
+
+      size_t size_bytes() const {
+        init_cstr();
+        return cstr_length;
+      }
+
+      bool is_empty() const {
+        if (cstr != NULL) {
+          return cstr_length <= 0;
+        } else if (orig != NULL) {
+          jsize len = env->GetStringLength(orig);
+          checkJavaException(env);
+          return len <= 0;
+        }
+        return true;
       }
 
       const jstring get_jstring() const {

@@ -28,15 +28,8 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfTable_createCudfTable(JNIEnv *en
     JNI_NULL_CHECK(env, cudfColumns, "input columns are null", 0);
 
     try {
-      const cudf::native_jlongArray nCudfColumns(env, cudfColumns);
-      int const len = nCudfColumns.size();
-
-      std::unique_ptr<gdf_column *[]> cols(new gdf_column *[len]);
-      const jlong* cudfColumnsData = nCudfColumns.data();
-
-      std::memcpy(cols.get(), cudfColumnsData, sizeof(gdf_column*) * len);
-
-      cudf::table* table = new cudf::table(cols.get(), len);
+      cudf::native_jpointerArray<gdf_column> nCudfColumns(env, cudfColumns);
+      cudf::table* table = new cudf::table(nCudfColumns.data(), nCudfColumns.size());
       return reinterpret_cast<jlong>(table);
     } CATCH_STD(env, 0);
 }
@@ -65,19 +58,6 @@ cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, const cudf::native_j
   return device;
 }
 
-/**
- * Convert an array of longs into an array of gdf_column pointers.
- */
-std::vector<gdf_column *> as_gdf_columns(const cudf::native_jlongArray &nColumnPtrs) {
-    jsize numColumns = nColumnPtrs.size();
-
-    std::vector<gdf_column *> columns(numColumns);
-    for (int i = 0; i < numColumns; i++) {
-      columns[i] = reinterpret_cast<gdf_column*>(nColumnPtrs[i]);
-    }
-    return columns;
-}
-
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
         jclass jClassObject,
         jlong jInputTable,
@@ -93,7 +73,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
     JNI_NULL_CHECK(env, jOutputTable, "output table is null", );
 
     try {
-        const cudf::native_jlongArray nSortKeysGdfcolumns(env, jSortKeysGdfcolumns);
+        cudf::native_jpointerArray<gdf_column> nSortKeysGdfcolumns(env, jSortKeysGdfcolumns);
         jsize numColumns = nSortKeysGdfcolumns.size();
         const cudf::native_jbooleanArray nIsDescending(env, jIsDescending);
         jsize numColumnsIsDesc = nIsDescending.size();
@@ -102,18 +82,17 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
             JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "columns and isDescending lengths don't match", );
         }
 
-        std::vector<gdf_column*> columns = as_gdf_columns(nSortKeysGdfcolumns);
         auto isDescending = copyToDevice(env, nIsDescending);
 
         cudf::table* outputTable = reinterpret_cast<cudf::table*>(jOutputTable);
         cudf::table* inputTable = reinterpret_cast<cudf::table*>(jInputTable);
         bool areNullsSmallest = static_cast<bool>(jAreNullsSmallest);
 
-        auto col_data = cudf::jniRmmAlloc<int32_t>(env, columns[0]->size * sizeof(int32_t), 0);
+        auto col_data = cudf::jniRmmAlloc<int32_t>(env, nSortKeysGdfcolumns[0]->size * sizeof(int32_t), 0);
 
         gdf_column intermediateOutput;
         // construct column view
-        cudf::jniCudfCheck(env, gdf_column_view(&intermediateOutput, col_data.get(), nullptr, columns[0]->size, gdf_dtype::GDF_INT32));
+        cudf::jniCudfCheck(env, gdf_column_view(&intermediateOutput, col_data.get(), nullptr, nSortKeysGdfcolumns[0]->size, gdf_dtype::GDF_INT32));
 
         gdf_context context{};
         // Most of these are probably ignored, but just to be safe
@@ -127,7 +106,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
         context.flag_null_sort_behavior = jAreNullsSmallest ? GDF_NULL_AS_SMALLEST : GDF_NULL_AS_LARGEST;
 
 
-        cudf::jniCudfCheck(env, gdf_order_by(columns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, &context));
+        cudf::jniCudfCheck(env, gdf_order_by(nSortKeysGdfcolumns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, &context));
         
         gather(inputTable, col_data.get(), outputTable);
     } CATCH_STD(env, );
@@ -179,10 +158,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
       }
 
       cudf::native_jstring filename(env, inputfilepath);
-      if (!read_buffer) {
-        if (strlen(filename.get()) == 0) {
-          JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
-        }
+      if (!read_buffer && filename.is_empty()) {
+        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
       }
 
       cudf::native_jstringArray nNullValues(env, nullValues);
@@ -291,10 +268,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv
 
     try {
       cudf::native_jstring filename(env, inputfilepath);
-      if (!read_buffer) {
-        if (strlen(filename.get()) == 0) {
-          JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
-        }
+      if (!read_buffer && filename.is_empty()) {
+        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "inputfilepath can't be empty", NULL);
       }
 
       cudf::native_jstringArray nFilterColNames(env, filterColNames);
@@ -357,21 +332,17 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfLeftJoin(
     // gdf_left_join is allocating the memory for the results so
     // allocate the output column structures here when we get it back fill in
     // the the outPtrs
-    cudf::native_jlongArray outputHandles(env, resultNumCols);
-    std::vector<std::unique_ptr<gdf_column>> output_columns(resultNumCols);
+    cudf::unique_jpointerArray<gdf_column> output_columns(env, resultNumCols);
     for (int i = 0; i < resultNumCols; i++) {
-        output_columns[i].reset(new gdf_column());
-        outputHandles[i] = reinterpret_cast<jlong>(output_columns[i].get());
+        output_columns.reset(i, new gdf_column());
     }
     JNI_GDF_TRY(env, NULL, gdf_left_join(
         nLefTable->begin(), nLefTable->num_columns(), leftJoinColsArr.data(),
         nRightTable->begin(), nRightTable->num_columns(), rightJoinColsArr.data(),
-        leftJoinColsArr.size(), resultNumCols, reinterpret_cast<gdf_column**>(outputHandles.data()), nullptr, nullptr,
-        &context));
-    for (int i = 0 ; i < resultNumCols ; i++) {
-        output_columns[i].release();
-    }
-    return outputHandles.get_jlongArray();
+        leftJoinColsArr.size(), resultNumCols, 
+        const_cast<gdf_column**>(output_columns.get()), // API does not respect const values
+        nullptr, nullptr, &context));
+    return output_columns.release();
   }
   CATCH_STD(env, NULL);
 }
