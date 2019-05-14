@@ -265,6 +265,20 @@ public final class Table implements AutoCloseable {
             CudfColumn[] columns = CudfTable.leftJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
             return new Table(columns);
         }
+
+	/**
+         * Joins two tables on the join columns that are passed in.
+         * Usage:
+         *      Table t1 ...
+         *      Table t2 ...
+         *      Table result = t1.joinColumns(0,1).innerJoin(t2.joinColumns(2,3));
+         * @param rightJoinIndices - Indices of the right table to join on
+         * @return Joined {@link Table}
+         */
+        public Table innerJoin(JoinColumns rightJoinIndices) {
+            CudfColumn[] columns = CudfTable.innerJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
+            return new Table(columns);
+        }
     }
 
     /**
