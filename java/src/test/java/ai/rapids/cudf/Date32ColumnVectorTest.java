@@ -38,7 +38,7 @@ public class Date32ColumnVectorTest {
     @Test
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES)) {
+        try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES)) {
             date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date32ColumnVector.year()) {
                 result.ensureOnHost();
@@ -53,7 +53,7 @@ public class Date32ColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES)) {
+        try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES)) {
             date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result = date32ColumnVector.month()) {
                 result.ensureOnHost();
@@ -67,7 +67,7 @@ public class Date32ColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date32ColumnVector date32ColumnVector = Date32ColumnVector.build(DATES_2)) {
+        try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES_2)) {
             date32ColumnVector.ensureOnDevice();
             try (ShortColumnVector result= date32ColumnVector.day()) {
                 result.ensureOnHost();

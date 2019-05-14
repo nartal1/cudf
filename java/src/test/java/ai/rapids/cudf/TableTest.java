@@ -77,8 +77,7 @@ public class TableTest {
                                         "Column " + col + " Row " + row);
                                 break;
                             case DATE32:
-                                assertEquals(((Date32ColumnVector)expect).get(row),
-                                        ((Date32ColumnVector)cv).get(row),
+                                assertEquals(expect.getInt(row), cv.getInt(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case DATE64:
@@ -111,6 +110,7 @@ public class TableTest {
                 // TODO when done delete this...
                 Class c = ColumnVector.class;
                 switch(type) {
+                    case DATE32:
                     case INT8:
                         // Ignored
                         break;
@@ -128,9 +128,6 @@ public class TableTest {
                         break;
                     case FLOAT64:
                         c = DoubleColumnVector.class;
-                        break;
-                    case DATE32:
-                        c = Date32ColumnVector.class;
                         break;
                     case DATE64:
                         c = Date64ColumnVector.class;
