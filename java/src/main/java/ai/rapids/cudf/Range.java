@@ -52,7 +52,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (byte i = start; i < end; i += step) {
-                b.appendByte(i);
+                b.append(i);
             }
         };
     }
@@ -86,7 +86,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (short i = start; i < end; i += step) {
-                b.appendShort(i);
+                b.append(i);
             }
         };
     }
@@ -122,7 +122,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (int i = start; i < end; i += step) {
-                b.appendInt(i);
+                b.append(i);
             }
         };
     }
@@ -139,7 +139,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (long i = start; i < end; i += step) {
-                b.appendLong(i);
+                b.append(i);
             }
         };
     }
@@ -175,7 +175,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (float i = start; i < end; i += step) {
-                b.appendFloat(i);
+                b.append(i);
             }
         };
     }
@@ -211,7 +211,7 @@ public final class Range {
         assert start <= end;
         return (b) -> {
             for (double i = start; i < end; i += step) {
-                b.appendDouble(i);
+                b.append(i);
             }
         };
     }

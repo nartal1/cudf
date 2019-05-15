@@ -40,11 +40,10 @@ public class ColumnVector implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(ColumnVector.class);
     static final boolean REF_COUNT_DEBUG = Boolean.getBoolean("ai.rapids.refcount.debug");
 
-    //TODO make these private
-    protected long rows;
-    protected final DType type;
-    protected long nullCount;
-    protected final OffHeapState offHeap = new OffHeapState();
+    private long rows;
+    private final DType type;
+    private long nullCount;
+    private final OffHeapState offHeap = new OffHeapState();
     private int refCount;
 
     private static <T> String stringJoin(String delim, Iterable<T> it) {
@@ -54,7 +53,7 @@ public class ColumnVector implements AutoCloseable {
                         .collect(Collectors.toList()));
     }
 
-    protected ColumnVector(CudfColumn cudfColumn) {
+    ColumnVector(CudfColumn cudfColumn) {
         assert cudfColumn != null;
         ColumnVectorCleaner.register(this, offHeap);
         this.type = cudfColumn.getDtype();
@@ -74,7 +73,7 @@ public class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    protected ColumnVector(HostMemoryBuffer hostDataBuffer,
+    ColumnVector(HostMemoryBuffer hostDataBuffer,
                            HostMemoryBuffer hostValidityBuffer, long rows, DType type, long nullCount) {
         if (nullCount > 0 && hostValidityBuffer == null) {
             throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
@@ -89,7 +88,7 @@ public class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    protected ColumnVector(DeviceMemoryBuffer dataBuffer,
+    ColumnVector(DeviceMemoryBuffer dataBuffer,
                            DeviceMemoryBuffer validityBuffer, long rows, DType type) {
         ColumnVectorCleaner.register(this, offHeap);
         offHeap.deviceData = new BufferEncapsulator(dataBuffer, validityBuffer);
@@ -143,6 +142,7 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
      */
+    @Override
     public final void close() {
         refCount --;
         offHeap.delRef();
@@ -227,10 +227,10 @@ public class ColumnVector implements AutoCloseable {
                     }
                 }
             }
-        }
-        offHeap.deviceData.data.copyFromHostBuffer(offHeap.hostData.data);
-        if (offHeap.deviceData.valid != null) {
-            offHeap.deviceData.valid.copyFromHostBuffer(offHeap.hostData.valid);
+            offHeap.deviceData.data.copyFromHostBuffer(offHeap.hostData.data);
+            if (offHeap.deviceData.valid != null) {
+                offHeap.deviceData.valid.copyFromHostBuffer(offHeap.hostData.valid);
+            }
         }
     }
 
@@ -332,8 +332,12 @@ public class ColumnVector implements AutoCloseable {
         return offHeap.hostData.data.getDouble(index * type.sizeInBytes);
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    // DATE/TIME
+    ////////////////////////////////////////////////////////////////////////////
+
     /**
-     * Get year from DATE32 or DATE64
+     * Get year from DATE32, DATE64, or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -349,7 +353,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get month from DATE32 or DATE64
+     * Get month from DATE32, DATE64, or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -365,7 +369,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get day from DATE32 or DATE64
+     * Get day from DATE32, DATE64, or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -381,7 +385,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get hour from DATE64
+     * Get hour from DATE64 or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -397,7 +401,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get minute from DATE64
+     * Get minute from DATE64 or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -413,7 +417,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Get second from DATE64
+     * Get second from DATE64 or TIMESTAMP
      *
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
@@ -428,6 +432,11 @@ public class ColumnVector implements AutoCloseable {
         return result;
     }
 
+
+    /////////////////////////////////////////////////////////////////////////////
+    // ARITHMETIC
+    ////////////////////////////////////////////////////////////////////////////
+
     /**
      * Add two vectors.
      * Preconditions - vectors have to be the same size
@@ -435,8 +444,8 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      * Example:
-     *          try (ColumnVector v1 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.appendDouble(1.2).appendDouble(5.1)...);
-     *               ColumnVector v2 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.appendDouble(5.1).appendDouble(13.1)...);
+     *          try (ColumnVector v1 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.append(1.2).append(5.1)...);
+     *               ColumnVector v2 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.append(5.1).append(13.1)...);
      *               ColumnVector v3 = v1.add(v2);
      *            ...
      *          }
@@ -446,7 +455,7 @@ public class ColumnVector implements AutoCloseable {
      */
     public ColumnVector add(ColumnVector v1) {
         assert type == v1.getType();
-        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64; // TODO need others...
+        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64;
         assert v1.getRows() == getRows(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
@@ -483,7 +492,7 @@ public class ColumnVector implements AutoCloseable {
         return getCudfColumn().getNativeHandle();
     }
 
-    protected final CudfColumn getCudfColumn() {
+    final CudfColumn getCudfColumn() {
         if (offHeap.cudfColumn == null) {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
@@ -499,7 +508,7 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Update any internal accounting from what is in the Native Code
      */
-    protected void updateFromNative() {
+    final void updateFromNative() {
         assert offHeap.cudfColumn != null;
         this.nullCount = offHeap.cudfColumn.getNullCount();
         this.rows = offHeap.cudfColumn.getSize();
@@ -508,7 +517,7 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Encapsulator class to hold the two buffers as a cohesive object
      */
-    protected static final class BufferEncapsulator<T extends MemoryBuffer> implements AutoCloseable {
+    private static final class BufferEncapsulator<T extends MemoryBuffer> implements AutoCloseable {
         public final T data;
         public final T valid;
 
@@ -649,63 +658,63 @@ public class ColumnVector implements AutoCloseable {
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(byte ... values) {
-        return build(DType.INT8, values.length, (b) -> b.appendBytes(values));
+        return build(DType.INT8, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(short ... values) {
-        return build(DType.INT16, values.length, (b) -> b.appendShorts(values));
+        return build(DType.INT16, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(int ... values) {
-        return build(DType.INT32, values.length, (b) -> b.appendInts(values));
+        return build(DType.INT32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(long ... values) {
-        return build(DType.INT64, values.length, (b) -> b.appendLongs(values));
+        return build(DType.INT64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(float ... values) {
-        return build(DType.FLOAT32, values.length, (b) -> b.appendFloats(values));
+        return build(DType.FLOAT32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new byte vector from the given values.
      */
     public static ColumnVector build(double ... values) {
-        return build(DType.FLOAT64, values.length, (b) -> b.appendDoubles(values));
+        return build(DType.FLOAT64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
     public static ColumnVector buildDate(int ... values) {
-        return build(DType.DATE32, values.length, (b) -> b.appendInts(values));
+        return build(DType.DATE32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
     public static ColumnVector buildDate(long ... values) {
-        return build(DType.DATE64, values.length, (b) -> b.appendLongs(values));
+        return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
     public static ColumnVector buildTimestamp(long ... values) {
-        return build(DType.TIMESTAMP, values.length, (b) -> b.appendLongs(values));
+        return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
     }
 
     /**
@@ -793,13 +802,13 @@ public class ColumnVector implements AutoCloseable {
      * Base class for Builder
      */
     public static final class Builder implements AutoCloseable {
-        HostMemoryBuffer data;
-        HostMemoryBuffer valid;
-        long currentIndex = 0;
-        long nullCount;
-        final long rows;
-        boolean built;
-        final DType type;
+        private HostMemoryBuffer data;
+        private HostMemoryBuffer valid;
+        private long currentIndex = 0;
+        private long nullCount;
+        private final long rows;
+        private boolean built;
+        private final DType type;
 
         /**
          * Create a builder with a buffer of size rows
@@ -807,9 +816,9 @@ public class ColumnVector implements AutoCloseable {
          * @param rows number of rows to allocate.
          */
         Builder(DType type, long rows) {
-            this.type=type;
+            this.type = type;
             this.rows = rows;
-            this.data=HostMemoryBuffer.allocate(rows * type.sizeInBytes);
+            this.data = HostMemoryBuffer.allocate(rows * type.sizeInBytes);
         }
 
         /**
@@ -827,7 +836,7 @@ public class ColumnVector implements AutoCloseable {
             this.valid = testValid;
         }
 
-        public final Builder appendByte(byte value) {
+        public final Builder append(byte value) {
             assert type == DType.INT8;
             assert currentIndex < rows;
             data.setByte(currentIndex *  type.sizeInBytes, value);
@@ -835,7 +844,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendBytes(byte value, long count) {
+        public final Builder append(byte value, long count) {
             assert (count + currentIndex) <= rows;
             assert type == DType.INT8;
             data.setMemory(currentIndex * type.sizeInBytes, count, value);
@@ -843,15 +852,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendBytes(byte[] values) {
-            assert (values.length + currentIndex) <= rows;
-            assert type == DType.INT8;
-            data.setBytes(currentIndex * type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-            return this;
-        }
-
-        public final Builder appendShort(short value) {
+        public final Builder append(short value) {
             assert type == DType.INT16;
             assert currentIndex < rows;
             data.setShort(currentIndex *  type.sizeInBytes, value);
@@ -859,15 +860,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendShorts(short[] values) {
-            assert type == DType.INT16;
-            assert (values.length + currentIndex) <= rows;
-            data.setShorts(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-            return this;
-        }
-
-        public final Builder appendInt(int value) {
+        public final Builder append(int value) {
             assert (type == DType.INT32 || type == DType.DATE32);
             assert currentIndex < rows;
             data.setInt(currentIndex *  type.sizeInBytes, value);
@@ -875,15 +868,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendInts(int[] values) {
-            assert (type == DType.INT32 || type == DType.DATE32);
-            assert (values.length + currentIndex) <= rows;
-            data.setInts(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-            return this;
-        }
-
-        public final Builder appendLong(long value) {
+        public final Builder append(long value) {
             assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
             assert currentIndex < rows;
             data.setLong(currentIndex * type.sizeInBytes, value);
@@ -891,15 +876,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendLongs(long[] values) {
-            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
-            assert (values.length + currentIndex) <= rows;
-            data.setLongs(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-            return this;
-        }
-
-        public final Builder appendFloat(float value) {
+        public final Builder append(float value) {
             assert type == DType.FLOAT32;
             assert currentIndex < rows;
             data.setFloat(currentIndex * type.sizeInBytes, value);
@@ -907,15 +884,7 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendFloats(float[] values) {
-            assert type == DType.FLOAT32;
-            assert (values.length + currentIndex) <= rows;
-            data.setFloats(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-            return this;
-        }
-
-        public final Builder appendDouble(double value) {
+        public final Builder append(double value) {
             assert type == DType.FLOAT64;
             assert currentIndex < rows;
             data.setDouble(currentIndex * type.sizeInBytes, value);
@@ -923,7 +892,47 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        public final Builder appendDoubles(double[] values) {
+        public final Builder appendArray(byte ... values) {
+            assert (values.length + currentIndex) <= rows;
+            assert type == DType.INT8;
+            data.setBytes(currentIndex * type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(short ... values) {
+            assert type == DType.INT16;
+            assert (values.length + currentIndex) <= rows;
+            data.setShorts(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(int... values) {
+            assert (type == DType.INT32 || type == DType.DATE32);
+            assert (values.length + currentIndex) <= rows;
+            data.setInts(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(long ... values) {
+            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
+            assert (values.length + currentIndex) <= rows;
+            data.setLongs(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(float... values) {
+            assert type == DType.FLOAT32;
+            assert (values.length + currentIndex) <= rows;
+            data.setFloats(currentIndex *  type.sizeInBytes, values, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(double... values) {
             assert type == DType.FLOAT64;
             assert (values.length + currentIndex) <= rows;
             data.setDoubles(currentIndex *  type.sizeInBytes, values, values.length);
@@ -942,7 +951,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendByte(b);
+                    append(b);
                 }
             }
             return this;
@@ -959,7 +968,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendShort(b);
+                    append(b);
                 }
             }
             return this;
@@ -976,7 +985,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendInt(b);
+                    append(b);
                 }
             }
             return this;
@@ -993,7 +1002,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendLong(b);
+                    append(b);
                 }
             }
             return this;
@@ -1010,7 +1019,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendFloat(b);
+                    append(b);
                 }
             }
             return this;
@@ -1027,7 +1036,7 @@ public class ColumnVector implements AutoCloseable {
                 if (b == null) {
                     appendNull();
                 } else {
-                    appendDouble(b);
+                    append(b);
                 }
             }
             return this;
