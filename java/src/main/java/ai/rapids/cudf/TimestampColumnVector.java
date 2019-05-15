@@ -66,10 +66,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector year() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector year() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -81,10 +81,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector month() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector month() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -96,10 +96,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector day() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector day() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -111,10 +111,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector hour() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector hour() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -126,10 +126,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector minute() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector minute() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -141,10 +141,10 @@ public final class TimestampColumnVector extends ColumnVector {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector second() {
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+    public ColumnVector second() {
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;

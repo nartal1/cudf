@@ -121,10 +121,8 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
         ColumnVector columnVector = null;
         switch (type) {
-            case INT16:
-                columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
-                break;
             case INT8:
+            case INT16:
             case INT32:
             case INT64:
             case FLOAT32:
@@ -152,10 +150,8 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
         ColumnVector columnVector = null;
         switch (cudfColumn.getDtype()) {
-            case INT16:
-                columnVector = new ShortColumnVector(cudfColumn);
-                break;
             case INT8:
+            case INT16:
             case INT32:
             case INT64:
             case FLOAT32:
@@ -328,6 +324,17 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get the value at index.
      */
+    public final short getShort(long index) {
+        assert type == DType.INT16;
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert offHeap.hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
+        return offHeap.hostData.data.getShort(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
     public final int getInt(long index) {
         assert type == DType.INT32 || type == DType.DATE32;
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
@@ -375,11 +382,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector year() {
+    public ColumnVector year() {
         assert type == DType.DATE32 || type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -391,11 +398,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector month() {
+    public ColumnVector month() {
         assert type == DType.DATE32 || type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -407,11 +414,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector day() {
+    public ColumnVector day() {
         assert type == DType.DATE32 || type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -423,11 +430,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector hour() {
+    public ColumnVector hour() {
         assert type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -439,11 +446,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector minute() {
+    public ColumnVector minute() {
         assert type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -455,11 +462,11 @@ public class ColumnVector implements AutoCloseable {
      * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
      *                  its lifecycle.
      *
-     * @return - A new vector allocated on the GPU.
+     * @return - A new INT16 vector allocated on the GPU.
      */
-    public ShortColumnVector second() {
+    public ColumnVector second() {
         assert type == DType.DATE64;
-        ShortColumnVector result = ShortColumnVector.newOutputVector(this);
+        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -752,6 +759,15 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
+    public static ColumnVector buildBoxed(Short ... values) {
+        return build(DType.INT16, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
     public static ColumnVector buildBoxed(Integer ... values) {
         return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
     }
@@ -955,6 +971,23 @@ public class ColumnVector implements AutoCloseable {
                     appendNull();
                 } else {
                     appendByte(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Short ... values) throws IndexOutOfBoundsException {
+            for (Short b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    appendShort(b);
                 }
             }
             return this;

@@ -52,15 +52,16 @@ public class TableTest {
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT16:
-                                assertEquals(((ShortColumnVector)expect).get(row),
-                                        ((ShortColumnVector)cv).get(row),
+                                assertEquals(expect.getShort(row), cv.getShort(row),
                                         "Column " + col + " Row " + row);
                                 break;
-                            case INT32:
+                            case INT32: //fall through
+                            case DATE32:
                                 assertEquals(expect.getInt(row), cv.getInt(row),
                                         "Column " + col + " Row " + row);
                                 break;
-                            case INT64:
+                            case INT64: // fall through
+                            case DATE64:
                                 assertEquals(expect.getLong(row), cv.getLong(row),
                                         "Column " + col + " Row " + row);
                                 break;
@@ -70,14 +71,6 @@ public class TableTest {
                                 break;
                             case FLOAT64:
                                 assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case DATE32:
-                                assertEquals(expect.getInt(row), cv.getInt(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case DATE64:
-                                assertEquals(expect.getLong(row), cv.getLong(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case TIMESTAMP:
@@ -106,6 +99,7 @@ public class TableTest {
                 Class c = ColumnVector.class;
                 switch(type) {
                     case INT8:
+                    case INT16:
                     case INT32:
                     case INT64:
                     case FLOAT32:
@@ -113,9 +107,6 @@ public class TableTest {
                     case DATE32:
                     case DATE64:
                         // Ignored
-                        break;
-                    case INT16:
-                        c = ShortColumnVector.class;
                         break;
                     case TIMESTAMP:
                         c = TimestampColumnVector.class;

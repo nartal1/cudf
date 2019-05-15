@@ -40,11 +40,11 @@ public class Date32ColumnVectorTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES)) {
             date32ColumnVector.ensureOnDevice();
-            try (ShortColumnVector result= date32ColumnVector.year()) {
+            try (ColumnVector result= date32ColumnVector.year()) {
                 result.ensureOnHost();
                 int expected = 2019;
                 for (int i = 0; i < DATES.length; i++) {
-                    assertEquals(expected - i, result.get(i)); //2019 to 2015
+                    assertEquals(expected - i, result.getShort(i)); //2019 to 2015
                 }
             }
         }
@@ -55,10 +55,10 @@ public class Date32ColumnVectorTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES)) {
             date32ColumnVector.ensureOnDevice();
-            try (ShortColumnVector result = date32ColumnVector.month()) {
+            try (ColumnVector result = date32ColumnVector.month()) {
                 result.ensureOnHost();
                 for (int i = 0; i < DATES.length; i++) {
-                    assertEquals(1, result.get(i)); //Jan of every year
+                    assertEquals(1, result.getShort(i)); //Jan of every year
                 }
             }
         }
@@ -69,10 +69,10 @@ public class Date32ColumnVectorTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector date32ColumnVector = ColumnVector.buildDate(DATES_2)) {
             date32ColumnVector.ensureOnDevice();
-            try (ShortColumnVector result= date32ColumnVector.day()) {
+            try (ColumnVector result= date32ColumnVector.day()) {
                 result.ensureOnHost();
                 for (int i = 0; i < DATES_2.length; i++) {
-                    assertEquals(i + 1, result.get(i)); //1 to 5
+                    assertEquals(i + 1, result.getShort(i)); //1 to 5
                 }
             }
         }
