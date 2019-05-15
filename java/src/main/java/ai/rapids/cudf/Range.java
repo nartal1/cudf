@@ -134,12 +134,12 @@ public final class Range {
      * @param step how must to step by.
      * @return the builder for chaining.
      */
-    public static final Consumer<LongColumnVector.Builder> appendLongs(long start, long end, long step) {
+    public static final Consumer<ColumnVector.Builder> appendLongs(long start, long end, long step) {
         assert step > 0;
         assert start <= end;
         return (b) -> {
             for (long i = start; i < end; i += step) {
-                b.append(i);
+                b.appendLong(i);
             }
         };
     }
@@ -149,7 +149,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<LongColumnVector.Builder> appendLongs(long end) {
+    public static final Consumer<ColumnVector.Builder> appendLongs(long end) {
         return appendLongs(0, end, 1);
     }
 
@@ -159,7 +159,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<LongColumnVector.Builder> appendLongs(long start, long end) {
+    public static final Consumer<ColumnVector.Builder> appendLongs(long start, long end) {
         return appendLongs(start, end, 1);
     }
 

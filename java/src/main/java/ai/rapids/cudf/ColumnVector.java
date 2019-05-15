@@ -121,14 +121,12 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
         ColumnVector columnVector = null;
         switch (type) {
-            case INT64:
-                columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
-                break;
             case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
             case INT8:
             case INT32:
+            case INT64:
             case FLOAT32:
             case FLOAT64:
             case DATE32:
@@ -154,14 +152,12 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
         ColumnVector columnVector = null;
         switch (cudfColumn.getDtype()) {
-            case INT64:
-                columnVector = new LongColumnVector(cudfColumn);
-                break;
             case INT16:
                 columnVector = new ShortColumnVector(cudfColumn);
                 break;
             case INT8:
             case INT32:
+            case INT64:
             case FLOAT32:
             case FLOAT64:
             case DATE32:
@@ -487,25 +483,13 @@ public class ColumnVector implements AutoCloseable {
      */
     public ColumnVector add(ColumnVector v1) {
         assert type == v1.getType();
-        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32; // TODO need others...
+        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64; // TODO need others...
         assert v1.getRows() == getRows(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
         ColumnVector result = newOutputVector(v1, this, type);
-        switch (type) {
-            case INT32:
-                Cudf.gdfAddI32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
-                break;
-            case FLOAT32:
-                Cudf.gdfAddF32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
-                break;
-            case FLOAT64:
-                Cudf.gdfAddF64(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
-                break;
-            default:
-                throw new IllegalArgumentException(type + " is not yet supported");
-        }
+        Cudf.gdfAddGeneric(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
     }
@@ -770,6 +754,15 @@ public class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector buildBoxed(Integer ... values) {
         return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxed(Long ... values) {
+        return build(DType.INT64, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**
