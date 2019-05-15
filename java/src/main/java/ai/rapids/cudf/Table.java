@@ -64,7 +64,7 @@ public final class Table implements AutoCloseable {
 
         this.columnVectors = new ColumnVector[cudfColumns.length];
         for (int i = 0 ; i < cudfColumns.length ; i++) {
-            this.columnVectors[i] = ColumnVector.fromCudfColumn(cudfColumns[i]);
+            this.columnVectors[i] = new ColumnVector(cudfColumns[i]);
         }
         cudfTable = new CudfTable(cudfColumns);
         this.rows = cudfColumns[0].getSize();
@@ -346,7 +346,7 @@ public final class Table implements AutoCloseable {
                     ret = ColumnVector.buildBoxedDate((Long[]) dataArray);
                     break;
                 case TIMESTAMP:
-                    ret = TimestampColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.buildBoxedTimestamp((Long[]) dataArray);
                     break;
                 case FLOAT32:
                     ret = ColumnVector.buildBoxed((Float[]) dataArray);

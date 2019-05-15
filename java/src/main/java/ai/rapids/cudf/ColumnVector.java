@@ -111,63 +111,19 @@ public class ColumnVector implements AutoCloseable {
         offHeap.addRef();
     }
 
-    // TODO this should be private
-    static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
+    private static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
         assert v1.rows == v2.rows;
         return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
     }
 
-    //TODO this should be private
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
-        ColumnVector columnVector = null;
-        switch (type) {
-            case INT8:
-            case INT16:
-            case INT32:
-            case INT64:
-            case FLOAT32:
-            case FLOAT64:
-            case DATE32:
-            case DATE64:
-                DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
-                DeviceMemoryBuffer valid = null;
-                if (hasValidity) {
-                    valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
-                }
-                columnVector = new ColumnVector(data, valid, rows, type);
-                break;
-            case TIMESTAMP:
-                columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case INVALID:
-            default:
-                throw new IllegalArgumentException("Invalid type: " + type);
+        assert type != DType.INVALID;
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidity) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
         }
-        return columnVector;
-    }
-
-
-    static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
-        ColumnVector columnVector = null;
-        switch (cudfColumn.getDtype()) {
-            case INT8:
-            case INT16:
-            case INT32:
-            case INT64:
-            case FLOAT32:
-            case FLOAT64:
-            case DATE32:
-            case DATE64:
-                columnVector = new ColumnVector(cudfColumn);
-                break;
-            case TIMESTAMP:
-                columnVector = new TimestampColumnVector(cudfColumn);
-                break;
-            case INVALID:
-            default:
-                throw new IllegalArgumentException("Invalid type: " + cudfColumn.getDtype());
-        }
-        return columnVector;
+        return new ColumnVector(data, valid, rows, type);
     }
 
     /**
@@ -347,7 +303,7 @@ public class ColumnVector implements AutoCloseable {
      * Get the value at index.
      */
     public final long getLong(long index) {
-        assert type == DType.INT64 || type == DType.DATE64;
+        assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
@@ -385,7 +341,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector year() {
-        assert type == DType.DATE32 || type == DType.DATE64;
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -401,7 +357,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector month() {
-        assert type == DType.DATE32 || type == DType.DATE64;
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -417,7 +373,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector day() {
-        assert type == DType.DATE32 || type == DType.DATE64;
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -433,7 +389,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector hour() {
-        assert type == DType.DATE64;
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -449,7 +405,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector minute() {
-        assert type == DType.DATE64;
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -465,7 +421,7 @@ public class ColumnVector implements AutoCloseable {
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector second() {
-        assert type == DType.DATE64;
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
@@ -746,6 +702,13 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector buildTimestamp(long ... values) {
+        return build(DType.TIMESTAMP, values.length, (b) -> b.appendLongs(values));
+    }
+
+    /**
      * Create a new vector from the given values.  This API supports inline nulls,
      * but is much slower than using a regular array and should really only be used
      * for tests.
@@ -815,6 +778,15 @@ public class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector buildBoxedDate(Long ... values) {
         return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxedTimestamp(Long ... values) {
+        return build(DType.TIMESTAMP, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**

@@ -61,7 +61,8 @@ public class TableTest {
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT64: // fall through
-                            case DATE64:
+                            case DATE64: // fall through
+                            case TIMESTAMP:
                                 assertEquals(expect.getLong(row), cv.getLong(row),
                                         "Column " + col + " Row " + row);
                                 break;
@@ -71,11 +72,6 @@ public class TableTest {
                                 break;
                             case FLOAT64:
                                 assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case TIMESTAMP:
-                                assertEquals(((TimestampColumnVector)expect).get(row),
-                                        ((TimestampColumnVector)cv).get(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             default:
@@ -95,26 +91,6 @@ public class TableTest {
             try (ColumnVector vec = t.getColumn(i)) {
                 DType type = vec.getType();
                 assertEquals(expectedTypes[i], type, "Types don't match at " + i);
-                // TODO when done delete this...
-                Class c = ColumnVector.class;
-                switch(type) {
-                    case INT8:
-                    case INT16:
-                    case INT32:
-                    case INT64:
-                    case FLOAT32:
-                    case FLOAT64:
-                    case DATE32:
-                    case DATE64:
-                        // Ignored
-                        break;
-                    case TIMESTAMP:
-                        c = TimestampColumnVector.class;
-                        break;
-                    default:
-                        throw new IllegalArgumentException(type + " is not supported yet");
-                }
-                assertTrue(c.isAssignableFrom(vec.getClass()), "Expected type " + c + " but found " + vec.getClass());
             }
         }
     }
