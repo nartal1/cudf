@@ -127,14 +127,12 @@ public class ColumnVector implements AutoCloseable {
             case INT64:
                 columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
                 break;
-            case FLOAT32:
-                columnVector = FloatColumnVector.newOutputVector(rows, hasValidity);
-                break;
             case INT16:
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
             case INT8:
             case DATE32:
+            case FLOAT32:
             case DATE64:
             case FLOAT64:
                 DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
@@ -164,14 +162,12 @@ public class ColumnVector implements AutoCloseable {
             case INT64:
                 columnVector = new LongColumnVector(cudfColumn);
                 break;
-            case FLOAT32:
-                columnVector = new FloatColumnVector(cudfColumn);
-                break;
             case INT16:
                 columnVector = new ShortColumnVector(cudfColumn);
                 break;
             case INT8:
             case DATE32:
+            case FLOAT32:
             case DATE64:
             case FLOAT64:
                 columnVector = new ColumnVector(cudfColumn);
@@ -362,6 +358,17 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get the value at index.
      */
+    public final float getFloat(long index) {
+        assert type == DType.FLOAT32;
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert offHeap.hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
+        return offHeap.hostData.data.getFloat(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
     public final double getDouble(long index) {
         assert type == DType.FLOAT64;
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
@@ -484,13 +491,16 @@ public class ColumnVector implements AutoCloseable {
      */
     public ColumnVector add(ColumnVector v1) {
         assert type == v1.getType();
-        assert type == DType.FLOAT64; // TODO need others...
+        assert type == DType.FLOAT32 || type == DType.FLOAT64; // TODO need others...
         assert v1.getRows() == getRows(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
         ColumnVector result = newOutputVector(v1, this, type);
         switch (type) {
+            case FLOAT32:
+                Cudf.gdfAddF32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+                break;
             case FLOAT64:
                 Cudf.gdfAddF64(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
                 break;
@@ -699,6 +709,34 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Create a new byte vector from the given values.
      */
+    public static ColumnVector build(short ... values) {
+        return build(DType.INT16, values.length, (b) -> b.appendShorts(values));
+    }
+
+    /**
+     * Create a new byte vector from the given values.
+     */
+//    public static ColumnVector build(int ... values) {
+//        return build(DType.INT32, values.length, (b) -> b.appendInts(values));
+//    }
+
+    /**
+     * Create a new byte vector from the given values.
+     */
+//    public static ColumnVector build(long ... values) {
+//        return build(DType.INT64, values.length, (b) -> b.appendLongs(values));
+//    }
+
+    /**
+     * Create a new byte vector from the given values.
+     */
+    public static ColumnVector build(float ... values) {
+        return build(DType.FLOAT32, values.length, (b) -> b.appendFloats(values));
+    }
+
+    /**
+     * Create a new byte vector from the given values.
+     */
     public static ColumnVector build(double ... values) {
         return build(DType.FLOAT64, values.length, (b) -> b.appendDoubles(values));
     }
@@ -724,6 +762,15 @@ public class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector buildBoxed(Byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxed(Float ... values) {
+        return build(DType.FLOAT32, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**
@@ -941,6 +988,23 @@ public class ColumnVector implements AutoCloseable {
                     appendNull();
                 } else {
                     appendLong(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Float ... values) throws IndexOutOfBoundsException {
+            for (Float b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    appendFloat(b);
                 }
             }
             return this;

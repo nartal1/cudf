@@ -349,7 +349,7 @@ public final class Table implements AutoCloseable {
                     ret = TimestampColumnVector.buildBoxed((Long[]) dataArray);
                     break;
                 case FLOAT32:
-                    ret = FloatColumnVector.buildBoxed((Float[]) dataArray);
+                    ret = ColumnVector.buildBoxed((Float[]) dataArray);
                     break;
                 case FLOAT64:
                     ret = ColumnVector.buildBoxed((Double[]) dataArray);

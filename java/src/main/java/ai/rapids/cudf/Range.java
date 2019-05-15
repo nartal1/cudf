@@ -170,12 +170,12 @@ public final class Range {
      * @param step how must to step by.
      * @return the builder for chaining.
      */
-    public static final Consumer<FloatColumnVector.Builder> appendFloats(float start, float end, float step) {
+    public static final Consumer<ColumnVector.Builder> appendFloats(float start, float end, float step) {
         assert step > 0;
         assert start <= end;
         return (b) -> {
             for (float i = start; i < end; i += step) {
-                b.append(i);
+                b.appendFloat(i);
             }
         };
     }
@@ -185,7 +185,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<FloatColumnVector.Builder> appendFloats(float end) {
+    public static final Consumer<ColumnVector.Builder> appendFloats(float end) {
         return appendFloats(0, end, 1);
     }
 
@@ -195,7 +195,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<FloatColumnVector.Builder> appendFloats(float start, float end) {
+    public static final Consumer<ColumnVector.Builder> appendFloats(float start, float end) {
         return appendFloats(start, end, 1);
     }
 
