@@ -534,7 +534,7 @@ public abstract class ColumnVector implements AutoCloseable {
         final void appendBytes(byte[] values) {
             assert (values.length + currentIndex) <= rows;
             assert type == DType.INT8;
-            data.setBytes(currentIndex * type.sizeInBytes, values, values.length);
+            data.setBytes(currentIndex * type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
         }
 

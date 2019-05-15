@@ -69,8 +69,10 @@ public class CSVOptions extends ColumnFilterOptions {
     }
 
     public static class Builder extends ColumnFilterOptions.Builder<Builder> {
+        private static final int NO_HEADER_ROW = -1;
+
         private byte comment = 0;
-        private int headerRow = -1;
+        private int headerRow = NO_HEADER_ROW;
         private byte delim = ',';
         private byte quote = '"';
         private final Set<String> nullValues = new HashSet<>();
@@ -78,16 +80,23 @@ public class CSVOptions extends ColumnFilterOptions {
         /**
          * Row of the header data (0 based counting).  Negative is no header.
          */
-        public Builder withHeaderAt(int index) {
+        public Builder withHeaderAtRow(int index) {
             headerRow = index;
             return this;
+        }
+
+        /**
+         * Set the row of the header to 0, the first line, if hasHeader is true else disables the header.
+         */
+        public Builder hasHeader(boolean hasHeader) {
+            return withHeaderAtRow(hasHeader ? 0 : NO_HEADER_ROW);
         }
 
         /**
          * Set the row of the header to 0, the first line.
          */
         public Builder hasHeader() {
-            return withHeaderAt(0);
+            return withHeaderAtRow(0);
         }
 
         /**

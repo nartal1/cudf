@@ -118,17 +118,22 @@ public final class Table implements AutoCloseable {
     }
 
     public static Table readCSV(Schema schema, byte[] buffer) {
-        return readCSV(schema, CSVOptions.DEFAULT, buffer, buffer.length);
+        return readCSV(schema, CSVOptions.DEFAULT, buffer, 0, buffer.length);
     }
 
-    public static Table readCSV(Schema schema, CSVOptions opts, byte[] buffer, long len) {
+    public static Table readCSV(Schema schema, CSVOptions options, byte[] buffer) {
+        return readCSV(schema, options, buffer, 0, buffer.length);
+    }
+
+    public static Table readCSV(Schema schema, CSVOptions opts, byte[] buffer, long offset, long len) {
         if (len <= 0) {
-            len = buffer.length;
+            len = buffer.length - offset;
         }
         assert len > 0;
-        assert len <= buffer.length;
+        assert len <= buffer.length - offset;
+        assert offset >= 0 && offset < buffer.length;
         try (HostMemoryBuffer newBuf = HostMemoryBuffer.allocate(len)) {
-            newBuf.setBytes(0, buffer, len);
+            newBuf.setBytes(0, buffer, offset, len);
             return readCSV(schema, opts, newBuf, len);
         }
     }
@@ -162,7 +167,7 @@ public final class Table implements AutoCloseable {
         assert len > 0;
         assert len <= buffer.length;
         try (HostMemoryBuffer newBuf = HostMemoryBuffer.allocate(len)) {
-            newBuf.setBytes(0, buffer, len);
+            newBuf.setBytes(0, buffer, 0, len);
             return readParquet(opts, newBuf, len);
         }
     }
