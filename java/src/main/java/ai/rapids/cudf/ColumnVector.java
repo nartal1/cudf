@@ -121,9 +121,6 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
         ColumnVector columnVector = null;
         switch (type) {
-            case INT32:
-                columnVector = IntColumnVector.newOutputVector(rows, hasValidity);
-                break;
             case INT64:
                 columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
                 break;
@@ -131,10 +128,11 @@ public class ColumnVector implements AutoCloseable {
                 columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
                 break;
             case INT8:
-            case DATE32:
+            case INT32:
             case FLOAT32:
-            case DATE64:
             case FLOAT64:
+            case DATE32:
+            case DATE64:
                 DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
                 DeviceMemoryBuffer valid = null;
                 if (hasValidity) {
@@ -156,9 +154,6 @@ public class ColumnVector implements AutoCloseable {
     static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
         ColumnVector columnVector = null;
         switch (cudfColumn.getDtype()) {
-            case INT32:
-                columnVector = new IntColumnVector(cudfColumn);
-                break;
             case INT64:
                 columnVector = new LongColumnVector(cudfColumn);
                 break;
@@ -166,10 +161,11 @@ public class ColumnVector implements AutoCloseable {
                 columnVector = new ShortColumnVector(cudfColumn);
                 break;
             case INT8:
-            case DATE32:
+            case INT32:
             case FLOAT32:
-            case DATE64:
             case FLOAT64:
+            case DATE32:
+            case DATE64:
                 columnVector = new ColumnVector(cudfColumn);
                 break;
             case TIMESTAMP:
@@ -491,13 +487,16 @@ public class ColumnVector implements AutoCloseable {
      */
     public ColumnVector add(ColumnVector v1) {
         assert type == v1.getType();
-        assert type == DType.FLOAT32 || type == DType.FLOAT64; // TODO need others...
+        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32; // TODO need others...
         assert v1.getRows() == getRows(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
         ColumnVector result = newOutputVector(v1, this, type);
         switch (type) {
+            case INT32:
+                Cudf.gdfAddI32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+                break;
             case FLOAT32:
                 Cudf.gdfAddF32(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
                 break;
@@ -716,16 +715,16 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Create a new byte vector from the given values.
      */
-//    public static ColumnVector build(int ... values) {
-//        return build(DType.INT32, values.length, (b) -> b.appendInts(values));
-//    }
+    public static ColumnVector build(int ... values) {
+        return build(DType.INT32, values.length, (b) -> b.appendInts(values));
+    }
 
     /**
      * Create a new byte vector from the given values.
      */
-//    public static ColumnVector build(long ... values) {
-//        return build(DType.INT64, values.length, (b) -> b.appendLongs(values));
-//    }
+    public static ColumnVector build(long ... values) {
+        return build(DType.INT64, values.length, (b) -> b.appendLongs(values));
+    }
 
     /**
      * Create a new byte vector from the given values.
@@ -762,6 +761,15 @@ public class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector buildBoxed(Byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector buildBoxed(Integer ... values) {
+        return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**

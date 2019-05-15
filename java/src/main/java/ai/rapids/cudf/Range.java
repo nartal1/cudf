@@ -96,7 +96,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<IntColumnVector.Builder> appendInts(int end) {
+    public static final Consumer<ColumnVector.Builder> appendInts(int end) {
         return appendInts(0, end, 1);
     }
 
@@ -106,7 +106,7 @@ public final class Range {
      * @param end last entry exclusive.
      * @return the consumer.
      */
-    public static final Consumer<IntColumnVector.Builder> appendInts(int start, int end) {
+    public static final Consumer<ColumnVector.Builder> appendInts(int start, int end) {
         return appendInts(start, end, 1);
     }
 
@@ -117,12 +117,12 @@ public final class Range {
      * @param step how must to step by.
      * @return the builder for chaining.
      */
-    public static final Consumer<IntColumnVector.Builder> appendInts(int start, int end, int step) {
+    public static final Consumer<ColumnVector.Builder> appendInts(int start, int end, int step) {
         assert step > 0;
         assert start <= end;
         return (b) -> {
             for (int i = start; i < end; i += step) {
-                b.append(i);
+                b.appendInt(i);
             }
         };
     }

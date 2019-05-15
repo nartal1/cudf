@@ -57,8 +57,7 @@ public class TableTest {
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT32:
-                                assertEquals(((IntColumnVector)expect).get(row),
-                                        ((IntColumnVector)cv).get(row),
+                                assertEquals(expect.getInt(row), cv.getInt(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT64:
@@ -108,17 +107,15 @@ public class TableTest {
                 Class c = ColumnVector.class;
                 switch(type) {
                     case INT8:
-                    case DATE32:
-                    case DATE64:
+                    case INT32:
                     case FLOAT32:
                     case FLOAT64:
+                    case DATE32:
+                    case DATE64:
                         // Ignored
                         break;
                     case INT16:
                         c = ShortColumnVector.class;
-                        break;
-                    case INT32:
-                        c = IntColumnVector.class;
                         break;
                     case INT64:
                         c = LongColumnVector.class;
@@ -193,8 +190,8 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         //tests the Table increases the refcount on column vectors
         assertThrows(IllegalStateException.class, () -> {
-            try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-                 IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
+            try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+                 ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
                 v1.ensureOnDevice();
                 v2.ensureOnDevice();
                 assertDoesNotThrow(() -> {
@@ -211,8 +208,8 @@ public class TableTest {
     void testGetColumnIncreasesRefCount() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         assertDoesNotThrow(() -> {
-            try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-                 IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
+            try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+                 ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
                 v1.ensureOnDevice();
                 v2.ensureOnDevice();
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
@@ -228,8 +225,8 @@ public class TableTest {
     @Test
     void testGetRows() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
             v1.ensureOnDevice();
             v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
@@ -247,8 +244,8 @@ public class TableTest {
     @Test
     void testAllRowsSize() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(4, Range.appendInts(4));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 4, Range.appendInts(4));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
             v1.ensureOnDevice();
             v2.ensureOnDevice();
             assertThrows(AssertionError.class, () -> {
@@ -261,8 +258,8 @@ public class TableTest {
     @Test
     void testGetNumberOfColumns() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
             v1.ensureOnDevice();
             v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {

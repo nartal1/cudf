@@ -185,7 +185,6 @@ public final class ShortColumnVector extends ColumnVector {
         /**
          * Append value to the next open index
          * @param value - value to be appended
-         * @return - IntColumnVector
          * @throws - {@link IndexOutOfBoundsException}
          */
         public final Builder append(short value) throws IndexOutOfBoundsException {

@@ -334,7 +334,7 @@ public final class Table implements AutoCloseable {
                     ret = ShortColumnVector.buildBoxed((Short[]) dataArray);
                     break;
                 case INT32:
-                    ret = IntColumnVector.buildBoxed((Integer[]) dataArray);
+                    ret = ColumnVector.buildBoxed((Integer[]) dataArray);
                     break;
                 case INT64:
                     ret = LongColumnVector.buildBoxed((Long[]) dataArray);

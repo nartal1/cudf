@@ -31,40 +31,40 @@ public class IntColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(3, (b) -> b.append(1))) {
+        try (ColumnVector intColumnVector = ColumnVector.build(DType.INT32, 3, (b) -> b.appendInt(1))) {
             assertFalse(intColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testArrayAllocation() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
+        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
-            assertEquals(intColumnVector.get(0), 2);
-            assertEquals(intColumnVector.get(1), 3);
-            assertEquals(intColumnVector.get(2), 5);
+            assertEquals(intColumnVector.getInt(0), 2);
+            assertEquals(intColumnVector.getInt(1), 3);
+            assertEquals(intColumnVector.getInt(2), 5);
         }
     }
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
-            assertThrows(AssertionError.class, () -> intColumnVector.get(3));
+        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
+            assertThrows(AssertionError.class, () -> intColumnVector.getInt(3));
             assertFalse(intColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (IntColumnVector intColumnVector = IntColumnVector.build(2, 3, 5)) {
+        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
-            assertThrows(AssertionError.class, () -> intColumnVector.get(-1));
+            assertThrows(AssertionError.class, () -> intColumnVector.getInt(-1));
         }
     }
 
     @Test
     public void testAddingNullValues() {
-        try (IntColumnVector cv = IntColumnVector.buildBoxed(2,3,4,5,6,7,null,null)) {
+        try (ColumnVector cv = ColumnVector.buildBoxed(2,3,4,5,6,7,null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {
@@ -77,8 +77,8 @@ public class IntColumnVectorTest {
 
     @Test
     public void testOverrunningTheBuffer() {
-        try (IntColumnVector.Builder builder = IntColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append(2).appendNull().appendArray(5, 4).build());
+        try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT32, 3)) {
+            assertThrows(AssertionError.class, () -> builder.appendInt(2).appendNull().appendInts(new int[]{5, 4}).build());
         }
     }
 
@@ -89,17 +89,17 @@ public class IntColumnVectorTest {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
-                    try (IntColumnVector.Builder dst = IntColumnVector.builder(dstSize);
-                        IntColumnVector src = IntColumnVector.build(srcSize, (b) -> {
+                    try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT32, dstSize);
+                        ColumnVector src = ColumnVector.build(DType.INT32, srcSize, (b) -> {
                             for (int i = 0 ; i < srcSize ; i++) {
                                 if (random.nextBoolean()) {
                                     b.appendNull();
                                 } else {
-                                    b.append(random.nextInt());
+                                    b.appendInt(random.nextInt());
                                 }
                             }
                         });
-                        IntColumnVector.Builder gtBuilder = IntColumnVector.builder(dstPrefilledSize)) {
+                        ColumnVector.Builder gtBuilder = ColumnVector.builder(DType.INT32, dstPrefilledSize)) {
                         assertEquals(dstSize, srcSize + dstPrefilledSize);
                         //add the first half of the prefilled list
                         for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
@@ -108,24 +108,24 @@ public class IntColumnVectorTest {
                                 gtBuilder.appendNull();
                             } else {
                                 int a = random.nextInt();
-                                dst.append(a);
-                                gtBuilder.append(a);
+                                dst.appendInt(a);
+                                gtBuilder.appendInt(a);
                             }
                         }
                         // append the src vector
                         dst.append(src);
-                        try (IntColumnVector dstVector = dst.build();
-                             IntColumnVector gt = gtBuilder.build()) {
+                        try (ColumnVector dstVector = dst.build();
+                             ColumnVector gt = gtBuilder.build()) {
                             for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                 assertEquals(gt.isNull(i), dstVector.isNull(i));
                                 if (!gt.isNull(i)) {
-                                    assertEquals(gt.get(i), dstVector.get(i));
+                                    assertEquals(gt.getInt(i), dstVector.getInt(i));
                                 }
                             }
                             for (int i = dstPrefilledSize - sizeOfDataNotToAdd, j = 0; i < dstSize - sizeOfDataNotToAdd && j < srcSize; i++, j++) {
                                 assertEquals(src.isNull(j), dstVector.isNull(i));
                                 if (!src.isNull(j)) {
-                                    assertEquals(src.get(j), dstVector.get(i));
+                                    assertEquals(src.getInt(j), dstVector.getInt(i));
                                 }
                             }
                             if (dstVector.offHeap.hostData.valid != null) {
@@ -144,8 +144,8 @@ public class IntColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 4));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (IntColumnVector.Builder builder = IntColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.appendArray(2, 3, 5).appendNull();
+            try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT32, 4, mockDataBuffer, mockValidBuffer)) {
+                builder.appendInts(new int[]{2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();
@@ -155,20 +155,20 @@ public class IntColumnVectorTest {
     @Test
     public void testAdd() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector intColumnVector1 = IntColumnVector.build(4, Range.appendInts(1, 5));
-             IntColumnVector intColumnVector2 = IntColumnVector.build(4, Range.appendInts(10, 50, 10))) {
+        try (ColumnVector intColumnVector1 = ColumnVector.build(DType.INT32, 4, Range.appendInts(1, 5));
+             ColumnVector intColumnVector2 = ColumnVector.build(DType.INT32, 4, Range.appendInts(10, 50, 10))) {
 
             intColumnVector1.ensureOnDevice();
             intColumnVector2.ensureOnDevice();
 
-            try (IntColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
+            try (ColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
                 intColumnVector3.ensureOnHost();
                 assertEquals(4, intColumnVector3.getRows());
                 assertEquals(0, intColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {
-                    long v1 = intColumnVector1.get(i);
-                    long v2 = intColumnVector2.get(i);
-                    long v3 = intColumnVector3.get(i);
+                    long v1 = intColumnVector1.getInt(i);
+                    long v2 = intColumnVector2.getInt(i);
+                    long v3 = intColumnVector3.getInt(i);
                     assertEquals(v1 + v2, v3);
                 }
             }
