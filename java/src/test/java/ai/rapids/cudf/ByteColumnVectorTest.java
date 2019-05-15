@@ -37,7 +37,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
+        try (ColumnVector byteColumnVector = ColumnVector.fromBytes(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
             assertEquals(byteColumnVector.getByte(0), 2);
             assertEquals(byteColumnVector.getByte(1), 3);
@@ -58,7 +58,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
+        try (ColumnVector byteColumnVector = ColumnVector.fromBytes(new byte[] {2, 3, 5})) {
             assertThrows(AssertionError.class, () -> byteColumnVector.getByte(3));
             assertFalse(byteColumnVector.hasNulls());
         }
@@ -66,7 +66,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ColumnVector byteColumnVector = ColumnVector.build(new byte[] {2, 3, 5})) {
+        try (ColumnVector byteColumnVector = ColumnVector.fromBytes(new byte[] {2, 3, 5})) {
             assertFalse(byteColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> byteColumnVector.getByte(-1));
         }
@@ -74,7 +74,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (ColumnVector byteColumnVector = ColumnVector.buildBoxed(
+        try (ColumnVector byteColumnVector = ColumnVector.fromBoxedBytes(
                 new Byte[] {2,3,4,5,6,7,null,null})) {
             assertTrue(byteColumnVector.hasNulls());
             assertEquals(2, byteColumnVector.getNullCount());

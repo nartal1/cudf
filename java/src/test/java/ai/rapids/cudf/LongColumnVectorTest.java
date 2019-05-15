@@ -38,7 +38,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ColumnVector longColumnVector = ColumnVector.build(2L, 3L, 5L)) {
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
             assertFalse(longColumnVector.hasNulls());
             assertEquals(longColumnVector.getLong(0), 2);
             assertEquals(longColumnVector.getLong(1), 3);
@@ -48,7 +48,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ColumnVector longColumnVector = ColumnVector.build(2L, 3L, 5L)) {
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
             assertThrows(AssertionError.class, () -> longColumnVector.getLong(3));
             assertFalse(longColumnVector.hasNulls());
         }
@@ -56,7 +56,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ColumnVector longColumnVector = ColumnVector.build(2L, 3L, 5L)) {
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
             assertFalse(longColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> longColumnVector.getLong(-1));
         }
@@ -64,7 +64,7 @@ public class LongColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (ColumnVector cv = ColumnVector.buildBoxed(2L,3L,4L,5L,6L,7L, null,null)) {
+        try (ColumnVector cv = ColumnVector.fromBoxedLongs(2L,3L,4L,5L,6L,7L, null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {

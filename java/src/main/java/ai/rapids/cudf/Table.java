@@ -59,7 +59,7 @@ public final class Table implements AutoCloseable {
         this.rows = rows;
     }
 
-    Table(CudfColumn[] cudfColumns) {
+    private Table(CudfColumn[] cudfColumns) {
         assert cudfColumns != null : "CudfColumns can't be null";
 
         this.columnVectors = new ColumnVector[cudfColumns.length];
@@ -328,31 +328,31 @@ public final class Table implements AutoCloseable {
             ColumnVector ret;
             switch(type) {
                 case INT8:
-                    ret = ColumnVector.buildBoxed((Byte[]) dataArray);
+                    ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
                     break;
                 case INT16:
-                    ret = ColumnVector.buildBoxed((Short[]) dataArray);
+                    ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
                     break;
                 case INT32:
-                    ret = ColumnVector.buildBoxed((Integer[]) dataArray);
+                    ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
                     break;
                 case INT64:
-                    ret = ColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
                     break;
                 case DATE32:
-                    ret = ColumnVector.buildBoxedDate((Integer[]) dataArray);
+                    ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
                     break;
                 case DATE64:
-                    ret = ColumnVector.buildBoxedDate((Long[]) dataArray);
+                    ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
                     break;
                 case TIMESTAMP:
-                    ret = ColumnVector.buildBoxedTimestamp((Long[]) dataArray);
+                    ret = ColumnVector.timestampsFromBoxedLongs((Long[]) dataArray);
                     break;
                 case FLOAT32:
-                    ret = ColumnVector.buildBoxed((Float[]) dataArray);
+                    ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
                     break;
                 case FLOAT64:
-                    ret = ColumnVector.buildBoxed((Double[]) dataArray);
+                    ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
                     break;
                 default:
                     throw new IllegalArgumentException(type + " is not supported yet");

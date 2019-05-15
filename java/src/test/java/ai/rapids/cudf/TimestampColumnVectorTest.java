@@ -30,7 +30,7 @@ public class TimestampColumnVectorTest {
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             ColumnVector result= timestampColumnVector.year();
             result.ensureOnHost();
@@ -43,7 +43,7 @@ public class TimestampColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             ColumnVector result= timestampColumnVector.month();
             result.ensureOnHost();
@@ -56,7 +56,7 @@ public class TimestampColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.day()) {
                 result.ensureOnHost();
@@ -70,7 +70,7 @@ public class TimestampColumnVectorTest {
     @Test
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.hour()) {
                 result.ensureOnHost();
@@ -84,7 +84,7 @@ public class TimestampColumnVectorTest {
     @Test
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.minute()) {
                 result.ensureOnHost();
@@ -98,7 +98,7 @@ public class TimestampColumnVectorTest {
     @Test
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.buildTimestamp(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.second()) {
                 result.ensureOnHost();

@@ -38,7 +38,7 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ColumnVector shortColumnVector = ColumnVector.build((short)2, (short)3, (short)5)) {
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
             assertFalse(shortColumnVector.hasNulls());
             assertEquals(shortColumnVector.getShort(0), 2);
             assertEquals(shortColumnVector.getShort(1), 3);
@@ -48,7 +48,7 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ColumnVector shortColumnVector = ColumnVector.build((short)2, (short)3, (short)5)) {
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
             assertThrows(AssertionError.class, () -> shortColumnVector.getShort(3));
             assertFalse(shortColumnVector.hasNulls());
         }
@@ -56,7 +56,7 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ColumnVector shortColumnVector = ColumnVector.build((short)2, (short)3, (short)5)) {
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
             assertFalse(shortColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> shortColumnVector.getShort(-1));
         }
@@ -64,7 +64,7 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (ColumnVector cv = ColumnVector.buildBoxed(new Short[] {2,3,4,5,6,7,null,null})) {
+        try (ColumnVector cv = ColumnVector.fromBoxedShorts(new Short[] {2,3,4,5,6,7,null,null})) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {

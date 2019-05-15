@@ -655,65 +655,65 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(byte ... values) {
+    public static ColumnVector fromBytes(byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendArray(values));
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(short ... values) {
+    public static ColumnVector fromShorts(short ... values) {
         return build(DType.INT16, values.length, (b) -> b.appendArray(values));
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(int ... values) {
+    public static ColumnVector fromInts(int ... values) {
         return build(DType.INT32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(long ... values) {
+    public static ColumnVector fromLongs(long ... values) {
         return build(DType.INT64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(float ... values) {
+    public static ColumnVector fromFloats(float ... values) {
         return build(DType.FLOAT32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
-     * Create a new byte vector from the given values.
+     * Create a new vector from the given values.
      */
-    public static ColumnVector build(double ... values) {
+    public static ColumnVector fromDoubles(double ... values) {
         return build(DType.FLOAT64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
-    public static ColumnVector buildDate(int ... values) {
+    public static ColumnVector datesFromInts(int ... values) {
         return build(DType.DATE32, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
-    public static ColumnVector buildDate(long ... values) {
+    public static ColumnVector datesFromLongs(long ... values) {
         return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
     }
 
     /**
      * Create a new vector from the given values.
      */
-    public static ColumnVector buildTimestamp(long ... values) {
+    public static ColumnVector timestampsFromLongs(long ... values) {
         return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
     }
 
@@ -722,7 +722,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Byte ... values) {
+    public static ColumnVector fromBoxedBytes(Byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -731,7 +731,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Short ... values) {
+    public static ColumnVector fromBoxedShorts(Short ... values) {
         return build(DType.INT16, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -740,7 +740,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Integer ... values) {
+    public static ColumnVector fromBoxedInts(Integer ... values) {
         return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -749,7 +749,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Long ... values) {
+    public static ColumnVector fromBoxedLongs(Long ... values) {
         return build(DType.INT64, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -758,7 +758,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Float ... values) {
+    public static ColumnVector fromBoxedFloats(Float ... values) {
         return build(DType.FLOAT32, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -767,7 +767,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxed(Double ... values) {
+    public static ColumnVector fromBoxedDoubles(Double ... values) {
         return build(DType.FLOAT64, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -776,7 +776,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxedDate(Integer ... values) {
+    public static ColumnVector datesFromBoxedInts(Integer ... values) {
         return build(DType.DATE32, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -785,7 +785,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxedDate(Long ... values) {
+    public static ColumnVector datesFromBoxedLongs(Long ... values) {
         return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
     }
 
@@ -794,7 +794,7 @@ public class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
-    public static ColumnVector buildBoxedTimestamp(Long ... values) {
+    public static ColumnVector timestampsFromBoxedLongs(Long ... values) {
         return build(DType.TIMESTAMP, values.length, (b) -> b.appendBoxed(values));
     }
 

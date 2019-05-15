@@ -38,7 +38,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
+        try (ColumnVector intColumnVector = ColumnVector.fromInts(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
             assertEquals(intColumnVector.getInt(0), 2);
             assertEquals(intColumnVector.getInt(1), 3);
@@ -48,7 +48,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
+        try (ColumnVector intColumnVector = ColumnVector.fromInts(2, 3, 5)) {
             assertThrows(AssertionError.class, () -> intColumnVector.getInt(3));
             assertFalse(intColumnVector.hasNulls());
         }
@@ -56,7 +56,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ColumnVector intColumnVector = ColumnVector.build(2, 3, 5)) {
+        try (ColumnVector intColumnVector = ColumnVector.fromInts(2, 3, 5)) {
             assertFalse(intColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> intColumnVector.getInt(-1));
         }
@@ -64,7 +64,7 @@ public class IntColumnVectorTest {
 
     @Test
     public void testAddingNullValues() {
-        try (ColumnVector cv = ColumnVector.buildBoxed(2,3,4,5,6,7,null,null)) {
+        try (ColumnVector cv = ColumnVector.fromBoxedInts(2,3,4,5,6,7,null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {

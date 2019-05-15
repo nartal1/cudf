@@ -37,7 +37,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testArrayAllocation() {
-        try (ColumnVector doubleColumnVector = ColumnVector.build(2.1, 3.02, 5.003)) {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
             assertEquals(doubleColumnVector.getDouble(0), 2.1, 0.01);
             assertEquals(doubleColumnVector.getDouble(1), 3.02,0.01);
@@ -47,7 +47,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ColumnVector doubleColumnVector = ColumnVector.build(2.1, 3.02, 5.003)) {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
             assertThrows(AssertionError.class, () -> doubleColumnVector.getDouble(3));
             assertFalse(doubleColumnVector.hasNulls());
         }
@@ -55,7 +55,7 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ColumnVector doubleColumnVector = ColumnVector.build(2.1, 3.02, 5.003)) {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
             assertThrows(AssertionError.class, () -> doubleColumnVector.getDouble(-1));
         }
@@ -64,7 +64,7 @@ public class DoubleColumnVectorTest {
     @Test
     public void testAddingNullValues() {
         try (ColumnVector cv =
-                     ColumnVector.buildBoxed(2.0,3.0,4.0,5.0,6.0,7.0,null,null)) {
+                     ColumnVector.fromBoxedDoubles(2.0,3.0,4.0,5.0,6.0,7.0,null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {
