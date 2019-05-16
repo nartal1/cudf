@@ -145,7 +145,7 @@ public class IntColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 4));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT32, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT32, TimeUnit.NONE, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(new int[]{2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();

@@ -22,15 +22,29 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TimestampColumnVectorTest {
-    static final long[] TIMES = {-131968727238L,   //'1965-10-26 14:01:12.762'
+    static final long[] TIMES_MS = {-131968727238L,   //'1965-10-26 14:01:12.762'
             1530705600000L,   //'2018-07-04 12:00:00.000'
             1674631932929L};  //'2023-01-25 07:32:12.929'
+
+    static final long[] TIMES_S = {-131968728L,   //'1965-10-26 14:01:12'
+            1530705600L,   //'2018-07-04 12:00:00'
+            1674631932L};  //'2023-01-25 07:32:12'
 
     @Test
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            ColumnVector result= timestampColumnVector.year();
+            result.ensureOnHost();
+            assertEquals(1965,result.getShort(0));
+            assertEquals(2018,result.getShort(1));
+            assertEquals(2023,result.getShort(2));
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             ColumnVector result= timestampColumnVector.year();
             result.ensureOnHost();
@@ -43,7 +57,17 @@ public class TimestampColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            ColumnVector result= timestampColumnVector.month();
+            result.ensureOnHost();
+            assertEquals(10,result.getShort(0));
+            assertEquals(7,result.getShort(1));
+            assertEquals(1,result.getShort(2));
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             ColumnVector result= timestampColumnVector.month();
             result.ensureOnHost();
@@ -56,7 +80,18 @@ public class TimestampColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.day()) {
+                result.ensureOnHost();
+                assertEquals(26, result.getShort(0));
+                assertEquals(4, result.getShort(1));
+                assertEquals(25, result.getShort(2));
+            }
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.day()) {
                 result.ensureOnHost();
@@ -70,7 +105,18 @@ public class TimestampColumnVectorTest {
     @Test
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.hour()) {
+                result.ensureOnHost();
+                assertEquals(14, result.getShort(0));
+                assertEquals(12, result.getShort(1));
+                assertEquals(7, result.getShort(2));
+            }
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.hour()) {
                 result.ensureOnHost();
@@ -84,7 +130,18 @@ public class TimestampColumnVectorTest {
     @Test
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.minute()) {
+                result.ensureOnHost();
+                assertEquals(1, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(32, result.getShort(2));
+            }
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.minute()) {
                 result.ensureOnHost();
@@ -98,7 +155,18 @@ public class TimestampColumnVectorTest {
     @Test
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)) {
+            assert timestampColumnVector.getTimeUnit() == TimeUnit.MILLISECONDS;
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.second()) {
+                result.ensureOnHost();
+                assertEquals(12, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(12, result.getShort(2));
+            }
+        }
+
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TimeUnit.SECONDS, TIMES_S)) {
             timestampColumnVector.ensureOnDevice();
             try (ColumnVector result= timestampColumnVector.second()) {
                 result.ensureOnHost();

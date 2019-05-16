@@ -102,8 +102,9 @@ public final class Table implements AutoCloseable {
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRowCount(),
-                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].getType());
+            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getType(), inputColumnVectors[i].getTimeUnit(), inputColumnVectors[i].getRowCount(),
+                    inputColumnVectors[i].hasValidityVector()
+            );
         }
         return new Table(outputColumnVectors);
     }

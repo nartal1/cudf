@@ -42,6 +42,8 @@ public final class ColumnVector implements AutoCloseable {
 
     private final DType type;
     private final OffHeapState offHeap = new OffHeapState();
+    // Time Unit of a TIMESTAMP vector
+    private TimeUnit tsTimeUnit;
     private long rows;
     private long nullCount;
     private int refCount;
@@ -58,19 +60,20 @@ public final class ColumnVector implements AutoCloseable {
     }
 
 
-    private static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
+    private static ColumnVector newOutputVector(DType outputType, TimeUnit tsTimeUnit,
+                                                ColumnVector v1, ColumnVector v2) {
         assert v1.rows == v2.rows;
-        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
+        return newOutputVector(outputType, tsTimeUnit, v1.rows, v1.hasValidityVector() || v2.hasValidityVector());
     }
 
-    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
+    static ColumnVector newOutputVector(DType type, TimeUnit tsTimeUnit, long rows, boolean hasValidity) {
         assert type != DType.INVALID;
         DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (hasValidity) {
             valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
         }
-        return new ColumnVector(data, valid, rows, type);
+        return new ColumnVector(type, tsTimeUnit, rows, data, valid);
     }
 
     ColumnVector(CudfColumn cudfColumn) {
@@ -80,6 +83,7 @@ public final class ColumnVector implements AutoCloseable {
         offHeap.hostData = null;
         this.rows = cudfColumn.getSize();
         this.nullCount = cudfColumn.getNullCount();
+        this.tsTimeUnit = cudfColumn.getTimeUnit();
         DeviceMemoryBuffer data = new DeviceMemoryBuffer(cudfColumn.getDataPtr(), this.rows * type.sizeInBytes);
         DeviceMemoryBuffer valid = null;
         if (cudfColumn.getValidPtr() != 0) {
@@ -93,10 +97,19 @@ public final class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    ColumnVector(HostMemoryBuffer hostDataBuffer, HostMemoryBuffer hostValidityBuffer,
-                 long rows, DType type, long nullCount) {
+    ColumnVector(DType type, TimeUnit tsTimeUnit, long rows, long nullCount,
+                 HostMemoryBuffer hostDataBuffer, HostMemoryBuffer hostValidityBuffer) {
         if (nullCount > 0 && hostValidityBuffer == null) {
             throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
+        }
+        if (type == DType.TIMESTAMP) {
+            if (tsTimeUnit == TimeUnit.NONE) {
+                this.tsTimeUnit = TimeUnit.MILLISECONDS;
+            } else {
+                this.tsTimeUnit = tsTimeUnit;
+            }
+        } else {
+            this.tsTimeUnit = TimeUnit.NONE;
         }
         ColumnVectorCleaner.register(this, offHeap);
         offHeap.hostData = new BufferEncapsulator(hostDataBuffer, hostValidityBuffer);
@@ -108,9 +121,18 @@ public final class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    ColumnVector(DeviceMemoryBuffer dataBuffer, DeviceMemoryBuffer validityBuffer,
-                 long rows, DType type) {
+    ColumnVector(DType type, TimeUnit tsTimeUnit, long rows,
+                 DeviceMemoryBuffer dataBuffer, DeviceMemoryBuffer validityBuffer) {
         ColumnVectorCleaner.register(this, offHeap);
+        if (type == DType.TIMESTAMP) {
+            if (tsTimeUnit == TimeUnit.NONE) {
+                this.tsTimeUnit = TimeUnit.MILLISECONDS;
+            } else {
+                this.tsTimeUnit = tsTimeUnit;
+            }
+        } else {
+            this.tsTimeUnit = TimeUnit.NONE;
+        }
         offHeap.deviceData = new BufferEncapsulator(dataBuffer, validityBuffer);
         offHeap.hostData = null;
         this.rows = rows;
@@ -128,6 +150,7 @@ public final class ColumnVector implements AutoCloseable {
         assert offHeap.cudfColumn != null;
         this.nullCount = offHeap.cudfColumn.getNullCount();
         this.rows = offHeap.cudfColumn.getSize();
+        this.tsTimeUnit = offHeap.cudfColumn.getTimeUnit();
     }
 
     /**
@@ -210,6 +233,16 @@ public final class ColumnVector implements AutoCloseable {
      */
     public boolean hasNulls() {
         return getNullCount() > 0;
+    }
+
+    /**
+     * For vector types that support a TimeUnit (TIMESTAMP),
+     * get the unit of time. Will be NONE for vectors that
+     * did not have one set.  For a TIMESTAMP NONE is the default
+     * unit which should be the same as MILLISECONDS.
+     */
+    public TimeUnit getTimeUnit() {
+        return tsTimeUnit;
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -404,7 +437,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector year() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -420,7 +453,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector month() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -436,7 +469,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector day() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -452,7 +485,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector hour() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -468,7 +501,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector minute() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -484,7 +517,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector second() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -519,7 +552,7 @@ public final class ColumnVector implements AutoCloseable {
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
-        ColumnVector result = newOutputVector(v1, this, type);
+        ColumnVector result = newOutputVector(type, TimeUnit.NONE, v1, this);
         Cudf.gdfAddGeneric(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -548,10 +581,9 @@ public final class ColumnVector implements AutoCloseable {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
             checkHasDeviceData();
-            offHeap.cudfColumn = new CudfColumn(offHeap.deviceData.data.getAddress(),
-                    (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress()),
-                    (int)rows,
-                    type, (int) getNullCount(), CudfTimeUnit.NONE);
+            offHeap.cudfColumn = new CudfColumn(type, tsTimeUnit, (int)rows, (int) getNullCount(), offHeap.deviceData.data.getAddress(),
+                    (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress())
+            );
         }
         return offHeap.cudfColumn;
     }
@@ -687,7 +719,19 @@ public final class ColumnVector implements AutoCloseable {
      * @return the builder to use.
      */
     public static Builder builder(DType type, int rows) {
-        return new Builder(type, rows);
+        return new Builder(type, TimeUnit.NONE, rows);
+    }
+
+    /**
+     * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
+     * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
+     * close the builder.
+     * @param type the type of vector to build.
+     * @param rows the number of rows this builder can hold
+     * @return the builder to use.
+     */
+    public static Builder builder(DType type, TimeUnit tsTimeUnit, int rows) {
+        return new Builder(type, tsTimeUnit, rows);
     }
 
     /**
@@ -697,7 +741,18 @@ public final class ColumnVector implements AutoCloseable {
      * @return the created vector.
      */
     public static ColumnVector build(DType type, int rows, Consumer<Builder> init) {
-        try (Builder builder = builder(type, rows)) {
+        return build(type, TimeUnit.NONE, rows, init);
+    }
+
+    /**
+     * Create a new vector.
+     * @param rows maximum number of rows that the vector can hold.
+     * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+     * @param init what will initialize the vector.
+     * @return the created vector.
+     */
+    public static ColumnVector build(DType type, TimeUnit tsTimeUnit, int rows, Consumer<Builder> init) {
+        try (Builder builder = builder(type, tsTimeUnit, rows)) {
             init.accept(builder);
             return builder.build();
         }
@@ -764,6 +819,13 @@ public final class ColumnVector implements AutoCloseable {
      */
     public static ColumnVector timestampsFromLongs(long ... values) {
         return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector timestampsFromLongs(TimeUnit tsTimeUnit, long ... values) {
+        return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendArray(values));
     }
 
     /**
@@ -848,6 +910,15 @@ public final class ColumnVector implements AutoCloseable {
     }
 
     /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector timestampsFromBoxedLongs(TimeUnit tsTimeUnit, Long ... values) {
+        return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
      * Build
      */
     public static final class Builder implements AutoCloseable {
@@ -858,14 +929,17 @@ public final class ColumnVector implements AutoCloseable {
         private final long rows;
         private boolean built;
         private final DType type;
+        private final TimeUnit tsTimeUnit;
 
         /**
          * Create a builder with a buffer of size rows
          * @param type datatype
+         * @param tsTimeUnit for TIMESTAMP the unit of time it is storing.
          * @param rows number of rows to allocate.
          */
-        Builder(DType type, long rows) {
+        Builder(DType type, TimeUnit tsTimeUnit, long rows) {
             this.type = type;
+            this.tsTimeUnit = tsTimeUnit;
             this.rows = rows;
             this.data = HostMemoryBuffer.allocate(rows * type.sizeInBytes);
         }
@@ -873,13 +947,15 @@ public final class ColumnVector implements AutoCloseable {
         /**
          * Create a builder with a buffer of size rows (for testing ONLY).
          * @param type datatype
+         * @param tsTimeUnit for TIMESTAMP the unit of time it is storing.
          * @param rows number of rows to allocate.
          * @param testData a buffer to hold the data (should be large enough to hold rows entries).
          * @param testValid a buffer to hold the validity vector (should be large enough to hold
          *                 rows entries or is null).
          */
-        Builder(DType type, long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
+        Builder(DType type, TimeUnit tsTimeUnit, long rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
             this.type = type;
+            this.tsTimeUnit = tsTimeUnit;
             this.rows = rows;
             this.data = testData;
             this.valid = testValid;
@@ -1155,7 +1231,7 @@ public final class ColumnVector implements AutoCloseable {
                 throw new IllegalStateException("Cannot reuse a builder.");
             }
             built = true;
-            return new ColumnVector(data, valid, currentIndex, type, nullCount);
+            return new ColumnVector(type, tsTimeUnit, currentIndex, nullCount, data, valid);
         }
 
         /**

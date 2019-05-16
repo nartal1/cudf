@@ -34,11 +34,11 @@ public class ColumnVectorTest {
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
 
-        try (ColumnVector v0 = new ColumnVector(mockDataBuffer, mockValidBuffer, 0, DType.INT32)) {
+        try (ColumnVector v0 = new ColumnVector(DType.INT32, TimeUnit.NONE, 0, mockDataBuffer, mockValidBuffer)) {
             v0.getCudfColumn();
         }
 
-        try (ColumnVector v1 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, DType.INT32)) {
+        try (ColumnVector v1 = new ColumnVector(DType.INT32, TimeUnit.NONE, Long.MAX_VALUE, mockDataBuffer, mockValidBuffer)) {
             assertThrows(AssertionError.class, () -> v1.getCudfColumn());
         }
     }
@@ -46,7 +46,7 @@ public class ColumnVectorTest {
     @Test
     void testCudfColumnFromHostVector() {
         HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class);
-        try (ColumnVector v = new ColumnVector(mockDataBuffer, null, 10, DType.INT32, 0)) {
+        try (ColumnVector v = new ColumnVector(DType.INT32, TimeUnit.NONE, 10, 0, mockDataBuffer, null)) {
             assertThrows(IllegalStateException.class, () -> v.getCudfColumn());
         }
     }
@@ -54,7 +54,7 @@ public class ColumnVectorTest {
     @Test
     void testGetNativeAddressFromHostVector() {
         HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class);
-        try (ColumnVector v = new ColumnVector(mockDataBuffer, null, 10, DType.INT32, 0)) {
+        try (ColumnVector v = new ColumnVector(DType.INT32, TimeUnit.NONE, 10, 0, mockDataBuffer, null)) {
             assertThrows(IllegalStateException.class, () -> v.getNativeCudfColumnAddress());
         }
     }
@@ -65,7 +65,7 @@ public class ColumnVectorTest {
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
 
         assertThrows(IllegalStateException.class, () -> {
-            try (ColumnVector v2 = new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, DType.INT32)) {
+            try (ColumnVector v2 = new ColumnVector(DType.INT32, TimeUnit.NONE, Long.MAX_VALUE, mockDataBuffer, mockValidBuffer)) {
                 v2.close();
             }
         });
@@ -77,7 +77,7 @@ public class ColumnVectorTest {
         long expectedLeakCount = ColumnVectorCleaner.leakCount.get() + 1;
         DeviceMemoryBuffer mockDataBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
-        new ColumnVector(mockDataBuffer, mockValidBuffer, Long.MAX_VALUE, DType.INT32);
+        new ColumnVector(DType.INT32, TimeUnit.NONE, Long.MAX_VALUE, mockDataBuffer, mockValidBuffer);
         long maxTime = System.currentTimeMillis() + 10_000;
         long leakNow;
         do {
