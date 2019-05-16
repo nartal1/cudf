@@ -36,21 +36,41 @@ import java.util.stream.StreamSupport;
  * close to decrement the reference count when you are done with the column, and call inRefCount
  * to increment the reference count.
  */
-public class ColumnVector implements AutoCloseable {
+public final class ColumnVector implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(ColumnVector.class);
     static final boolean REF_COUNT_DEBUG = Boolean.getBoolean("ai.rapids.refcount.debug");
 
-    private long rows;
     private final DType type;
-    private long nullCount;
     private final OffHeapState offHeap = new OffHeapState();
+    private long rows;
+    private long nullCount;
     private int refCount;
 
+    /**
+     * Convert elements in it to a String and join them together. Only use for debug messages
+     * where the code execution itself can be disabled as this is not fast.
+     */
     private static <T> String stringJoin(String delim, Iterable<T> it) {
         return String.join(delim,
                 StreamSupport.stream(it.spliterator(), false)
                         .map((i) -> i.toString())
                         .collect(Collectors.toList()));
+    }
+
+
+    private static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
+        assert v1.rows == v2.rows;
+        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
+    }
+
+    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
+        assert type != DType.INVALID;
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidity) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
+        }
+        return new ColumnVector(data, valid, rows, type);
     }
 
     ColumnVector(CudfColumn cudfColumn) {
@@ -73,8 +93,8 @@ public class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    ColumnVector(HostMemoryBuffer hostDataBuffer,
-                           HostMemoryBuffer hostValidityBuffer, long rows, DType type, long nullCount) {
+    ColumnVector(HostMemoryBuffer hostDataBuffer, HostMemoryBuffer hostValidityBuffer,
+                 long rows, DType type, long nullCount) {
         if (nullCount > 0 && hostValidityBuffer == null) {
             throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
         }
@@ -88,8 +108,8 @@ public class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    ColumnVector(DeviceMemoryBuffer dataBuffer,
-                           DeviceMemoryBuffer validityBuffer, long rows, DType type) {
+    ColumnVector(DeviceMemoryBuffer dataBuffer, DeviceMemoryBuffer validityBuffer,
+                 long rows, DType type) {
         ColumnVectorCleaner.register(this, offHeap);
         offHeap.deviceData = new BufferEncapsulator(dataBuffer, validityBuffer);
         offHeap.hostData = null;
@@ -102,41 +122,12 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Increment the reference count for this column.  You need to call close on this
-     * to decrement the reference count again.
+     * Update any internal accounting from what is in the Native Code
      */
-    public void incRefCount() {
-        refCount++;
-        offHeap.addRef();
-    }
-
-    private static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
-        assert v1.rows == v2.rows;
-        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
-    }
-
-    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
-        assert type != DType.INVALID;
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
-        DeviceMemoryBuffer valid = null;
-        if (hasValidity) {
-            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
-        }
-        return new ColumnVector(data, valid, rows, type);
-    }
-
-    /**
-     * Returns the number of rows in this vector.
-     */
-    public final long getRows() {
-        return rows;
-    }
-
-    /**
-     * Returns the type of this vector.
-     */
-    public final DType getType() {
-        return type;
+    final void updateFromNative() {
+        assert offHeap.cudfColumn != null;
+        this.nullCount = offHeap.cudfColumn.getNullCount();
+        this.rows = offHeap.cudfColumn.getSize();
     }
 
     /**
@@ -155,29 +146,56 @@ public class ColumnVector implements AutoCloseable {
         }
     }
 
+    @Override
+    public String toString() {
+        return "ColumnVector{" +
+                "rows=" + rows +
+                ", type=" + type +
+                ", hostData=" + offHeap.hostData +
+                ", deviceData=" + offHeap.deviceData +
+                ", nullCount=" + nullCount +
+                ", cudfColumn=" + offHeap.cudfColumn +
+                '}';
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // METADATA ACCESS
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Increment the reference count for this column.  You need to call close on this
+     * to decrement the reference count again.
+     */
+    public void incRefCount() {
+        refCount++;
+        offHeap.addRef();
+    }
+
+    /**
+     * Returns the number of rows in this vector.
+     */
+    public long getRowCount() {
+        return rows;
+    }
+
+    /**
+     * Returns the type of this vector.
+     */
+    public DType getType() {
+        return type;
+    }
+
     /**
      * Returns the number of nulls in the data.
      */
-    public final long getNullCount(){
+    public long getNullCount(){
         return nullCount;
-    }
-
-    private void checkDeviceData() {
-        if (offHeap.deviceData == null) {
-            throw new IllegalStateException("Vector not on Device");
-        }
-    }
-
-    private void checkHostData() {
-        if (offHeap.hostData == null) {
-            throw new IllegalStateException("Vector not on Host");
-        }
     }
 
     /**
      * Returns if the vector has a validity vector allocated or not.
      */
-    public final boolean hasValidityVector() {
+    public boolean hasValidityVector() {
         boolean ret;
         if (offHeap.hostData != null) {
             ret = (offHeap.hostData.valid != null);
@@ -190,24 +208,33 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Returns if the vector has nulls.
      */
-    public final boolean hasNulls() {
+    public boolean hasNulls() {
         return getNullCount() > 0;
     }
 
-    public final boolean isNull(long index) {
-        checkHostData();
-        if (hasNulls()) {
-            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+    /////////////////////////////////////////////////////////////////////////////
+    // DATA MOVEMENT
+    /////////////////////////////////////////////////////////////////////////////
+
+    private void checkHasDeviceData() {
+        if (offHeap.deviceData == null) {
+            throw new IllegalStateException("Vector not on Device");
         }
-        return false;
+    }
+
+    private void checkHasHostData() {
+        if (offHeap.hostData == null) {
+            throw new IllegalStateException("Vector not on Host");
+        }
     }
 
     /**
      * Be sure the data is on the device.
      */
     public final void ensureOnDevice() {
-        checkHostData();
         if (offHeap.deviceData == null) {
+            checkHasHostData();
+
             DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(offHeap.hostData.data.getLength());
             DeviceMemoryBuffer deviceValidityBuffer = null;
             boolean needsCleanup = true;
@@ -238,8 +265,9 @@ public class ColumnVector implements AutoCloseable {
      * Be sure the data is on the host.
      */
     public final void ensureOnHost() {
-        checkDeviceData();
         if (offHeap.hostData == null) {
+            checkHasDeviceData();
+
             HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(offHeap.deviceData.data.getLength());
             HostMemoryBuffer hostValidityBuffer = null;
             boolean needsCleanup = true;
@@ -266,14 +294,54 @@ public class ColumnVector implements AutoCloseable {
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    // DATA ACCESS
+    /////////////////////////////////////////////////////////////////////////////
+
     /**
-     * Get the byte value at index.
+     * Check if the value at index is null or not.
      */
-    public final byte getByte(long index) {
-        assert type == DType.INT8;
+    public boolean isNull(long index) {
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        if (hasNulls()) {
+            checkHasHostData();
+            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+        }
+        return false;
+    }
+
+    /**
+     * For testing only.  Allows null checks to go past the number of rows, but not past the end
+     * of the buffer.  NOTE: If the validity vector was allocated by cudf itself it is not
+     * guaranteed to have the same padding, but for all practical purposes it does.  This is
+     * just to verify that the buffer was allocated and initialized properly.
+     */
+    boolean isNullExtendedRange(long index) {
+        long maxNullRow = BitVectorHelper.getValidityAllocationSizeInBytes(rows) * 8;
+        assert (index >= 0 && index < maxNullRow) : "TEST: index is out of range 0 <= " + index + " < " + maxNullRow;
+        if (hasNulls()) {
+            checkHasHostData();
+            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+        }
+        return false;
+    }
+
+    /**
+     * Generic type independent asserts when getting a value from a single index.
+     * @param index where to get the data from.
+     */
+    private void assertsForGet(long index) {
         assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
         assert offHeap.hostData != null : "data is not on the host";
         assert !isNull(index) : " value at " + index + " is null";
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public byte getByte(long index) {
+        assert type == DType.INT8;
+        assertsForGet(index);
         return offHeap.hostData.data.getByte(index * type.sizeInBytes);
     }
 
@@ -282,9 +350,7 @@ public class ColumnVector implements AutoCloseable {
      */
     public final short getShort(long index) {
         assert type == DType.INT16;
-        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert offHeap.hostData != null : "data is not on the host";
-        assert !isNull(index) : " value at " + index + " is null";
+        assertsForGet(index);
         return offHeap.hostData.data.getShort(index * type.sizeInBytes);
     }
 
@@ -293,9 +359,7 @@ public class ColumnVector implements AutoCloseable {
      */
     public final int getInt(long index) {
         assert type == DType.INT32 || type == DType.DATE32;
-        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert offHeap.hostData != null : "data is not on the host";
-        assert !isNull(index) : " value at " + index + " is null";
+        assertsForGet(index);
         return offHeap.hostData.data.getInt(index * type.sizeInBytes);
     }
 
@@ -304,9 +368,7 @@ public class ColumnVector implements AutoCloseable {
      */
     public final long getLong(long index) {
         assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert offHeap.hostData != null : "data is not on the host";
-        assert !isNull(index) : " value at " + index + " is null";
+        assertsForGet(index);
         return offHeap.hostData.data.getLong(index * type.sizeInBytes);
     }
 
@@ -315,9 +377,7 @@ public class ColumnVector implements AutoCloseable {
      */
     public final float getFloat(long index) {
         assert type == DType.FLOAT32;
-        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert offHeap.hostData != null : "data is not on the host";
-        assert !isNull(index) : " value at " + index + " is null";
+        assertsForGet(index);
         return offHeap.hostData.data.getFloat(index * type.sizeInBytes);
     }
 
@@ -326,27 +386,25 @@ public class ColumnVector implements AutoCloseable {
      */
     public final double getDouble(long index) {
         assert type == DType.FLOAT64;
-        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
-        assert offHeap.hostData != null : "data is not on the host";
-        assert !isNull(index) : " value at " + index + " is null";
+        assertsForGet(index);
         return offHeap.hostData.data.getDouble(index * type.sizeInBytes);
     }
 
     /////////////////////////////////////////////////////////////////////////////
     // DATE/TIME
-    ////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * Get year from DATE32, DATE64, or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector year() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -355,14 +413,14 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get month from DATE32, DATE64, or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector month() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -371,14 +429,14 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get day from DATE32, DATE64, or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector day() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -387,14 +445,14 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get hour from DATE64 or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector hour() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -403,14 +461,14 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get minute from DATE64 or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector minute() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -419,14 +477,14 @@ public class ColumnVector implements AutoCloseable {
     /**
      * Get second from DATE64 or TIMESTAMP
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      *
      * @return - A new INT16 vector allocated on the GPU.
      */
     public ColumnVector second() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(this.rows, this.hasValidityVector(), DType.INT16);
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
         Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
         result.updateFromNative();
         return result;
@@ -435,28 +493,29 @@ public class ColumnVector implements AutoCloseable {
 
     /////////////////////////////////////////////////////////////////////////////
     // ARITHMETIC
-    ////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * Add two vectors.
-     * Preconditions - vectors have to be the same size
+     * Preconditions - vectors have to be the same size and same type. FLOAT32, FLOAT64, INT32 or INT64.
+     * NULLs are not currently supported.
      *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and is responsible for
-     *                  its lifecycle.
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
      * Example:
-     *          try (ColumnVector v1 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.append(1.2).append(5.1)...);
-     *               ColumnVector v2 = ColumnVector.build(DType.FLOAT64, 5, (b) -> b.append(5.1).append(13.1)...);
+     *          try (ColumnVector v1 = ColumnVector.fromFloats(1.2f, 5.1f, ...);
+     *               ColumnVector v2 = ColumnVector.fromFloats(5.1f, 13.1f, ...);
      *               ColumnVector v3 = v1.add(v2);
      *            ...
      *          }
      *
      * @param v1 - vector to be added to this vector.
-     * @return - A new vector allocated on the GPU.
+     * @return - A new vector allocated on the GPU of the same type as the input types.
      */
     public ColumnVector add(ColumnVector v1) {
         assert type == v1.getType();
         assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64;
-        assert v1.getRows() == getRows(); // cudf will check this too.
+        assert v1.getRowCount() == getRowCount(); // cudf will check this too.
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
@@ -466,17 +525,9 @@ public class ColumnVector implements AutoCloseable {
         return result;
     }
 
-    @Override
-    public String toString() {
-        return "ColumnVector{" +
-                "rows=" + rows +
-                ", type=" + type +
-                ", hostData=" + offHeap.hostData +
-                ", deviceData=" + offHeap.deviceData +
-                ", nullCount=" + nullCount +
-                ", cudfColumn=" + offHeap.cudfColumn +
-                '}';
-    }
+    /////////////////////////////////////////////////////////////////////////////
+    // INTERNAL/NATIVE ACCESS
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * USE WITH CAUTION: This method exposes the address of the native cudf_column.  This allows
@@ -496,7 +547,7 @@ public class ColumnVector implements AutoCloseable {
         if (offHeap.cudfColumn == null) {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
-            checkDeviceData();
+            checkHasDeviceData();
             offHeap.cudfColumn = new CudfColumn(offHeap.deviceData.data.getAddress(),
                     (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress()),
                     (int)rows,
@@ -505,14 +556,9 @@ public class ColumnVector implements AutoCloseable {
         return offHeap.cudfColumn;
     }
 
-    /**
-     * Update any internal accounting from what is in the Native Code
-     */
-    final void updateFromNative() {
-        assert offHeap.cudfColumn != null;
-        this.nullCount = offHeap.cudfColumn.getNullCount();
-        this.rows = offHeap.cudfColumn.getSize();
-    }
+    /////////////////////////////////////////////////////////////////////////////
+    // HELPER CLASSES
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * Encapsulator class to hold the two buffers as a cohesive object
@@ -542,6 +588,9 @@ public class ColumnVector implements AutoCloseable {
         }
     }
 
+    /**
+     * When debug is enabled holds information about inc and dec of ref count.
+     */
     private static final class RefCountDebugItem {
         final StackTraceElement[] stackTrace;
         final long timeMs;
@@ -563,7 +612,10 @@ public class ColumnVector implements AutoCloseable {
         }
     }
 
-    protected static class OffHeapState implements ColumnVectorCleaner.Cleaner {
+    /**
+     * Holds the off heap state of the column vector so we can clean it up, even if it is leaked.
+     */
+    protected static final class OffHeapState implements ColumnVectorCleaner.Cleaner {
         public BufferEncapsulator<HostMemoryBuffer> hostData;
         public BufferEncapsulator<DeviceMemoryBuffer> deviceData;
         public CudfColumn cudfColumn;
@@ -622,6 +674,10 @@ public class ColumnVector implements AutoCloseable {
     }
 
 
+    /////////////////////////////////////////////////////////////////////////////
+    // BUILDER
+    /////////////////////////////////////////////////////////////////////////////
+
     /**
      * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
      * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
@@ -632,13 +688,6 @@ public class ColumnVector implements AutoCloseable {
      */
     public static Builder builder(DType type, int rows) {
         return new Builder(type, rows);
-    }
-
-    /**
-     * Create a builder but with some things possibly replaced for testing.
-     */
-    static Builder builder(DType type, int rows, HostMemoryBuffer testData, HostMemoryBuffer testValid) {
-        return new Builder(type, rows, testData, testValid);
     }
 
     /**
@@ -799,7 +848,7 @@ public class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Base class for Builder
+     * Build
      */
     public static final class Builder implements AutoCloseable {
         private HostMemoryBuffer data;
@@ -1042,12 +1091,6 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
-        private void allocateBitmaskAndSetDefaultValues() {
-            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
-            valid = HostMemoryBuffer.allocate(bitmaskSize);
-            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
-        }
-
         /**
          * Append this vector to the end of this vector
          * @param columnVector - Vector to be added
@@ -1060,7 +1103,7 @@ public class ColumnVector implements AutoCloseable {
 
             data.copyRange(currentIndex * type.sizeInBytes, columnVector.offHeap.hostData.data,
                     0L,
-                    columnVector.getRows() * type.sizeInBytes);
+                    columnVector.getRowCount() * type.sizeInBytes);
 
             if (columnVector.nullCount != 0) {
                 if (valid == null) {
@@ -1072,6 +1115,12 @@ public class ColumnVector implements AutoCloseable {
             }
             currentIndex += columnVector.rows;
             return this;
+        }
+
+        private void allocateBitmaskAndSetDefaultValues() {
+            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
+            valid = HostMemoryBuffer.allocate(bitmaskSize);
+            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
         }
 
         /**
@@ -1098,13 +1147,20 @@ public class ColumnVector implements AutoCloseable {
             return this;
         }
 
+        /**
+         * Finish and create the immutable ColumnVector.
+         */
         public final ColumnVector build() {
+            if (built) {
+                throw new IllegalStateException("Cannot reuse a builder.");
+            }
             built = true;
             return new ColumnVector(data, valid, currentIndex, type, nullCount);
         }
 
         /**
-         * Close this builder and free memory if the ColumnVector wasn't generated
+         * Close this builder and free memory if the ColumnVector wasn't generated. Verifies that
+         * the data was released even in the case of an error.
          */
         @Override
         public final void close() {

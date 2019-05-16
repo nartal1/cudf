@@ -128,12 +128,12 @@ public class IntColumnVectorTest {
                                     assertEquals(src.getInt(j), dstVector.getInt(i));
                                 }
                             }
-                            // TODO do we really need this?
-//                            if (dstVector.offHeap.hostData.valid != null) {
-//                                for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-//                                    assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
-//                                }
-//                            }
+                            if (dstVector.hasValidityVector()) {
+                                long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                    assertFalse(dstVector.isNullExtendedRange(i));
+                                }
+                            }
                         }
                     }
                 }
@@ -145,7 +145,7 @@ public class IntColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 4));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT32, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT32, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(new int[]{2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
@@ -164,7 +164,7 @@ public class IntColumnVectorTest {
 
             try (ColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
                 intColumnVector3.ensureOnHost();
-                assertEquals(4, intColumnVector3.getRows());
+                assertEquals(4, intColumnVector3.getRowCount());
                 assertEquals(0, intColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {
                     long v1 = intColumnVector1.getInt(i);

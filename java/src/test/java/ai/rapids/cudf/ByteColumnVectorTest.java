@@ -30,7 +30,7 @@ public class ByteColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (ColumnVector shortColumnVector = ColumnVector.build(DType.INT8,3, (b) -> b.append((byte)1))) {
+        try (ColumnVector shortColumnVector = ColumnVector.build(DType.INT8, 3, (b) -> b.append((byte)1))) {
             assertFalse(shortColumnVector.hasNulls());
         }
     }
@@ -139,12 +139,12 @@ public class ByteColumnVectorTest {
                                     assertEquals(src.getByte(j), dstVector.getByte(i));
                                 }
                             }
-                            // TODO do we really need this to always run?
-//                            if (dstVector.offHeap.hostData.valid != null) {
-//                                for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-//                                    assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
-//                                }
-//                            }
+                            if (dstVector.hasValidityVector()) {
+                                long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                    assertFalse(dstVector.isNullExtendedRange(i));
+                                }
+                            }
                         }
                     }
                 }
@@ -156,7 +156,7 @@ public class ByteColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT8, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT8, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(new byte[] {2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();

@@ -128,12 +128,12 @@ public class DoubleColumnVectorTest {
                                      assertEquals(src.getDouble(j), dstVector.getDouble(i));
                                  }
                              }
-                             // TODO do we really need this?
-//                             if (dstVector.offHeap.hostData.valid != null) {
-//                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-//                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
-//                                 }
-//                             }
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
+                                 }
+                             }
                          }
                     }
                 }
@@ -145,7 +145,7 @@ public class DoubleColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = ColumnVector.builder(DType.FLOAT64, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.FLOAT64, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(new double[] {2.1, 3.02, 5.004}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
@@ -164,7 +164,7 @@ public class DoubleColumnVectorTest {
 
             try (ColumnVector doubleColumnVector3 = doubleColumnVector1.add(doubleColumnVector2)) {
                 doubleColumnVector3.ensureOnHost();
-                assertEquals(5, doubleColumnVector3.getRows());
+                assertEquals(5, doubleColumnVector3.getRowCount());
                 assertEquals(0, doubleColumnVector3.getNullCount());
                 for (int i = 0; i < 5; i++) {
                     double v1 = doubleColumnVector1.getDouble(i);

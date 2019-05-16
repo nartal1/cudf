@@ -128,12 +128,12 @@ public class FloatColumnVectorTest {
                                      assertEquals(src.getFloat(j), dstVector.getFloat(i));
                                  }
                              }
-                             // TODO do we really need this?
-//                             if (dstVector.offHeap.hostData.valid != null) {
-//                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-//                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
-//                                 }
-//                             }
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
+                                 }
+                             }
                          }
                     }
                 }
@@ -145,7 +145,7 @@ public class FloatColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = ColumnVector.builder(DType.FLOAT32, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.FLOAT32, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(2.1f, 3.02f, 5.004f).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
@@ -164,7 +164,7 @@ public class FloatColumnVectorTest {
 
             try (ColumnVector floatColumnVector3 = floatColumnVector1.add(floatColumnVector2)) {
                 floatColumnVector3.ensureOnHost();
-                assertEquals(5, floatColumnVector3.getRows());
+                assertEquals(5, floatColumnVector3.getRowCount());
                 assertEquals(0, floatColumnVector3.getNullCount());
                 for (int i = 0; i < 5; i++) {
                     float v1 = floatColumnVector1.getFloat(i);

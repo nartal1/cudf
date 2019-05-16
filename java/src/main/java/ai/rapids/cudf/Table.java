@@ -39,11 +39,11 @@ public final class Table implements AutoCloseable {
      */
     public Table(ColumnVector[] columnVectors) {
         assert columnVectors != null : "ColumnVectors can't be null";
-        final long rows = columnVectors[0].getRows();
+        final long rows = columnVectors[0].getRowCount();
 
         for (ColumnVector columnVector : columnVectors) {
             assert (null != columnVector) : "ColumnVectors can't be null";
-            assert (rows == columnVector.getRows()) : "All columns should have the same number of rows";
+            assert (rows == columnVector.getRowCount()) : "All columns should have the same number of rows";
         }
         this.columnVectors = new ColumnVector[columnVectors.length];
         // Since Arrays are mutable objects make a copy
@@ -102,7 +102,7 @@ public final class Table implements AutoCloseable {
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRows(),
+            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRowCount(),
                     inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].getType());
         }
         return new Table(outputColumnVectors);
@@ -182,7 +182,7 @@ public final class Table implements AutoCloseable {
         return columnVectors[index];
     }
 
-    public final long getRows() {
+    public final long getRowCount() {
         return rows;
     }
 

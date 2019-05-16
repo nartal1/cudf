@@ -128,12 +128,12 @@ public class ShortColumnVectorTest {
                                      assertEquals(src.getShort(j), dstVector.getShort(i));
                                  }
                              }
-                             // TODO do we really need this?
-//                             if (dstVector.offHeap.hostData.valid != null) {
-//                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-//                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
-//                                 }
-//                             }
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
+                                 }
+                             }
                          }
                     }
                 }
@@ -145,7 +145,7 @@ public class ShortColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT16, 4, mockDataBuffer, mockValidBuffer)) {
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT16, 4, mockDataBuffer, mockValidBuffer)) {
                 builder.appendArray(new short[]{2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();

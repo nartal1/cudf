@@ -33,17 +33,17 @@ public class TableTest {
 
     public static void assertTablesAreEqual(Table expected, Table table) {
         assertEquals(expected.getNumberOfColumns(), table.getNumberOfColumns());
-        assertEquals(expected.getRows(), table.getRows());
+        assertEquals(expected.getRowCount(), table.getRowCount());
         for (int col = 0; col < expected.getNumberOfColumns(); col++) {
             try (ColumnVector expect = expected.getColumn(col);
                  ColumnVector cv = table.getColumn(col)) {
                 assertEquals(expect.getType(), cv.getType(), "Column " + col);
-                assertEquals(expect.getRows(), cv.getRows(), "Column " + col); // Yes this might be redundant
+                assertEquals(expect.getRowCount(), cv.getRowCount(), "Column " + col); // Yes this might be redundant
                 assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
                 expect.ensureOnHost();
                 cv.ensureOnHost();
                 DType type = expect.getType();
-                for (long row = 0; row < expect.getRows(); row++) {
+                for (long row = 0; row < expect.getRowCount(); row++) {
                     assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
                     if (!expect.isNull(row)) {
                         switch(type) {
@@ -194,7 +194,7 @@ public class TableTest {
             v1.ensureOnDevice();
             v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
-                assertEquals(5, t.getRows());
+                assertEquals(5, t.getRowCount());
             }
         }
     }
@@ -346,7 +346,7 @@ public class TableTest {
                 .includeColumn("num_units")
                 .build();
         try (Table table = Table.readParquet(opts, TEST_PARQUET_FILE)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
             assertTableTypes(new DType[] {DType.INT64, DType.INT32, DType.INT32}, table);
         }
@@ -367,7 +367,7 @@ public class TableTest {
             bufferLen = in.read(buffer);
         }
         try (Table table = Table.readParquet(opts, buffer, bufferLen)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
             assertTableTypes(new DType[] {DType.INT64, DType.FLOAT64, DType.FLOAT64}, table);
         }
@@ -377,7 +377,7 @@ public class TableTest {
     void testReadParquetFull() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Table table = Table.readParquet(TEST_PARQUET_FILE)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
 
             DType[] expectedTypes = new DType[]{
