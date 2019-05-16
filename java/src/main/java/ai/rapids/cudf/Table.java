@@ -102,8 +102,9 @@ public final class Table implements AutoCloseable {
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRowCount(),
-                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].getType());
+            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getType(), inputColumnVectors[i].getTimeUnit(), inputColumnVectors[i].getRowCount(),
+                    inputColumnVectors[i].hasValidityVector()
+            );
         }
         return new Table(outputColumnVectors);
     }
@@ -287,63 +288,80 @@ public final class Table implements AutoCloseable {
      */
     public static final class TestBuilder {
         private final List<DType> types = new ArrayList<>();
+        private final List<TimeUnit> units = new ArrayList<>();
         private final List<Object> typeErasedData = new ArrayList<>();
 
         public TestBuilder column(Byte... values) {
             types.add(DType.INT8);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder column(Short... values) {
             types.add(DType.INT16);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder column(Integer... values) {
             types.add(DType.INT32);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder column(Long... values) {
             types.add(DType.INT64);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder column(Float... values) {
             types.add(DType.FLOAT32);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder column(Double... values) {
             types.add(DType.FLOAT64);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder date32Column(Integer... values) {
             types.add(DType.DATE32);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder date64Column(Long... values) {
             types.add(DType.DATE64);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
         public TestBuilder timestampColumn(Long... values) {
             types.add(DType.TIMESTAMP);
+            units.add(TimeUnit.NONE);
             typeErasedData.add(values);
             return this;
         }
 
-        private static ColumnVector from(DType type, Object dataArray) {
+        public TestBuilder timestampColumn(TimeUnit unit, Long... values) {
+            types.add(DType.TIMESTAMP);
+            units.add(unit);
+            typeErasedData.add(values);
+            return this;
+        }
+
+        private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
             ColumnVector ret;
             switch(type) {
                 case INT8:
@@ -365,7 +383,7 @@ public final class Table implements AutoCloseable {
                     ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
                     break;
                 case TIMESTAMP:
-                    ret = ColumnVector.timestampsFromBoxedLongs((Long[]) dataArray);
+                    ret = ColumnVector.timestampsFromBoxedLongs(unit, (Long[]) dataArray);
                     break;
                 case FLOAT32:
                     ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
@@ -383,7 +401,7 @@ public final class Table implements AutoCloseable {
             List<ColumnVector> columns = new ArrayList<>(types.size());
             try {
                 for (int i = 0; i < types.size(); i++) {
-                    columns.add(from(types.get(i), typeErasedData.get(i)));
+                    columns.add(from(types.get(i), units.get(i), typeErasedData.get(i)));
                 }
                 for (ColumnVector cv: columns) {
                     cv.ensureOnDevice();

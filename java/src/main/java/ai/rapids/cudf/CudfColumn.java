@@ -31,6 +31,7 @@ class CudfColumn implements AutoCloseable {
     private Integer size;
     private DType type;
     private Integer nullCount;
+    private TimeUnit timeUnit;
 
     CudfColumn(long data, long valid,
                      int size, DType dtype) {
@@ -38,11 +39,10 @@ class CudfColumn implements AutoCloseable {
         cudfColumnView(nativeHandle, data, valid, size, dtype.nativeId);
     }
 
-    CudfColumn(long dataPtr, long valid, int size, DType dtype, int null_count,
-                     CudfTimeUnit timeUnit) {
+    CudfColumn(DType dtype, TimeUnit timeUnit, int size, int null_count, long dataPtr, long valid) {
         nativeHandle = allocate();
         cudfColumnViewAugmented(nativeHandle, dataPtr, valid, size, dtype.nativeId,
-                null_count, timeUnit.getValue());
+                null_count, timeUnit.getNativeId());
     }
 
     final long getNativeHandle() {
@@ -77,7 +77,7 @@ class CudfColumn implements AutoCloseable {
      * @param size       Number of rows in the column.
      * @param dtype      Data type of the column.
      * @param null_count The number of non-valid elements in the validity bitmask.
-     * @param timeUnit   {@link CudfTimeUnit}
+     * @param timeUnit   {@link TimeUnit}
      */
     private native void cudfColumnViewAugmented(long column, long dataPtr, long valid,
                                                int size, int dtype, int null_count,
@@ -132,6 +132,16 @@ class CudfColumn implements AutoCloseable {
 
     private native int getDtype(long handle) throws CudfException;
 
+
+
+    public TimeUnit getTimeUnit() {
+        if (timeUnit == null) {
+            timeUnit = TimeUnit.fromNative(getTimeUnit(nativeHandle));
+        }
+        return timeUnit;
+    }
+
+    private native int getTimeUnit(long handle) throws CudfException;
 
     public int getNullCount() {
         if (nullCount == null) {

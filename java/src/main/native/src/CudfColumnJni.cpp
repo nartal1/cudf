@@ -69,6 +69,13 @@ JNIEXPORT jint JNICALL Java_ai_rapids_cudf_CudfColumn_getDtype
     return column->dtype;
 }
 
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_CudfColumn_getTimeUnit
+        (JNIEnv *env, jobject jObject, jlong handle) {
+    JNI_NULL_CHECK(env, handle, "native handle is null", 0);
+    gdf_column *column = reinterpret_cast<gdf_column *>(handle);
+    return column->dtype_info.time_unit;
+}
+
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfColumn_cudfColumnView
         (JNIEnv *env, jobject, jlong handle, jlong data, jlong valid, jint size, jint dtype) {
     JNI_NULL_CHECK(env, handle, "column is null",);
