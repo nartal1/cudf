@@ -474,6 +474,49 @@ public class TableTest {
                      .column( 93, 186, 193, 257,  84,  22, 184, 231,  80,  12)
                      .build()) {
             assertTablesAreEqual(expected, orderedJoinedTable);
+	}
+    }
+
+    @Test
+    void testInnerJoinWithNonCommonKeys() {
+        try (Table leftTable = new Table.TestBuilder()
+                      .column(  2,    3,    9,    0,    1,    7,    4,    6,    5,    8)
+                      .column(102,  103,   19,  100,  101,    4,  104,    1,    3,    1)
+                      .build();
+             Table rightTable = new Table.TestBuilder()
+                     .column(   6,    5,    9,    8,   10,   32)
+                     .column( 199,  211,  321, 1233,   33,  392)
+                     .build();
+             Table expected = new Table.TestBuilder()
+                     .column(   3,    1,        1,   19)
+                     .column(   5,    6,        8,    9)
+                     .column( 211,  199,     1233,  321)
+                     .build();
+             Table joinedTable = leftTable.joinColumns(0).innerJoin(rightTable.joinColumns(0));
+             Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1))) {
+            assertTablesAreEqual(expected, orderedJoinedTable);
         }
     }
+
+
+    @Test
+    void testInnerJoinWithOnlyCommonKeys() {
+	try (Table leftTable = new Table.TestBuilder()
+                     .column(360, 326, 254, 306, 109, 361, 251, 335, 301, 317)
+                     .column(323, 172,  11, 243,  57, 143, 305,  95, 147,  58)
+                     .build();
+             Table rightTable = new Table.TestBuilder()
+                     .column(306, 301, 360, 109, 335, 254, 317, 361, 251, 326)
+                     .column( 84, 257,  80,  93, 231, 193,  22,  12, 186, 184)
+                     .build();
+             Table joinedTable = leftTable.joinColumns(0).innerJoin(rightTable.joinColumns(new int[]{0}));
+             Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1));
+             Table expected = new Table.TestBuilder()
+                     .column( 57, 305,  11, 147, 243,  58, 172,  95, 323, 143)
+                     .column(109, 251, 254, 301, 306, 317, 326, 335, 360, 361)
+                     .column( 93, 186, 193, 257,  84,  22, 184, 231,  80,  12)
+                     .build()) {
+            assertTablesAreEqual(expected, orderedJoinedTable);
+        }
+    }    
 }
