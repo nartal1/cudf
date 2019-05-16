@@ -952,7 +952,7 @@ public final class ColumnVector implements AutoCloseable {
         public final Builder appendArray(short ... values) {
             assert type == DType.INT16;
             assert (values.length + currentIndex) <= rows;
-            data.setShorts(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setShorts(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;
         }
@@ -960,7 +960,7 @@ public final class ColumnVector implements AutoCloseable {
         public final Builder appendArray(int... values) {
             assert (type == DType.INT32 || type == DType.DATE32);
             assert (values.length + currentIndex) <= rows;
-            data.setInts(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setInts(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;
         }
@@ -968,7 +968,7 @@ public final class ColumnVector implements AutoCloseable {
         public final Builder appendArray(long ... values) {
             assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
             assert (values.length + currentIndex) <= rows;
-            data.setLongs(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setLongs(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;
         }
@@ -976,7 +976,7 @@ public final class ColumnVector implements AutoCloseable {
         public final Builder appendArray(float... values) {
             assert type == DType.FLOAT32;
             assert (values.length + currentIndex) <= rows;
-            data.setFloats(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setFloats(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;
         }
@@ -984,7 +984,7 @@ public final class ColumnVector implements AutoCloseable {
         public final Builder appendArray(double... values) {
             assert type == DType.FLOAT64;
             assert (values.length + currentIndex) <= rows;
-            data.setDoubles(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setDoubles(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;
         }

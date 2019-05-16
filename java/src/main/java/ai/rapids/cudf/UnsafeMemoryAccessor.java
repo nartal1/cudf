@@ -214,7 +214,7 @@ class UnsafeMemoryAccessor {
      * @throws IndexOutOfBoundsException
      */
     public static void setShorts(long address, short[] values, long offset, long len) {
-        copyMemory(values, UnsafeMemoryAccessor.SHORT_ARRAY_OFFSET +_(offset * 2),
+        copyMemory(values, UnsafeMemoryAccessor.SHORT_ARRAY_OFFSET + (offset * 2),
                 null, address, len * 2);
     }
 
