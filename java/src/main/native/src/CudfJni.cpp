@@ -206,7 +206,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cudf_gdfCastTo
     JNI_NULL_CHECK(env, outputPtr, "output is null",);
     try {
       JNI_GDF_TRY(env, ,
-                gdf_cast((gdf_column *)inputPtr, (gdf_column *)outputPtr));
+        gdf_cast((gdf_column *)inputPtr, (gdf_column *)outputPtr));
     } CATCH_STD(env, );
 }
 

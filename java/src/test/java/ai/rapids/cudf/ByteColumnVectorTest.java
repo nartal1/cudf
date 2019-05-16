@@ -87,19 +87,19 @@ public class ByteColumnVectorTest {
     }
 
     @Test
-    public void testCast() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(new double[] {4.3,3.8,8});
-             ShortColumnVector shortColumnVector = ShortColumnVector.build(new short[] {100,50,20})){
-            doubleColumnVector.toDeviceBuffer();
-            shortColumnVector.toDeviceBuffer();
-            try (ByteColumnVector byteColumnVector1 = ByteColumnVector.CastToByte(doubleColumnVector);
-                 ByteColumnVector byteColumnVector2 = ByteColumnVector.CastToByte(shortColumnVector)){
-                byteColumnVector1.toHostBuffer();
-                byteColumnVector2.toHostBuffer();
-                assertEquals(byteColumnVector1.get(0), 4);
-                assertEquals(byteColumnVector1.get(1), 3);
-                assertEquals(byteColumnVector1.get(2), 8);
-                assertEquals(byteColumnVector2.get(0), 100);
+    public void testCastToByte() {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
+            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100})){
+            doubleColumnVector.ensureOnDevice();
+            shortColumnVector.ensureOnDevice();
+            try (ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
+                 ColumnVector byteColumnVector2 = shortColumnVector.asBytes()){
+                byteColumnVector1.ensureOnHost();
+                byteColumnVector2.ensureOnHost();
+                assertEquals(byteColumnVector1.getByte(0), 4);
+                assertEquals(byteColumnVector1.getByte(1), 3);
+                assertEquals(byteColumnVector1.getByte(2), 8);
+                assertEquals(byteColumnVector2.getByte(0), 100);
             }
         }
     }

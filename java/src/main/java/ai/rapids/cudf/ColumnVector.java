@@ -716,6 +716,20 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
 
     /////////////////////////////////////////////////////////////////////////////
+    // TYPE CAST
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Cast to Byte - ColumnVector
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asBytes(){
+        ColumnVector result = newOutputVector(rows, hasValidityVector(), DType.INT8);
+        Cudf.gdfCastTo(getCudfColumn(), result.getCudfColumn());
+        return result;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
     // INTERNAL/NATIVE ACCESS
     /////////////////////////////////////////////////////////////////////////////
 
