@@ -278,19 +278,32 @@ public class TableTest {
                 .column(   0L,    1L,    2L,    3L,    4L,    5L,    6L,    7L,    8L,    9L)
                 .column(110.0, 111.0, 112.0, 113.0, 114.0, 115.0, 116.0, 117.0, 118.2, 119.8)
                 .build();
-             Table table = Table.readCSV(Schema.INFERRED, opts, data, data.length)) {
+             Table table = Table.readCSV(Schema.INFERRED, opts, data)) {
             assertTablesAreEqual(expected, table);
         }
     }
 
+    private static final Schema CSV_DATA_BUFFER_SCHEMA = Schema.builder()
+            .column(DType.INT32, "A")
+            .column(DType.FLOAT64, "B")
+            .column(DType.INT64, "C")
+            .build();
+
+    private static final byte[] CSV_DATA_BUFFER = ("A|B|C\n" +
+            "'0'|'110.0'|'120'\n" +
+            "1|111.0|121\n" +
+            "2|112.0|122\n" +
+            "3|113.0|123\n" +
+            "4|114.0|124\n" +
+            "5|115.0|125\n" +
+            "6|116.0|126\n" +
+            "7|NULL|127\n" +
+            "8|118.2|128\n" +
+            "9|119.8|129").getBytes(StandardCharsets.UTF_8);
+
     @Test
     void testReadCSVBuffer() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        Schema schema = Schema.builder()
-                .column(DType.INT32, "A")
-                .column(DType.FLOAT64, "B")
-                .column(DType.INT64, "C")
-                .build();
         CSVOptions opts = CSVOptions.builder()
                 .includeColumn("A")
                 .includeColumn("B")
@@ -299,22 +312,31 @@ public class TableTest {
                 .withQuote('\'')
                 .withNullValue("NULL")
                 .build();
-        byte[] data = ("A|B|C\n" +
-                "'0'|'110.0'|'120'\n" +
-                "1|111.0|121\n" +
-                "2|112.0|122\n" +
-                "3|113.0|123\n" +
-                "4|114.0|124\n" +
-                "5|115.0|125\n" +
-                "6|116.0|126\n" +
-                "7|NULL|127\n" +
-                "8|118.2|128\n" +
-                "9|119.8|129").getBytes(StandardCharsets.UTF_8);
         try (Table expected = new Table.TestBuilder()
                 .column(    0,     1,     2,     3,     4,     5,     6,     7,     8,     9)
                 .column(110.0, 111.0, 112.0, 113.0, 114.0, 115.0, 116.0,  null, 118.2, 119.8)
                 .build();
-             Table table = Table.readCSV(schema, opts, data, data.length)) {
+             Table table = Table.readCSV(TableTest.CSV_DATA_BUFFER_SCHEMA, opts, TableTest.CSV_DATA_BUFFER)) {
+            assertTablesAreEqual(expected, table);
+        }
+    }
+
+    @Test
+    void testReadCSVWithOffset() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        CSVOptions opts = CSVOptions.builder()
+                .includeColumn("A")
+                .includeColumn("B")
+                .hasHeader(false)
+                .withDelim('|')
+                .withNullValue("NULL")
+                .build();
+        int bytesToIgnore = 24;
+        try (Table expected = new Table.TestBuilder()
+                .column(     1,     2,     3,     4,     5,     6,     7,     8,     9)
+                .column( 111.0, 112.0, 113.0, 114.0, 115.0, 116.0,  null, 118.2, 119.8)
+                .build();
+             Table table = Table.readCSV(TableTest.CSV_DATA_BUFFER_SCHEMA, opts, TableTest.CSV_DATA_BUFFER, bytesToIgnore, CSV_DATA_BUFFER.length - bytesToIgnore)) {
             assertTablesAreEqual(expected, table);
         }
     }

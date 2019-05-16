@@ -100,11 +100,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of bytes.
      * @param address - memory address
      * @param values to be set
+     * @param offset index into values to start at.
      * @param len the number of bytes to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setBytes(long address, byte [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET,
+    public static void setBytes(long address, byte [] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET + offset,
                 null, address, len);
     }
 
@@ -142,11 +143,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of ints.
      * @param address memory address
      * @param values to be set
+     * @param offset index into values to start at.
      * @param len the number of ints to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setInts(long address, int [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.INT_ARRAY_OFFSET,
+    public static void setInts(long address, int[] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.INT_ARRAY_OFFSET + (offset * 4),
                 null, address, len * 4);
     }
 
@@ -164,11 +166,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of longs.
      * @param address memory address
      * @param values to be set
+     * @param offset index into values to start at
      * @param len the number of longs to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setLongs(long address, long [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.LONG_ARRAY_OFFSET,
+    public static void setLongs(long address, long[] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.LONG_ARRAY_OFFSET + (offset * 8),
                 null, address, len * 8);
     }
 
@@ -206,11 +209,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of shorts.
      * @param address memory address
      * @param values to be set
+     * @param offset index into values to start at
      * @param len the number of shorts to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setShorts(long address, short [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.SHORT_ARRAY_OFFSET,
+    public static void setShorts(long address, short[] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.SHORT_ARRAY_OFFSET +_(offset * 2),
                 null, address, len * 2);
     }
 
@@ -228,11 +232,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of doubles.
      * @param address memory address
      * @param values to be set
+     * @param offset index into values to start at
      * @param len the number of doubles to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setDoubles(long address, double [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.DOUBLE_ARRAY_OFFSET,
+    public static void setDoubles(long address, double[] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.DOUBLE_ARRAY_OFFSET + (offset * 8),
                 null, address, len * 8);
     }
 
@@ -270,11 +275,12 @@ class UnsafeMemoryAccessor {
      * Sets an array of floats.
      * @param address memory address
      * @param values to be set
+     * @param offset the index in values to start at
      * @param len the number of floats to copy
      * @throws IndexOutOfBoundsException
      */
-    public static void setFloats(long address, float [] values, long len) {
-        UnsafeMemoryAccessor.copyMemory(values, UnsafeMemoryAccessor.FLOAT_ARRAY_OFFSET,
+    public static void setFloats(long address, float[] values, long offset, long len) {
+        copyMemory(values, UnsafeMemoryAccessor.FLOAT_ARRAY_OFFSET + (offset * 4),
                 null, address, len * 4);
     }
 
