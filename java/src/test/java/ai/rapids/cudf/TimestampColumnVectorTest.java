@@ -30,39 +30,39 @@ public class TimestampColumnVectorTest {
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            ShortColumnVector result= timestampColumnVector.year();
-            result.toHostBuffer();
-            assertEquals(1965,result.get(0));
-            assertEquals(2018,result.get(1));
-            assertEquals(2023,result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            ColumnVector result= timestampColumnVector.year();
+            result.ensureOnHost();
+            assertEquals(1965,result.getShort(0));
+            assertEquals(2018,result.getShort(1));
+            assertEquals(2023,result.getShort(2));
         }
     }
 
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            ShortColumnVector result= timestampColumnVector.month();
-            result.toHostBuffer();
-            assertEquals(10,result.get(0));
-            assertEquals(7,result.get(1));
-            assertEquals(1,result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            ColumnVector result= timestampColumnVector.month();
+            result.ensureOnHost();
+            assertEquals(10,result.getShort(0));
+            assertEquals(7,result.getShort(1));
+            assertEquals(1,result.getShort(2));
         }
     }
 
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= timestampColumnVector.day()) {
-                result.toHostBuffer();
-                assertEquals(26, result.get(0));
-                assertEquals(4, result.get(1));
-                assertEquals(25, result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.day()) {
+                result.ensureOnHost();
+                assertEquals(26, result.getShort(0));
+                assertEquals(4, result.getShort(1));
+                assertEquals(25, result.getShort(2));
             }
         }
     }
@@ -70,13 +70,13 @@ public class TimestampColumnVectorTest {
     @Test
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= timestampColumnVector.hour()) {
-                result.toHostBuffer();
-                assertEquals(14, result.get(0));
-                assertEquals(12, result.get(1));
-                assertEquals(7, result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.hour()) {
+                result.ensureOnHost();
+                assertEquals(14, result.getShort(0));
+                assertEquals(12, result.getShort(1));
+                assertEquals(7, result.getShort(2));
             }
         }
     }
@@ -84,13 +84,13 @@ public class TimestampColumnVectorTest {
     @Test
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= timestampColumnVector.minute()) {
-                result.toHostBuffer();
-                assertEquals(1, result.get(0));
-                assertEquals(0, result.get(1));
-                assertEquals(32, result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.minute()) {
+                result.ensureOnHost();
+                assertEquals(1, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(32, result.getShort(2));
             }
         }
     }
@@ -98,13 +98,13 @@ public class TimestampColumnVectorTest {
     @Test
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (TimestampColumnVector timestampColumnVector = TimestampColumnVector.build(TIMES)) {
-            timestampColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= timestampColumnVector.second()) {
-                result.toHostBuffer();
-                assertEquals(12, result.get(0));
-                assertEquals(0, result.get(1));
-                assertEquals(12, result.get(2));
+        try (ColumnVector timestampColumnVector = ColumnVector.timestampsFromLongs(TIMES)) {
+            timestampColumnVector.ensureOnDevice();
+            try (ColumnVector result= timestampColumnVector.second()) {
+                result.ensureOnHost();
+                assertEquals(12, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(12, result.getShort(2));
             }
         }
     }

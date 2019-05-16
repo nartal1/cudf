@@ -31,40 +31,40 @@ public class LongColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(3, (b) -> b.append(1))) {
+        try (ColumnVector longColumnVector = ColumnVector.build(DType.INT64, 3, (b) -> b.append(1L))) {
             assertFalse(longColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testArrayAllocation() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
             assertFalse(longColumnVector.hasNulls());
-            assertEquals(longColumnVector.get(0), 2);
-            assertEquals(longColumnVector.get(1), 3);
-            assertEquals(longColumnVector.get(2), 5);
+            assertEquals(longColumnVector.getLong(0), 2);
+            assertEquals(longColumnVector.getLong(1), 3);
+            assertEquals(longColumnVector.getLong(2), 5);
         }
     }
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
-            assertThrows(AssertionError.class, () -> longColumnVector.get(3));
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
+            assertThrows(AssertionError.class, () -> longColumnVector.getLong(3));
             assertFalse(longColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (LongColumnVector longColumnVector = LongColumnVector.build(2, 3, 5)) {
+        try (ColumnVector longColumnVector = ColumnVector.fromLongs(2L, 3L, 5L)) {
             assertFalse(longColumnVector.hasNulls());
-            assertThrows(AssertionError.class, () -> longColumnVector.get(-1));
+            assertThrows(AssertionError.class, () -> longColumnVector.getLong(-1));
         }
     }
 
     @Test
     public void testAddingNullValues() {
-        try (LongColumnVector cv = LongColumnVector.buildBoxed(2L,3L,4L,5L,6L,7L, null,null)) {
+        try (ColumnVector cv = ColumnVector.fromBoxedLongs(2L,3L,4L,5L,6L,7L, null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {
@@ -77,8 +77,8 @@ public class LongColumnVectorTest {
 
     @Test
     public void testOverrunningTheBuffer() {
-        try (LongColumnVector.Builder builder = LongColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append(2).appendNull().append(5).append(4).build());
+        try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT64,3)) {
+            assertThrows(AssertionError.class, () -> builder.append(2L).appendNull().append(5L).append(4L).build());
         }
     }
 
@@ -89,8 +89,8 @@ public class LongColumnVectorTest {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
-                    try (LongColumnVector.Builder dst = LongColumnVector.builder(dstSize);
-                         LongColumnVector src = LongColumnVector.build(srcSize, (b) -> {
+                    try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT64, dstSize);
+                         ColumnVector src = ColumnVector.build(DType.INT64, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -99,7 +99,7 @@ public class LongColumnVectorTest {
                                  }
                              }
                          });
-                         LongColumnVector.Builder gtBuilder = LongColumnVector.builder(dstPrefilledSize)) {
+                         ColumnVector.Builder gtBuilder = ColumnVector.builder(DType.INT64, dstPrefilledSize)) {
                          assertEquals(dstSize, srcSize + dstPrefilledSize);
                          //add the first half of the prefilled list
                          for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
@@ -114,23 +114,24 @@ public class LongColumnVectorTest {
                          }
                          // append the src vector
                          dst.append(src);
-                         try (LongColumnVector dstVector = dst.build();
-                              LongColumnVector gt = gtBuilder.build()) {
+                         try (ColumnVector dstVector = dst.build();
+                              ColumnVector gt = gtBuilder.build()) {
                              for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                  assertEquals(gt.isNull(i), dstVector.isNull(i));
                                  if (!gt.isNull(i)) {
-                                     assertEquals(gt.get(i), dstVector.get(i));
+                                     assertEquals(gt.getLong(i), dstVector.getLong(i));
                                  }
                              }
                              for (int i = dstPrefilledSize - sizeOfDataNotToAdd, j = 0; i < dstSize - sizeOfDataNotToAdd && j < srcSize; i++, j++) {
                                  assertEquals(src.isNull(j), dstVector.isNull(i));
                                  if (!src.isNull(j)) {
-                                     assertEquals(src.get(j), dstVector.get(i));
+                                     assertEquals(src.getLong(j), dstVector.getLong(i));
                                  }
                              }
-                             if (dstVector.offHeap.hostData.valid != null) {
-                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
                                  }
                              }
                          }
@@ -144,8 +145,8 @@ public class LongColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (LongColumnVector.Builder builder = LongColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.appendArray(2, 3, 5).appendNull();
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT64, 4, mockDataBuffer, mockValidBuffer)) {
+                builder.appendArray(new long[] {2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();
@@ -155,20 +156,20 @@ public class LongColumnVectorTest {
     @Test
     public void testAdd() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (LongColumnVector longColumnVector1 = LongColumnVector.build(4, Range.appendLongs(1,5));
-             LongColumnVector longColumnVector2 = LongColumnVector.build(4, Range.appendLongs(10,  50, 10))) {
+        try (ColumnVector longColumnVector1 = ColumnVector.build(DType.INT64, 4, Range.appendLongs(1,5));
+             ColumnVector longColumnVector2 = ColumnVector.build(DType.INT64, 4, Range.appendLongs(10,  50, 10))) {
 
-            longColumnVector1.toDeviceBuffer();
-            longColumnVector2.toDeviceBuffer();
+            longColumnVector1.ensureOnDevice();
+            longColumnVector2.ensureOnDevice();
 
-            try (LongColumnVector longColumnVector3 = longColumnVector1.add(longColumnVector2)) {
-                longColumnVector3.toHostBuffer();
-                assertEquals(4, longColumnVector3.getRows());
+            try (ColumnVector longColumnVector3 = longColumnVector1.add(longColumnVector2)) {
+                longColumnVector3.ensureOnHost();
+                assertEquals(4, longColumnVector3.getRowCount());
                 assertEquals(0, longColumnVector3.getNullCount());
                 for (int i = 0; i < 4; i++) {
-                    long v1 = longColumnVector1.get(i);
-                    long v2 = longColumnVector2.get(i);
-                    long v3 = longColumnVector3.get(i);
+                    long v1 = longColumnVector1.getLong(i);
+                    long v2 = longColumnVector2.getLong(i);
+                    long v3 = longColumnVector3.getLong(i);
                     assertEquals(v1 + v2, v3);
                 }
             }

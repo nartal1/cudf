@@ -30,41 +30,41 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(3, (b) -> b.append(1))) {
+        try (ColumnVector doubleColumnVector = ColumnVector.build(DType.FLOAT64, 3, (b) -> b.append(1.0))) {
             assertFalse(doubleColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testArrayAllocation() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
-            assertEquals(doubleColumnVector.get(0), 2.1, 0.01);
-            assertEquals(doubleColumnVector.get(1), 3.02,0.01);
-            assertEquals(doubleColumnVector.get(2), 5.003,0.001);
+            assertEquals(doubleColumnVector.getDouble(0), 2.1, 0.01);
+            assertEquals(doubleColumnVector.getDouble(1), 3.02,0.01);
+            assertEquals(doubleColumnVector.getDouble(2), 5.003,0.001);
         }
     }
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
-            assertThrows(AssertionError.class, () -> doubleColumnVector.get(3));
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
+            assertThrows(AssertionError.class, () -> doubleColumnVector.getDouble(3));
             assertFalse(doubleColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (DoubleColumnVector doubleColumnVector = DoubleColumnVector.build(2.1, 3.02, 5.003)) {
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(2.1, 3.02, 5.003)) {
             assertFalse(doubleColumnVector.hasNulls());
-            assertThrows(AssertionError.class, () -> doubleColumnVector.get(-1));
+            assertThrows(AssertionError.class, () -> doubleColumnVector.getDouble(-1));
         }
     }
 
     @Test
     public void testAddingNullValues() {
-        try (DoubleColumnVector cv =
-                     DoubleColumnVector.buildBoxed(2.0,3.0,4.0,5.0,6.0,7.0,null,null)) {
+        try (ColumnVector cv =
+                     ColumnVector.fromBoxedDoubles(2.0,3.0,4.0,5.0,6.0,7.0,null,null)) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {
@@ -77,8 +77,8 @@ public class DoubleColumnVectorTest {
 
     @Test
     public void testOverrunningTheBuffer() {
-        try (DoubleColumnVector.Builder builder = DoubleColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append(2.1).appendNull().appendArray(5.003, 4.0).build());
+        try (ColumnVector.Builder builder = ColumnVector.builder(DType.FLOAT64, 3)) {
+            assertThrows(AssertionError.class, () -> builder.append(2.1).appendNull().appendArray(new double[]{5.003, 4.0}).build());
         }
     }
 
@@ -89,8 +89,8 @@ public class DoubleColumnVectorTest {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
-                    try (DoubleColumnVector.Builder dst = DoubleColumnVector.builder(dstSize);
-                         DoubleColumnVector src = DoubleColumnVector.build(srcSize, (b) -> {
+                    try (ColumnVector.Builder dst = ColumnVector.builder(DType.FLOAT64, dstSize);
+                         ColumnVector src = ColumnVector.build(DType.FLOAT64, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -99,7 +99,7 @@ public class DoubleColumnVectorTest {
                                  }
                              }
                          });
-                         DoubleColumnVector.Builder gtBuilder = DoubleColumnVector.builder(dstPrefilledSize)) {
+                         ColumnVector.Builder gtBuilder = ColumnVector.builder(DType.FLOAT64, dstPrefilledSize)) {
                          assertEquals(dstSize, srcSize + dstPrefilledSize);
                          //add the first half of the prefilled list
                          for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
@@ -114,23 +114,24 @@ public class DoubleColumnVectorTest {
                          }
                          // append the src vector
                          dst.append(src);
-                         try (DoubleColumnVector dstVector = dst.build();
-                              DoubleColumnVector gt = gtBuilder.build()) {
+                         try (ColumnVector dstVector = dst.build();
+                              ColumnVector gt = gtBuilder.build()) {
                              for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                  assertEquals(gt.isNull(i), dstVector.isNull(i));
                                  if (!gt.isNull(i)) {
-                                     assertEquals(gt.get(i), dstVector.get(i));
+                                     assertEquals(gt.getDouble(i), dstVector.getDouble(i));
                                  }
                              }
                              for (int i = dstPrefilledSize - sizeOfDataNotToAdd, j = 0; i < dstSize - sizeOfDataNotToAdd && j < srcSize; i++, j++) {
                                  assertEquals(src.isNull(j), dstVector.isNull(i));
                                  if (!src.isNull(j)) {
-                                     assertEquals(src.get(j), dstVector.get(i));
+                                     assertEquals(src.getDouble(j), dstVector.getDouble(i));
                                  }
                              }
-                             if (dstVector.offHeap.hostData.valid != null) {
-                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
                                  }
                              }
                          }
@@ -144,8 +145,8 @@ public class DoubleColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (DoubleColumnVector.Builder builder = DoubleColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.appendArray(2.1, 3.02, 5.004).appendNull();
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.FLOAT64, 4, mockDataBuffer, mockValidBuffer)) {
+                builder.appendArray(new double[] {2.1, 3.02, 5.004}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();
@@ -155,20 +156,20 @@ public class DoubleColumnVectorTest {
     @Test
     public void testAdd() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (DoubleColumnVector doubleColumnVector1 = DoubleColumnVector.build(5, Range.appendDoubles(1.1, 5.5));
-             DoubleColumnVector doubleColumnVector2 = DoubleColumnVector.build(5, Range.appendDoubles(10,  60, 10))) {
+        try (ColumnVector doubleColumnVector1 = ColumnVector.build(DType.FLOAT64, 5, Range.appendDoubles(1.1, 5.5));
+             ColumnVector doubleColumnVector2 = ColumnVector.build(DType.FLOAT64, 5, Range.appendDoubles(10,  60, 10))) {
 
-            doubleColumnVector1.toDeviceBuffer();
-            doubleColumnVector2.toDeviceBuffer();
+            doubleColumnVector1.ensureOnDevice();
+            doubleColumnVector2.ensureOnDevice();
 
-            try (DoubleColumnVector doubleColumnVector3 = doubleColumnVector1.add(doubleColumnVector2)) {
-                doubleColumnVector3.toHostBuffer();
-                assertEquals(5, doubleColumnVector3.getRows());
+            try (ColumnVector doubleColumnVector3 = doubleColumnVector1.add(doubleColumnVector2)) {
+                doubleColumnVector3.ensureOnHost();
+                assertEquals(5, doubleColumnVector3.getRowCount());
                 assertEquals(0, doubleColumnVector3.getNullCount());
                 for (int i = 0; i < 5; i++) {
-                    double v1 = doubleColumnVector1.get(i);
-                    double v2 = doubleColumnVector2.get(i);
-                    double v3 = doubleColumnVector3.get(i);
+                    double v1 = doubleColumnVector1.getDouble(i);
+                    double v2 = doubleColumnVector2.getDouble(i);
+                    double v3 = doubleColumnVector3.getDouble(i);
                     assertEquals(v1 + v2, v3,0.001);
                 }
             }

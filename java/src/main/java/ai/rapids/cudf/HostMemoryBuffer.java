@@ -68,8 +68,7 @@ class HostMemoryBuffer extends MemoryBuffer {
         assert srcOffset >= 0;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len, "setBytes");
-        UnsafeMemoryAccessor.copyMemory(data, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET + srcOffset,
-                null, requestedAddress, len);
+        UnsafeMemoryAccessor.setBytes(requestedAddress, data, srcOffset, len);
     }
 
     /**
@@ -98,13 +97,14 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Copy a set of shorts from an array into the buffer at offset.
      * @param offset the offset from the address to start copying to
      * @param data the data to be copied.
+     * @param srcOffset index in data to start at.
      */
-    public final void setShorts(long offset, short[] data, long len) {
+    public final void setShorts(long offset, short[] data, long srcOffset, long len) {
         assert len > 0;
-        assert len <= data.length;
+        assert len <= data.length - srcOffset;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len * 2, "setShorts");
-        UnsafeMemoryAccessor.setShorts(requestedAddress, data, len);
+        UnsafeMemoryAccessor.setShorts(requestedAddress, data, srcOffset, len);
     }
 
     /**
@@ -133,13 +133,14 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Copy a set of ints from an array into the buffer at offset.
      * @param offset the offset from the address to start copying to
      * @param data the data to be copied.
+     * @param srcOffset index into data to start at
      */
-    public final void setInts(long offset, int[] data, long len) {
+    public final void setInts(long offset, int[] data, long srcOffset, long len) {
         assert len > 0;
-        assert len <= data.length;
+        assert len <= data.length - srcOffset;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len * 4, "setInts");
-        UnsafeMemoryAccessor.setInts(requestedAddress, data, len);
+        UnsafeMemoryAccessor.setInts(requestedAddress, data, srcOffset, len);
     }
 
     /**
@@ -168,13 +169,14 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Copy a set of longs from an array into the buffer at offset.
      * @param offset the offset from the address to start copying to
      * @param data the data to be copied.
+     * @param srcOffset index into data to start at.
      */
-    public final void setLongs(long offset, long[] data, long len) {
+    public final void setLongs(long offset, long[] data, long srcOffset, long len) {
         assert len > 0;
-        assert len <= data.length;
+        assert len <= data.length - srcOffset;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len * 8, "setLongs");
-        UnsafeMemoryAccessor.setLongs(requestedAddress, data, len);
+        UnsafeMemoryAccessor.setLongs(requestedAddress, data, srcOffset, len);
     }
 
     /**
@@ -203,13 +205,14 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Copy a set of floats from an array into the buffer at offset.
      * @param offset the offset from the address to start copying to
      * @param data the data to be copied.
+     * @param srcOffset index into data to start at
      */
-    public final void setFloats(long offset, float[] data, long len) {
+    public final void setFloats(long offset, float[] data, long srcOffset, long len) {
         assert len > 0;
-        assert len <= data.length;
+        assert len <= data.length - srcOffset;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len * 4, "setFloats");
-        UnsafeMemoryAccessor.setFloats(requestedAddress, data, len);
+        UnsafeMemoryAccessor.setFloats(requestedAddress, data, srcOffset, len);
     }
 
     /**
@@ -238,13 +241,14 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Copy a set of doubles from an array into the buffer at offset.
      * @param offset the offset from the address to start copying to
      * @param data the data to be copied.
+     * @param srcOffset index into data to start at
      */
-    public final void setDoubles(long offset, double[] data, long len) {
+    public final void setDoubles(long offset, double[] data, long srcOffset, long len) {
         assert len > 0;
-        assert len <= data.length;
+        assert len <= data.length - srcOffset;
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, len * 8, "setDoubles");
-        UnsafeMemoryAccessor.setDoubles(requestedAddress, data, len);
+        UnsafeMemoryAccessor.setDoubles(requestedAddress, data, srcOffset, len);
     }
 
     /**

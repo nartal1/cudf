@@ -30,13 +30,13 @@ public class Date64ColumnVectorTest {
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
 
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= date64ColumnVector.year()) {
-                result.toHostBuffer();
-                assertEquals(1965, result.get(0));
-                assertEquals(2018, result.get(1));
-                assertEquals(2023, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector result= date64ColumnVector.year()) {
+                result.ensureOnHost();
+                assertEquals(1965, result.getShort(0));
+                assertEquals(2018, result.getShort(1));
+                assertEquals(2023, result.getShort(2));
             }
         }
     }
@@ -44,13 +44,13 @@ public class Date64ColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= date64ColumnVector.month()) {
-                result.toHostBuffer();
-                assertEquals(10, result.get(0));
-                assertEquals(7, result.get(1));
-                assertEquals(1, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector result= date64ColumnVector.month()) {
+                result.ensureOnHost();
+                assertEquals(10, result.getShort(0));
+                assertEquals(7, result.getShort(1));
+                assertEquals(1, result.getShort(2));
             }
         }
     }
@@ -58,13 +58,13 @@ public class Date64ColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= date64ColumnVector.day()) {
-                result.toHostBuffer();
-                assertEquals(26, result.get(0));
-                assertEquals(4, result.get(1));
-                assertEquals(25, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector result= date64ColumnVector.day()) {
+                result.ensureOnHost();
+                assertEquals(26, result.getShort(0));
+                assertEquals(4, result.getShort(1));
+                assertEquals(25, result.getShort(2));
             }
         }
     }
@@ -72,13 +72,13 @@ public class Date64ColumnVectorTest {
     @Test
     public void getHour() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= date64ColumnVector.hour()) {
-                result.toHostBuffer();
-                assertEquals(14, result.get(0));
-                assertEquals(12, result.get(1));
-                assertEquals(7, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector result= date64ColumnVector.hour()) {
+                result.ensureOnHost();
+                assertEquals(14, result.getShort(0));
+                assertEquals(12, result.getShort(1));
+                assertEquals(7, result.getShort(2));
             }
         }
     }
@@ -86,13 +86,13 @@ public class Date64ColumnVectorTest {
     @Test
     public void getMinute() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try(ShortColumnVector result= date64ColumnVector.minute()) {
-                result.toHostBuffer();
-                assertEquals(1, result.get(0));
-                assertEquals(0, result.get(1));
-                assertEquals(32, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try(ColumnVector result= date64ColumnVector.minute()) {
+                result.ensureOnHost();
+                assertEquals(1, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(32, result.getShort(2));
             }
         }
     }
@@ -100,13 +100,13 @@ public class Date64ColumnVectorTest {
     @Test
     public void getSecond() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (Date64ColumnVector date64ColumnVector = Date64ColumnVector.build(DATES)) {
-            date64ColumnVector.toDeviceBuffer();
-            try (ShortColumnVector result= date64ColumnVector.second()) {
-                result.toHostBuffer();
-                assertEquals(12, result.get(0));
-                assertEquals(0, result.get(1));
-                assertEquals(12, result.get(2));
+        try (ColumnVector date64ColumnVector = ColumnVector.datesFromLongs(DATES)) {
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector result= date64ColumnVector.second()) {
+                result.ensureOnHost();
+                assertEquals(12, result.getShort(0));
+                assertEquals(0, result.getShort(1));
+                assertEquals(12, result.getShort(2));
             }
         }
     }

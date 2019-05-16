@@ -33,63 +33,45 @@ public class TableTest {
 
     public static void assertTablesAreEqual(Table expected, Table table) {
         assertEquals(expected.getNumberOfColumns(), table.getNumberOfColumns());
-        assertEquals(expected.getRows(), table.getRows());
+        assertEquals(expected.getRowCount(), table.getRowCount());
         for (int col = 0; col < expected.getNumberOfColumns(); col++) {
             try (ColumnVector expect = expected.getColumn(col);
                  ColumnVector cv = table.getColumn(col)) {
                 assertEquals(expect.getType(), cv.getType(), "Column " + col);
-                assertEquals(expect.getRows(), cv.getRows(), "Column " + col); // Yes this might be redundant
+                assertEquals(expect.getRowCount(), cv.getRowCount(), "Column " + col); // Yes this might be redundant
                 assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
-                expect.toHostBuffer();
-                cv.toHostBuffer();
+                expect.ensureOnHost();
+                cv.ensureOnHost();
                 DType type = expect.getType();
-                for (long row = 0; row < expect.getRows(); row++) {
+                for (long row = 0; row < expect.getRowCount(); row++) {
                     assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
                     if (!expect.isNull(row)) {
                         switch(type) {
                             case INT8:
-                                assertEquals(((ByteColumnVector)expect).get(row),
-                                        ((ByteColumnVector)cv).get(row),
+                                assertEquals(expect.getByte(row), cv.getByte(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case INT16:
-                                assertEquals(((ShortColumnVector)expect).get(row),
-                                        ((ShortColumnVector)cv).get(row),
+                                assertEquals(expect.getShort(row), cv.getShort(row),
                                         "Column " + col + " Row " + row);
                                 break;
-                            case INT32:
-                                assertEquals(((IntColumnVector)expect).get(row),
-                                        ((IntColumnVector)cv).get(row),
+                            case INT32: //fall through
+                            case DATE32:
+                                assertEquals(expect.getInt(row), cv.getInt(row),
                                         "Column " + col + " Row " + row);
                                 break;
-                            case INT64:
-                                assertEquals(((LongColumnVector)expect).get(row),
-                                        ((LongColumnVector)cv).get(row),
+                            case INT64: // fall through
+                            case DATE64: // fall through
+                            case TIMESTAMP:
+                                assertEquals(expect.getLong(row), cv.getLong(row),
                                         "Column " + col + " Row " + row);
                                 break;
                             case FLOAT32:
-                                assertEquals(((FloatColumnVector)expect).get(row),
-                                        ((FloatColumnVector)cv).get(row), 0.0001,
+                                assertEquals(expect.getFloat(row), cv.getFloat(row), 0.0001,
                                         "Column " + col + " Row " + row);
                                 break;
                             case FLOAT64:
-                                assertEquals(((DoubleColumnVector)expect).get(row),
-                                        ((DoubleColumnVector)cv).get(row), 0.0001,
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case DATE32:
-                                assertEquals(((Date32ColumnVector)expect).get(row),
-                                        ((Date32ColumnVector)cv).get(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case DATE64:
-                                assertEquals(((Date64ColumnVector)expect).get(row),
-                                        ((Date64ColumnVector)cv).get(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case TIMESTAMP:
-                                assertEquals(((TimestampColumnVector)expect).get(row),
-                                        ((TimestampColumnVector)cv).get(row),
+                                assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
                                         "Column " + col + " Row " + row);
                                 break;
                             default:
@@ -109,39 +91,6 @@ public class TableTest {
             try (ColumnVector vec = t.getColumn(i)) {
                 DType type = vec.getType();
                 assertEquals(expectedTypes[i], type, "Types don't match at " + i);
-                Class c;
-                switch(type) {
-                    case INT8:
-                        c = ByteColumnVector.class;
-                        break;
-                    case INT16:
-                        c = ShortColumnVector.class;
-                        break;
-                    case INT32:
-                        c = IntColumnVector.class;
-                        break;
-                    case INT64:
-                        c = LongColumnVector.class;
-                        break;
-                    case FLOAT32:
-                        c = FloatColumnVector.class;
-                        break;
-                    case FLOAT64:
-                        c = DoubleColumnVector.class;
-                        break;
-                    case DATE32:
-                        c = Date32ColumnVector.class;
-                        break;
-                    case DATE64:
-                        c = Date64ColumnVector.class;
-                        break;
-                    case TIMESTAMP:
-                        c = TimestampColumnVector.class;
-                        break;
-                    default:
-                        throw new IllegalArgumentException(type + " is not supported yet");
-                }
-                assertTrue(c.isAssignableFrom(vec.getClass()), "Expected type " + c + " but found " + vec.getClass());
             }
         }
     }
@@ -205,10 +154,10 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         //tests the Table increases the refcount on column vectors
         assertThrows(IllegalStateException.class, () -> {
-            try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-                 IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-                v1.toDeviceBuffer();
-                v2.toDeviceBuffer();
+            try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+                 ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
+                v1.ensureOnDevice();
+                v2.ensureOnDevice();
                 assertDoesNotThrow(() -> {
                     try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                         v1.close();
@@ -223,10 +172,10 @@ public class TableTest {
     void testGetColumnIncreasesRefCount() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         assertDoesNotThrow(() -> {
-            try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-                 IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-                v1.toDeviceBuffer();
-                v2.toDeviceBuffer();
+            try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+                 ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
+                v1.ensureOnDevice();
+                v2.ensureOnDevice();
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                     ColumnVector vector1 = t.getColumn(0);
                     ColumnVector vector2 = t.getColumn(1);
@@ -240,12 +189,12 @@ public class TableTest {
     @Test
     void testGetRows() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
-                assertEquals(5, t.getRows());
+                assertEquals(5, t.getRowCount());
             }
         }
     }
@@ -259,10 +208,10 @@ public class TableTest {
     @Test
     void testAllRowsSize() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(4, Range.appendInts(4));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 4, Range.appendInts(4));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             assertThrows(AssertionError.class, () -> {
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 }
@@ -273,10 +222,10 @@ public class TableTest {
     @Test
     void testGetNumberOfColumns() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (IntColumnVector v1 = IntColumnVector.build(5, Range.appendInts(5));
-             IntColumnVector v2 = IntColumnVector.build(5, Range.appendInts(5))) {
-            v1.toDeviceBuffer();
-            v2.toDeviceBuffer();
+        try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
+            v1.ensureOnDevice();
+            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(2, t.getNumberOfColumns());
             }
@@ -419,7 +368,7 @@ public class TableTest {
                 .includeColumn("num_units")
                 .build();
         try (Table table = Table.readParquet(opts, TEST_PARQUET_FILE)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
             assertTableTypes(new DType[] {DType.INT64, DType.INT32, DType.INT32}, table);
         }
@@ -440,7 +389,7 @@ public class TableTest {
             bufferLen = in.read(buffer);
         }
         try (Table table = Table.readParquet(opts, buffer, bufferLen)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
             assertTableTypes(new DType[] {DType.INT64, DType.FLOAT64, DType.FLOAT64}, table);
         }
@@ -450,7 +399,7 @@ public class TableTest {
     void testReadParquetFull() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (Table table = Table.readParquet(TEST_PARQUET_FILE)) {
-            long rows = table.getRows();
+            long rows = table.getRowCount();
             assertEquals(1000, rows);
 
             DType[] expectedTypes = new DType[]{

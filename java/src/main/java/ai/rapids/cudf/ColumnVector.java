@@ -26,25 +26,30 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Abstract class depicting a Column Vector. This class represents the immutable vector created by the Builders from
- * each respective ColumnVector subclasses.  This class holds references to off heap memory and is
- * reference counted to know when to release it.  Call close to decrement the reference count when
- * you are done with the column, and call inRefCount to increment the reference count.
+ * A Column Vector. This class represents the immutable vector of data.  This class holds
+ * references to off heap memory and is reference counted to know when to release it.  Call
+ * close to decrement the reference count when you are done with the column, and call inRefCount
+ * to increment the reference count.
  */
-public abstract class ColumnVector implements AutoCloseable {
-    private static Logger log = LoggerFactory.getLogger(ColumnVector.class);
-    static boolean REF_COUNT_DEBUG = Boolean.getBoolean("ai.rapids.refcount.debug");
+public final class ColumnVector implements AutoCloseable {
+    private static final Logger log = LoggerFactory.getLogger(ColumnVector.class);
+    static final boolean REF_COUNT_DEBUG = Boolean.getBoolean("ai.rapids.refcount.debug");
 
-    protected long rows;
-    protected final DType type;
-    protected long nullCount;
-    protected final OffHeapState offHeap = new OffHeapState();
+    private final DType type;
+    private final OffHeapState offHeap = new OffHeapState();
+    private long rows;
+    private long nullCount;
     private int refCount;
 
+    /**
+     * Convert elements in it to a String and join them together. Only use for debug messages
+     * where the code execution itself can be disabled as this is not fast.
+     */
     private static <T> String stringJoin(String delim, Iterable<T> it) {
         return String.join(delim,
                 StreamSupport.stream(it.spliterator(), false)
@@ -52,7 +57,23 @@ public abstract class ColumnVector implements AutoCloseable {
                         .collect(Collectors.toList()));
     }
 
-    protected ColumnVector(CudfColumn cudfColumn) {
+
+    private static ColumnVector newOutputVector(ColumnVector v1, ColumnVector v2, DType outputType) {
+        assert v1.rows == v2.rows;
+        return newOutputVector(v1.rows, v1.hasValidityVector() || v2.hasValidityVector(), outputType);
+    }
+
+    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
+        assert type != DType.INVALID;
+        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
+        DeviceMemoryBuffer valid = null;
+        if (hasValidity) {
+            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
+        }
+        return new ColumnVector(data, valid, rows, type);
+    }
+
+    ColumnVector(CudfColumn cudfColumn) {
         assert cudfColumn != null;
         ColumnVectorCleaner.register(this, offHeap);
         this.type = cudfColumn.getDtype();
@@ -72,8 +93,8 @@ public abstract class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    protected ColumnVector(HostMemoryBuffer hostDataBuffer,
-                           HostMemoryBuffer hostValidityBuffer, long rows, DType type, long nullCount) {
+    ColumnVector(HostMemoryBuffer hostDataBuffer, HostMemoryBuffer hostValidityBuffer,
+                 long rows, DType type, long nullCount) {
         if (nullCount > 0 && hostValidityBuffer == null) {
             throw new IllegalStateException("Buffer cannot have a nullCount without a validity buffer");
         }
@@ -87,8 +108,8 @@ public abstract class ColumnVector implements AutoCloseable {
         incRefCount();
     }
 
-    protected ColumnVector(DeviceMemoryBuffer dataBuffer,
-                           DeviceMemoryBuffer validityBuffer, long rows, DType type) {
+    ColumnVector(DeviceMemoryBuffer dataBuffer, DeviceMemoryBuffer validityBuffer,
+                 long rows, DType type) {
         ColumnVectorCleaner.register(this, offHeap);
         offHeap.deviceData = new BufferEncapsulator(dataBuffer, validityBuffer);
         offHeap.hostData = null;
@@ -101,105 +122,18 @@ public abstract class ColumnVector implements AutoCloseable {
     }
 
     /**
-     * Increment the reference count for this column.  You need to call close on this
-     * to decrement the reference count again.
+     * Update any internal accounting from what is in the Native Code
      */
-    public void incRefCount() {
-        refCount++;
-        offHeap.addRef();
-    }
-
-    static ColumnVector newOutputVector(long rows, boolean hasValidity, DType type) {
-        ColumnVector columnVector = null;
-        switch (type) {
-            case INT32:
-                columnVector = IntColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case INT64:
-                columnVector = LongColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case FLOAT32:
-                columnVector = FloatColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case FLOAT64:
-                columnVector = DoubleColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case INT16:
-                columnVector = ShortColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case INT8:
-                columnVector = ByteColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case DATE32:
-                columnVector = Date32ColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case DATE64:
-                columnVector = Date64ColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case TIMESTAMP:
-                columnVector = TimestampColumnVector.newOutputVector(rows, hasValidity);
-                break;
-            case INVALID:
-            default:
-                throw new IllegalArgumentException("Invalid type: " + type);
-        }
-        return columnVector;
-    }
-
-    static ColumnVector fromCudfColumn(CudfColumn cudfColumn) {
-        ColumnVector columnVector = null;
-        switch (cudfColumn.getDtype()) {
-            case INT32:
-                columnVector = new IntColumnVector(cudfColumn);
-                break;
-            case INT64:
-                columnVector = new LongColumnVector(cudfColumn);
-                break;
-            case FLOAT32:
-                columnVector = new FloatColumnVector(cudfColumn);
-                break;
-            case FLOAT64:
-                columnVector = new DoubleColumnVector(cudfColumn);
-                break;
-            case INT16:
-                columnVector = new ShortColumnVector(cudfColumn);
-                break;
-            case DATE32:
-                columnVector = new Date32ColumnVector(cudfColumn);
-                break;
-            case DATE64:
-                columnVector = new Date64ColumnVector(cudfColumn);
-                break;
-            case INT8:
-                columnVector = new ByteColumnVector(cudfColumn);
-                break;
-            case TIMESTAMP:
-                columnVector = new TimestampColumnVector(cudfColumn);
-                break;
-            case INVALID:
-            default:
-                throw new IllegalArgumentException("Invalid type: " + cudfColumn.getDtype());
-        }
-        return columnVector;
-    }
-
-    /**
-     * Returns the number of rows in this vector.
-     */
-    public final long getRows() {
-        return rows;
-    }
-
-    /**
-     * Returns the type of this vector.
-     */
-    public final DType getType() {
-        return type;
+    final void updateFromNative() {
+        assert offHeap.cudfColumn != null;
+        this.nullCount = offHeap.cudfColumn.getNullCount();
+        this.rows = offHeap.cudfColumn.getSize();
     }
 
     /**
      * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
      */
+    @Override
     public final void close() {
         refCount --;
         offHeap.delRef();
@@ -212,29 +146,56 @@ public abstract class ColumnVector implements AutoCloseable {
         }
     }
 
+    @Override
+    public String toString() {
+        return "ColumnVector{" +
+                "rows=" + rows +
+                ", type=" + type +
+                ", hostData=" + offHeap.hostData +
+                ", deviceData=" + offHeap.deviceData +
+                ", nullCount=" + nullCount +
+                ", cudfColumn=" + offHeap.cudfColumn +
+                '}';
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // METADATA ACCESS
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Increment the reference count for this column.  You need to call close on this
+     * to decrement the reference count again.
+     */
+    public void incRefCount() {
+        refCount++;
+        offHeap.addRef();
+    }
+
+    /**
+     * Returns the number of rows in this vector.
+     */
+    public long getRowCount() {
+        return rows;
+    }
+
+    /**
+     * Returns the type of this vector.
+     */
+    public DType getType() {
+        return type;
+    }
+
     /**
      * Returns the number of nulls in the data.
      */
-    public final long getNullCount(){
+    public long getNullCount(){
         return nullCount;
-    }
-
-    private void checkDeviceData() {
-        if (offHeap.deviceData == null) {
-            throw new IllegalStateException("Vector not on Device");
-        }
-    }
-
-    private void checkHostData() {
-        if (offHeap.hostData == null) {
-            throw new IllegalStateException("Vector not on Host");
-        }
     }
 
     /**
      * Returns if the vector has a validity vector allocated or not.
      */
-    public final boolean hasValidityVector() {
+    public boolean hasValidityVector() {
         boolean ret;
         if (offHeap.hostData != null) {
             ret = (offHeap.hostData.valid != null);
@@ -247,24 +208,33 @@ public abstract class ColumnVector implements AutoCloseable {
     /**
      * Returns if the vector has nulls.
      */
-    public final boolean hasNulls() {
+    public boolean hasNulls() {
         return getNullCount() > 0;
     }
 
-    public final boolean isNull(long index) {
-        checkHostData();
-        if (hasNulls()) {
-            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+    /////////////////////////////////////////////////////////////////////////////
+    // DATA MOVEMENT
+    /////////////////////////////////////////////////////////////////////////////
+
+    private void checkHasDeviceData() {
+        if (offHeap.deviceData == null) {
+            throw new IllegalStateException("Vector not on Device");
         }
-        return false;
+    }
+
+    private void checkHasHostData() {
+        if (offHeap.hostData == null) {
+            throw new IllegalStateException("Vector not on Host");
+        }
     }
 
     /**
-     * Copies the HostBuffer data to DeviceBuffer.
+     * Be sure the data is on the device.
      */
-    public final void toDeviceBuffer() {
-        checkHostData();
+    public final void ensureOnDevice() {
         if (offHeap.deviceData == null) {
+            checkHasHostData();
+
             DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(offHeap.hostData.data.getLength());
             DeviceMemoryBuffer deviceValidityBuffer = null;
             boolean needsCleanup = true;
@@ -284,19 +254,20 @@ public abstract class ColumnVector implements AutoCloseable {
                     }
                 }
             }
-        }
-        offHeap.deviceData.data.copyFromHostBuffer(offHeap.hostData.data);
-        if (offHeap.deviceData.valid != null) {
-            offHeap.deviceData.valid.copyFromHostBuffer(offHeap.hostData.valid);
+            offHeap.deviceData.data.copyFromHostBuffer(offHeap.hostData.data);
+            if (offHeap.deviceData.valid != null) {
+                offHeap.deviceData.valid.copyFromHostBuffer(offHeap.hostData.valid);
+            }
         }
     }
 
     /**
-     * Copies the DeviceBuffer data to HostBuffer.
+     * Be sure the data is on the host.
      */
-    public final void toHostBuffer() {
-        checkDeviceData();
+    public final void ensureOnHost() {
         if (offHeap.hostData == null) {
+            checkHasDeviceData();
+
             HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(offHeap.deviceData.data.getLength());
             HostMemoryBuffer hostValidityBuffer = null;
             boolean needsCleanup = true;
@@ -323,17 +294,240 @@ public abstract class ColumnVector implements AutoCloseable {
         }
     }
 
-    @Override
-    public String toString() {
-        return "ColumnVector{" +
-                "rows=" + rows +
-                ", type=" + type +
-                ", hostData=" + offHeap.hostData +
-                ", deviceData=" + offHeap.deviceData +
-                ", nullCount=" + nullCount +
-                ", cudfColumn=" + offHeap.cudfColumn +
-                '}';
+    /////////////////////////////////////////////////////////////////////////////
+    // DATA ACCESS
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Check if the value at index is null or not.
+     */
+    public boolean isNull(long index) {
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        if (hasNulls()) {
+            checkHasHostData();
+            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+        }
+        return false;
     }
+
+    /**
+     * For testing only.  Allows null checks to go past the number of rows, but not past the end
+     * of the buffer.  NOTE: If the validity vector was allocated by cudf itself it is not
+     * guaranteed to have the same padding, but for all practical purposes it does.  This is
+     * just to verify that the buffer was allocated and initialized properly.
+     */
+    boolean isNullExtendedRange(long index) {
+        long maxNullRow = BitVectorHelper.getValidityAllocationSizeInBytes(rows) * 8;
+        assert (index >= 0 && index < maxNullRow) : "TEST: index is out of range 0 <= " + index + " < " + maxNullRow;
+        if (hasNulls()) {
+            checkHasHostData();
+            return BitVectorHelper.isNull(offHeap.hostData.valid, index);
+        }
+        return false;
+    }
+
+    /**
+     * Generic type independent asserts when getting a value from a single index.
+     * @param index where to get the data from.
+     */
+    private void assertsForGet(long index) {
+        assert (index >= 0 && index < rows) : "index is out of range 0 <= " + index + " < " + rows;
+        assert offHeap.hostData != null : "data is not on the host";
+        assert !isNull(index) : " value at " + index + " is null";
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public byte getByte(long index) {
+        assert type == DType.INT8;
+        assertsForGet(index);
+        return offHeap.hostData.data.getByte(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public final short getShort(long index) {
+        assert type == DType.INT16;
+        assertsForGet(index);
+        return offHeap.hostData.data.getShort(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public final int getInt(long index) {
+        assert type == DType.INT32 || type == DType.DATE32;
+        assertsForGet(index);
+        return offHeap.hostData.data.getInt(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public final long getLong(long index) {
+        assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
+        assertsForGet(index);
+        return offHeap.hostData.data.getLong(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public final float getFloat(long index) {
+        assert type == DType.FLOAT32;
+        assertsForGet(index);
+        return offHeap.hostData.data.getFloat(index * type.sizeInBytes);
+    }
+
+    /**
+     * Get the value at index.
+     */
+    public final double getDouble(long index) {
+        assert type == DType.FLOAT64;
+        assertsForGet(index);
+        return offHeap.hostData.data.getDouble(index * type.sizeInBytes);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // DATE/TIME
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Get year from DATE32, DATE64, or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector year() {
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get month from DATE32, DATE64, or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector month() {
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get day from DATE32, DATE64, or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector day() {
+        assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get hour from DATE64 or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector hour() {
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get minute from DATE64 or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector minute() {
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /**
+     * Get second from DATE64 or TIMESTAMP
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     *
+     * @return - A new INT16 vector allocated on the GPU.
+     */
+    public ColumnVector second() {
+        assert type == DType.DATE64 || type == DType.TIMESTAMP;
+        ColumnVector result = ColumnVector.newOutputVector(rows, hasValidityVector(), DType.INT16);
+        Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    // ARITHMETIC
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Add two vectors.
+     * Preconditions - vectors have to be the same size and same type. FLOAT32, FLOAT64, INT32 or INT64.
+     * NULLs are not currently supported.
+     *
+     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
+     *                  is responsible for its lifecycle.
+     * Example:
+     *          try (ColumnVector v1 = ColumnVector.fromFloats(1.2f, 5.1f, ...);
+     *               ColumnVector v2 = ColumnVector.fromFloats(5.1f, 13.1f, ...);
+     *               ColumnVector v3 = v1.add(v2);
+     *            ...
+     *          }
+     *
+     * @param v1 - vector to be added to this vector.
+     * @return - A new vector allocated on the GPU of the same type as the input types.
+     */
+    public ColumnVector add(ColumnVector v1) {
+        assert type == v1.getType();
+        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64;
+        assert v1.getRowCount() == getRowCount(); // cudf will check this too.
+        assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
+        assert getNullCount() == 0;
+
+        ColumnVector result = newOutputVector(v1, this, type);
+        Cudf.gdfAddGeneric(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
+        return result;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // INTERNAL/NATIVE ACCESS
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * USE WITH CAUTION: This method exposes the address of the native cudf_column.  This allows
@@ -349,11 +543,11 @@ public abstract class ColumnVector implements AutoCloseable {
         return getCudfColumn().getNativeHandle();
     }
 
-    protected final CudfColumn getCudfColumn() {
+    final CudfColumn getCudfColumn() {
         if (offHeap.cudfColumn == null) {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
-            checkDeviceData();
+            checkHasDeviceData();
             offHeap.cudfColumn = new CudfColumn(offHeap.deviceData.data.getAddress(),
                     (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress()),
                     (int)rows,
@@ -362,19 +556,14 @@ public abstract class ColumnVector implements AutoCloseable {
         return offHeap.cudfColumn;
     }
 
-    /**
-     * Update any internal accounting from what is in the Native Code
-     */
-    protected void updateFromNative() {
-        assert offHeap.cudfColumn != null;
-        this.nullCount = offHeap.cudfColumn.getNullCount();
-        this.rows = offHeap.cudfColumn.getSize();
-    }
+    /////////////////////////////////////////////////////////////////////////////
+    // HELPER CLASSES
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * Encapsulator class to hold the two buffers as a cohesive object
      */
-    protected static final class BufferEncapsulator<T extends MemoryBuffer> implements AutoCloseable {
+    private static final class BufferEncapsulator<T extends MemoryBuffer> implements AutoCloseable {
         public final T data;
         public final T valid;
 
@@ -399,6 +588,9 @@ public abstract class ColumnVector implements AutoCloseable {
         }
     }
 
+    /**
+     * When debug is enabled holds information about inc and dec of ref count.
+     */
     private static final class RefCountDebugItem {
         final StackTraceElement[] stackTrace;
         final long timeMs;
@@ -420,7 +612,10 @@ public abstract class ColumnVector implements AutoCloseable {
         }
     }
 
-    protected static class OffHeapState implements ColumnVectorCleaner.Cleaner {
+    /**
+     * Holds the off heap state of the column vector so we can clean it up, even if it is leaked.
+     */
+    protected static final class OffHeapState implements ColumnVectorCleaner.Cleaner {
         public BufferEncapsulator<HostMemoryBuffer> hostData;
         public BufferEncapsulator<DeviceMemoryBuffer> deviceData;
         public CudfColumn cudfColumn;
@@ -479,17 +674,190 @@ public abstract class ColumnVector implements AutoCloseable {
     }
 
 
+    /////////////////////////////////////////////////////////////////////////////
+    // BUILDER
+    /////////////////////////////////////////////////////////////////////////////
+
     /**
-     * Base class for Builder
+     * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
+     * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
+     * close the builder.
+     * @param type the type of vector to build.
+     * @param rows the number of rows this builder can hold
+     * @return the builder to use.
      */
-    static final class Builder implements AutoCloseable {
-        HostMemoryBuffer data;
-        HostMemoryBuffer valid;
-        long currentIndex = 0;
-        long nullCount;
-        final long rows;
-        boolean built;
-        final DType type;
+    public static Builder builder(DType type, int rows) {
+        return new Builder(type, rows);
+    }
+
+    /**
+     * Create a new vector.
+     * @param rows maximum number of rows that the vector can hold.
+     * @param init what will initialize the vector.
+     * @return the created vector.
+     */
+    public static ColumnVector build(DType type, int rows, Consumer<Builder> init) {
+        try (Builder builder = builder(type, rows)) {
+            init.accept(builder);
+            return builder.build();
+        }
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromBytes(byte ... values) {
+        return build(DType.INT8, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromShorts(short ... values) {
+        return build(DType.INT16, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromInts(int ... values) {
+        return build(DType.INT32, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromLongs(long ... values) {
+        return build(DType.INT64, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromFloats(float ... values) {
+        return build(DType.FLOAT32, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector fromDoubles(double ... values) {
+        return build(DType.FLOAT64, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector datesFromInts(int ... values) {
+        return build(DType.DATE32, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector datesFromLongs(long ... values) {
+        return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
+    public static ColumnVector timestampsFromLongs(long ... values) {
+        return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedBytes(Byte ... values) {
+        return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedShorts(Short ... values) {
+        return build(DType.INT16, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedInts(Integer ... values) {
+        return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedLongs(Long ... values) {
+        return build(DType.INT64, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedFloats(Float ... values) {
+        return build(DType.FLOAT32, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector fromBoxedDoubles(Double ... values) {
+        return build(DType.FLOAT64, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector datesFromBoxedInts(Integer ... values) {
+        return build(DType.DATE32, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector datesFromBoxedLongs(Long ... values) {
+        return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
+    public static ColumnVector timestampsFromBoxedLongs(Long ... values) {
+        return build(DType.TIMESTAMP, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Build
+     */
+    public static final class Builder implements AutoCloseable {
+        private HostMemoryBuffer data;
+        private HostMemoryBuffer valid;
+        private long currentIndex = 0;
+        private long nullCount;
+        private final long rows;
+        private boolean built;
+        private final DType type;
 
         /**
          * Create a builder with a buffer of size rows
@@ -497,9 +865,9 @@ public abstract class ColumnVector implements AutoCloseable {
          * @param rows number of rows to allocate.
          */
         Builder(DType type, long rows) {
-            this.type=type;
+            this.type = type;
             this.rows = rows;
-            this.data=HostMemoryBuffer.allocate(rows * type.sizeInBytes);
+            this.data = HostMemoryBuffer.allocate(rows * type.sizeInBytes);
         }
 
         /**
@@ -517,101 +885,210 @@ public abstract class ColumnVector implements AutoCloseable {
             this.valid = testValid;
         }
 
-        final void appendByte(byte value) {
+        public final Builder append(byte value) {
             assert type == DType.INT8;
             assert currentIndex < rows;
             data.setByte(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        final void appendBytes(byte value, long count) {
+        public final Builder append(byte value, long count) {
             assert (count + currentIndex) <= rows;
             assert type == DType.INT8;
             data.setMemory(currentIndex * type.sizeInBytes, count, value);
             currentIndex += count;
+            return this;
         }
 
-        final void appendBytes(byte[] values) {
-            assert (values.length + currentIndex) <= rows;
-            assert type == DType.INT8;
-            data.setBytes(currentIndex * type.sizeInBytes, values, 0, values.length);
-            currentIndex += values.length;
-        }
-
-        final void appendShort(short value) {
+        public final Builder append(short value) {
             assert type == DType.INT16;
             assert currentIndex < rows;
             data.setShort(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        public void appendShorts(short[] values) {
-            assert type == DType.INT16;
-            assert (values.length + currentIndex) <= rows;
-            data.setShorts(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-        }
-
-        final void appendInt(int value) {
+        public final Builder append(int value) {
             assert (type == DType.INT32 || type == DType.DATE32);
             assert currentIndex < rows;
             data.setInt(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        public void appendInts(int[] values) {
-            assert (type == DType.INT32 || type == DType.DATE32);
-            assert (values.length + currentIndex) <= rows;
-            data.setInts(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-        }
-
-        final void appendLong(long value) {
+        public final Builder append(long value) {
             assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
             assert currentIndex < rows;
             data.setLong(currentIndex * type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        public void appendLongs(long[] values) {
-            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
-            assert (values.length + currentIndex) <= rows;
-            data.setLongs(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-        }
-
-        final void appendFloat(float value) {
+        public final Builder append(float value) {
             assert type == DType.FLOAT32;
             assert currentIndex < rows;
             data.setFloat(currentIndex * type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        public void appendFloats(float[] values) {
-            assert type == DType.FLOAT32;
-            assert (values.length + currentIndex) <= rows;
-            data.setFloats(currentIndex *  type.sizeInBytes, values, values.length);
-            currentIndex += values.length;
-        }
-
-        final void appendDouble(double value) {
+        public final Builder append(double value) {
             assert type == DType.FLOAT64;
             assert currentIndex < rows;
             data.setDouble(currentIndex * type.sizeInBytes, value);
             currentIndex++;
+            return this;
         }
 
-        public void appendDoubles(double[] values) {
+        public final Builder appendArray(byte ... values) {
+            assert (values.length + currentIndex) <= rows;
+            assert type == DType.INT8;
+            data.setBytes(currentIndex * type.sizeInBytes, values, 0, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(short ... values) {
+            assert type == DType.INT16;
+            assert (values.length + currentIndex) <= rows;
+            data.setShorts(currentIndex *  type.sizeInBytes, values, 0, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(int... values) {
+            assert (type == DType.INT32 || type == DType.DATE32);
+            assert (values.length + currentIndex) <= rows;
+            data.setInts(currentIndex *  type.sizeInBytes, values, 0, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(long ... values) {
+            assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
+            assert (values.length + currentIndex) <= rows;
+            data.setLongs(currentIndex *  type.sizeInBytes, values, 0, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(float... values) {
+            assert type == DType.FLOAT32;
+            assert (values.length + currentIndex) <= rows;
+            data.setFloats(currentIndex *  type.sizeInBytes, values, 0, values.length);
+            currentIndex += values.length;
+            return this;
+        }
+
+        public final Builder appendArray(double... values) {
             assert type == DType.FLOAT64;
             assert (values.length + currentIndex) <= rows;
-            data.setDoubles(currentIndex *  type.sizeInBytes, values, values.length);
+            data.setDoubles(currentIndex *  type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
+            return this;
         }
 
-        void allocateBitmaskAndSetDefaultValues() {
-            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
-            valid = HostMemoryBuffer.allocate(bitmaskSize);
-            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Byte ... values) throws IndexOutOfBoundsException {
+            for (Byte b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Short ... values) throws IndexOutOfBoundsException {
+            for (Short b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Integer ... values) throws IndexOutOfBoundsException {
+            for (Integer b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Long ... values) throws IndexOutOfBoundsException {
+            for (Long b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Float ... values) throws IndexOutOfBoundsException {
+            for (Float b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Double ... values) throws IndexOutOfBoundsException {
+            for (Double b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b);
+                }
+            }
+            return this;
         }
 
         /**
@@ -619,14 +1096,14 @@ public abstract class ColumnVector implements AutoCloseable {
          * @param columnVector - Vector to be added
          * @return  - The ColumnVector based on this builder values
          */
-        final Builder append(ColumnVector columnVector) {
+        public final Builder append(ColumnVector columnVector) {
             assert columnVector.rows <= (rows - currentIndex);
             assert columnVector.type == type;
             assert columnVector.offHeap.hostData != null;
 
             data.copyRange(currentIndex * type.sizeInBytes, columnVector.offHeap.hostData.data,
                     0L,
-                    columnVector.getRows() * type.sizeInBytes);
+                    columnVector.getRowCount() * type.sizeInBytes);
 
             if (columnVector.nullCount != 0) {
                 if (valid == null) {
@@ -640,19 +1117,26 @@ public abstract class ColumnVector implements AutoCloseable {
             return this;
         }
 
+        private void allocateBitmaskAndSetDefaultValues() {
+            long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
+            valid = HostMemoryBuffer.allocate(bitmaskSize);
+            valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+        }
+
         /**
          * Append null value.
          */
-        void appendNull() {
+        public final Builder appendNull() {
             setNullAt(currentIndex);
             currentIndex++;
+            return this;
         }
 
         /**
          * Set a specific index to null.
          * @param index
          */
-        void setNullAt(long index) {
+        public final Builder setNullAt(long index) {
             assert index < rows;
 
             // add null
@@ -660,13 +1144,26 @@ public abstract class ColumnVector implements AutoCloseable {
                 allocateBitmaskAndSetDefaultValues();
             }
             nullCount += BitVectorHelper.setNullAt(valid, index);
+            return this;
         }
 
         /**
-         * Close this builder and free memory if the ColumnVector wasn't generated
+         * Finish and create the immutable ColumnVector.
+         */
+        public final ColumnVector build() {
+            if (built) {
+                throw new IllegalStateException("Cannot reuse a builder.");
+            }
+            built = true;
+            return new ColumnVector(data, valid, currentIndex, type, nullCount);
+        }
+
+        /**
+         * Close this builder and free memory if the ColumnVector wasn't generated. Verifies that
+         * the data was released even in the case of an error.
          */
         @Override
-        public void close() {
+        public final void close() {
             if (!built) {
                 data.close();
                 data = null;

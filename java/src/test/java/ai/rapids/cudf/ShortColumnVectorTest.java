@@ -31,41 +31,40 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testCreateColumnVectorBuilder() {
-        try (ShortColumnVector shortColumnVector = ShortColumnVector.build(3, (b) -> b.append((short)1))) {
+        try (ColumnVector shortColumnVector = ColumnVector.build(DType.INT16, 3, (b) -> b.append((short)1))) {
             assertFalse(shortColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testArrayAllocation() {
-        try (ShortColumnVector shortColumnVector = ShortColumnVector.build((short)2, (short)3, (short)5)) {
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
             assertFalse(shortColumnVector.hasNulls());
-            assertEquals(shortColumnVector.get(0), 2);
-            assertEquals(shortColumnVector.get(1), 3);
-            assertEquals(shortColumnVector.get(2), 5);
+            assertEquals(shortColumnVector.getShort(0), 2);
+            assertEquals(shortColumnVector.getShort(1), 3);
+            assertEquals(shortColumnVector.getShort(2), 5);
         }
     }
 
     @Test
     public void testUpperIndexOutOfBoundsException() {
-        try (ShortColumnVector shortColumnVector = ShortColumnVector.build((short)2, (short)3, (short)5)) {
-            assertThrows(AssertionError.class, () -> shortColumnVector.get(3));
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
+            assertThrows(AssertionError.class, () -> shortColumnVector.getShort(3));
             assertFalse(shortColumnVector.hasNulls());
         }
     }
 
     @Test
     public void testLowerIndexOutOfBoundsException() {
-        try (ShortColumnVector shortColumnVector = ShortColumnVector.build((short)2, (short)3, (short)5)) {
+        try (ColumnVector shortColumnVector = ColumnVector.fromShorts((short)2, (short)3, (short)5)) {
             assertFalse(shortColumnVector.hasNulls());
-            assertThrows(AssertionError.class, () -> shortColumnVector.get(-1));
+            assertThrows(AssertionError.class, () -> shortColumnVector.getShort(-1));
         }
     }
 
     @Test
     public void testAddingNullValues() {
-        try (ShortColumnVector cv =
-                     ShortColumnVector.buildBoxed(new Short[] {2,3,4,5,6,7,null,null})) {
+        try (ColumnVector cv = ColumnVector.fromBoxedShorts(new Short[] {2,3,4,5,6,7,null,null})) {
             assertTrue(cv.hasNulls());
             assertEquals(2, cv.getNullCount());
             for (int i = 0; i < 6; i++) {
@@ -78,8 +77,8 @@ public class ShortColumnVectorTest {
 
     @Test
     public void testOverrunningTheBuffer() {
-        try (ShortColumnVector.Builder builder = ShortColumnVector.builder(3)) {
-            assertThrows(AssertionError.class, () -> builder.append((short)2).appendNull().appendArray((short)5, (short)4).build());
+        try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT16, 3)) {
+            assertThrows(AssertionError.class, () -> builder.append((short)2).appendNull().appendArray(new short[] {5, 4}).build());
         }
     }
 
@@ -90,8 +89,8 @@ public class ShortColumnVectorTest {
             for (int dstPrefilledSize = 0 ; dstPrefilledSize < dstSize ; dstPrefilledSize++) {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
-                    try (ShortColumnVector.Builder dst = ShortColumnVector.builder(dstSize);
-                         ShortColumnVector src = ShortColumnVector.build(srcSize, (b) -> {
+                    try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT16, dstSize);
+                         ColumnVector src = ColumnVector.build(DType.INT16, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -100,7 +99,7 @@ public class ShortColumnVectorTest {
                                  }
                              }
                          });
-                         ShortColumnVector.Builder gtBuilder = ShortColumnVector.builder(dstPrefilledSize)) {
+                         ColumnVector.Builder gtBuilder = ColumnVector.builder(DType.INT16, dstPrefilledSize)) {
                          assertEquals(dstSize, srcSize + dstPrefilledSize);
                          //add the first half of the prefilled list
                          for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
@@ -115,23 +114,24 @@ public class ShortColumnVectorTest {
                          }
                          // append the src vector
                          dst.append(src);
-                         try (ShortColumnVector dstVector = dst.build();
-                              ShortColumnVector gt = gtBuilder.build()) {
+                         try (ColumnVector dstVector = dst.build();
+                              ColumnVector gt = gtBuilder.build()) {
                              for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                  assertEquals(gt.isNull(i), dstVector.isNull(i));
                                  if (!gt.isNull(i)) {
-                                     assertEquals(gt.get(i), dstVector.get(i));
+                                     assertEquals(gt.getShort(i), dstVector.getShort(i));
                                  }
                              }
                              for (int i = dstPrefilledSize - sizeOfDataNotToAdd, j = 0; i < dstSize - sizeOfDataNotToAdd && j < srcSize; i++, j++) {
                                  assertEquals(src.isNull(j), dstVector.isNull(i));
                                  if (!src.isNull(j)) {
-                                     assertEquals(src.get(j), dstVector.get(i));
+                                     assertEquals(src.getShort(j), dstVector.getShort(i));
                                  }
                              }
-                             if (dstVector.offHeap.hostData.valid != null) {
-                                 for (int i = dstSize - sizeOfDataNotToAdd ; i < BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.offHeap.hostData.valid.length); i++) {
-                                     assertFalse(BitVectorHelper.isNull(dstVector.offHeap.hostData.valid, i));
+                             if (dstVector.hasValidityVector()) {
+                                 long maxIndex = BitVectorHelper.getValidityAllocationSizeInBytes(dstVector.getRowCount()) * 8;
+                                 for (long i = dstSize - sizeOfDataNotToAdd; i < maxIndex; i++) {
+                                     assertFalse(dstVector.isNullExtendedRange(i));
                                  }
                              }
                          }
@@ -145,8 +145,8 @@ public class ShortColumnVectorTest {
     void testClose() {
         try (HostMemoryBuffer mockDataBuffer = spy(HostMemoryBuffer.allocate(4 * 8));
              HostMemoryBuffer mockValidBuffer = spy(HostMemoryBuffer.allocate(8))){
-            try (ShortColumnVector.Builder builder = ShortColumnVector.builder(4, mockDataBuffer, mockValidBuffer)) {
-                builder.appendArray((short)2, (short)3, (short)5).appendNull();
+            try (ColumnVector.Builder builder = new ColumnVector.Builder(DType.INT16, 4, mockDataBuffer, mockValidBuffer)) {
+                builder.appendArray(new short[]{2, 3, 5}).appendNull();
             }
             Mockito.verify(mockDataBuffer).doClose();
             Mockito.verify(mockValidBuffer).doClose();

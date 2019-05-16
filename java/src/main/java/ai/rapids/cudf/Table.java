@@ -39,11 +39,11 @@ public final class Table implements AutoCloseable {
      */
     public Table(ColumnVector[] columnVectors) {
         assert columnVectors != null : "ColumnVectors can't be null";
-        final long rows = columnVectors[0].rows;
+        final long rows = columnVectors[0].getRowCount();
 
         for (ColumnVector columnVector : columnVectors) {
             assert (null != columnVector) : "ColumnVectors can't be null";
-            assert (rows == columnVector.rows) : "All columns should have the same number of rows";
+            assert (rows == columnVector.getRowCount()) : "All columns should have the same number of rows";
         }
         this.columnVectors = new ColumnVector[columnVectors.length];
         // Since Arrays are mutable objects make a copy
@@ -59,12 +59,12 @@ public final class Table implements AutoCloseable {
         this.rows = rows;
     }
 
-    Table(CudfColumn[] cudfColumns) {
+    private Table(CudfColumn[] cudfColumns) {
         assert cudfColumns != null : "CudfColumns can't be null";
 
         this.columnVectors = new ColumnVector[cudfColumns.length];
         for (int i = 0 ; i < cudfColumns.length ; i++) {
-            this.columnVectors[i] = ColumnVector.fromCudfColumn(cudfColumns[i]);
+            this.columnVectors[i] = new ColumnVector(cudfColumns[i]);
         }
         cudfTable = new CudfTable(cudfColumns);
         this.rows = cudfColumns[0].getSize();
@@ -102,8 +102,8 @@ public final class Table implements AutoCloseable {
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
         ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
         for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].rows,
-                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].type);
+            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getRowCount(),
+                    inputColumnVectors[i].hasValidityVector(), inputColumnVectors[i].getType());
         }
         return new Table(outputColumnVectors);
     }
@@ -187,7 +187,7 @@ public final class Table implements AutoCloseable {
         return columnVectors[index];
     }
 
-    public final long getRows() {
+    public final long getRowCount() {
         return rows;
     }
 
@@ -333,31 +333,31 @@ public final class Table implements AutoCloseable {
             ColumnVector ret;
             switch(type) {
                 case INT8:
-                    ret = ByteColumnVector.buildBoxed((Byte[]) dataArray);
+                    ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
                     break;
                 case INT16:
-                    ret = ShortColumnVector.buildBoxed((Short[]) dataArray);
+                    ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
                     break;
                 case INT32:
-                    ret = IntColumnVector.buildBoxed((Integer[]) dataArray);
+                    ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
                     break;
                 case INT64:
-                    ret = LongColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
                     break;
                 case DATE32:
-                    ret = Date32ColumnVector.buildBoxed((Integer[]) dataArray);
+                    ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
                     break;
                 case DATE64:
-                    ret = Date64ColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
                     break;
                 case TIMESTAMP:
-                    ret = TimestampColumnVector.buildBoxed((Long[]) dataArray);
+                    ret = ColumnVector.timestampsFromBoxedLongs((Long[]) dataArray);
                     break;
                 case FLOAT32:
-                    ret = FloatColumnVector.buildBoxed((Float[]) dataArray);
+                    ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
                     break;
                 case FLOAT64:
-                    ret = DoubleColumnVector.buildBoxed((Double[]) dataArray);
+                    ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
                     break;
                 default:
                     throw new IllegalArgumentException(type + " is not supported yet");
@@ -372,7 +372,7 @@ public final class Table implements AutoCloseable {
                     columns.add(from(types.get(i), typeErasedData.get(i)));
                 }
                 for (ColumnVector cv: columns) {
-                    cv.toDeviceBuffer();
+                    cv.ensureOnDevice();
                 }
                 return new Table(columns.toArray(new ColumnVector[columns.size()]));
             } finally {
