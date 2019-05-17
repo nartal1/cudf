@@ -197,11 +197,11 @@ link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}" # CMAKE_CUDA_IMPLICIT
 # - library targets -------------------------------------------------------------------------------
 
 set(SOURCE_FILES
-	"src/CudfJni.cpp"
-	"src/CudaJni.cpp"
-	"src/CudfColumnJni.cpp"
-	"src/RmmJni.cpp"
-	"src/CudfTableJni.cpp")
+    "src/CudfJni.cpp"
+    "src/CudaJni.cpp"
+    "src/ColumnVectorJni.cpp"
+    "src/RmmJni.cpp"
+    "src/TableJni.cpp")
 add_library(cudfjni SHARED ${SOURCE_FILES})
 
 #Override RPATH for cudfjni

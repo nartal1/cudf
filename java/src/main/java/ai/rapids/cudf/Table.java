@@ -28,75 +28,49 @@ import java.util.List;
  * The refcount on the columns will be increased once they are passed in
  */
 public final class Table implements AutoCloseable {
-    private final ColumnVector[] columnVectors;
-    private final CudfTable cudfTable;
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
+
+    private long nativeHandle;
+    private ColumnVector[] columns;
     private final long rows;
 
     /**
      * Table class makes a copy of the array of {@link ColumnVector}s passed to it. The class will decrease the refcount
      * on itself and all its contents when closed and free resources if refcount is zero
-     * @param columnVectors - Array of ColumnVectors
+     * @param columns - Array of ColumnVectors
      */
-    public Table(ColumnVector[] columnVectors) {
-        assert columnVectors != null : "ColumnVectors can't be null";
-        final long rows = columnVectors[0].getRowCount();
+    public Table(ColumnVector... columns) {
+        assert columns != null : "ColumnVectors can't be null";
+        rows = columns[0].getRowCount();
 
-        for (ColumnVector columnVector : columnVectors) {
+        for (ColumnVector columnVector : columns) {
             assert (null != columnVector) : "ColumnVectors can't be null";
             assert (rows == columnVector.getRowCount()) : "All columns should have the same number of rows";
         }
-        this.columnVectors = new ColumnVector[columnVectors.length];
+
         // Since Arrays are mutable objects make a copy
-        for (int i = 0 ; i < columnVectors.length ; i++) {
-            this.columnVectors[i] = columnVectors[i];
-            columnVectors[i].incRefCount();
+        this.columns = new ColumnVector[columns.length];
+        long[] cudfColumnPointers = new long[columns.length];
+        for (int i = 0 ; i < columns.length ; i++) {
+            this.columns[i] = columns[i];
+            columns[i].incRefCount();
+            cudfColumnPointers[i] = columns[i].getNativeCudfColumnAddress();
         }
-        CudfColumn[] cudfColumns = new CudfColumn[columnVectors.length];
-        for (int i = 0 ; i < columnVectors.length ; i++) {
-            cudfColumns[i] = columnVectors[i].getCudfColumn();
-        }
-        cudfTable = new CudfTable(cudfColumns);
-        this.rows = rows;
+
+        nativeHandle = createCudfTable(cudfColumnPointers);
     }
 
-    private Table(CudfColumn[] cudfColumns) {
+    private Table(long[] cudfColumns) {
         assert cudfColumns != null : "CudfColumns can't be null";
 
-        this.columnVectors = new ColumnVector[cudfColumns.length];
+        this.columns = new ColumnVector[cudfColumns.length];
         for (int i = 0 ; i < cudfColumns.length ; i++) {
-            this.columnVectors[i] = new ColumnVector(cudfColumns[i]);
+            this.columns[i] = new ColumnVector(cudfColumns[i]);
         }
-        cudfTable = new CudfTable(cudfColumns);
-        this.rows = cudfColumns[0].getSize();
-    }
-
-    /**
-     * Orders the table using the sortkeys returning a new allocated table. The caller is responsible for cleaning up
-     * the {@link ColumnVector} returned as part of the output {@link Table}
-     *
-     * Example usage: orderBy(true, Table.asc(0), Table.desc(3)...);
-     *
-     * @param areNullsSmallest - represents if nulls are to be considered smaller than non-nulls.
-     * @param args - Suppliers to initialize sortKeys.
-     * @return Sorted Table
-     */
-    public Table orderBy(boolean areNullsSmallest, OrderByArg... args){
-        assert args.length <= columnVectors.length;
-        int[] sortKeysIndices = new int[args.length];
-        boolean[] isDescending = new boolean[args.length];
-        for (int i = 0 ; i < args.length ; i++) {
-            sortKeysIndices[i] = args[i].index;
-            assert (sortKeysIndices[i] >= 0 && sortKeysIndices[i] < columnVectors.length) :
-                    "index is out of range 0 <= " + sortKeysIndices[i] + " < " + columnVectors.length;
-            isDescending[i] = args[i].isDescending;}
-        Table outputTable = Table.newOutputTable(this.columnVectors);
-        cudfTable.gdfOrderBy(sortKeysIndices, isDescending, outputTable.cudfTable, areNullsSmallest);
-        // We allocated the ColumnVectors in Java before the output was calculated therefore
-        // we have to update them from native values
-        for (ColumnVector columnVector : outputTable.columnVectors ) {
-            columnVector.updateFromNative();
-        }
-        return outputTable;
+        nativeHandle = createCudfTable(cudfColumns);
+        this.rows = columns[0].getRowCount();
     }
 
     private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
@@ -109,13 +83,114 @@ public final class Table implements AutoCloseable {
         return new Table(outputColumnVectors);
     }
 
+    /**
+     * Return the {@link ColumnVector} at the specified index. The caller is responsible to close it once done to free
+     * resources
+     */
+    public ColumnVector getColumn(int index) {
+        assert index < columns.length;
+        columns[index].incRefCount();
+        return columns[index];
+    }
+
+    public final long getRowCount() {
+        return rows;
+    }
+
+    public final int getNumberOfColumns() {
+        return columns.length;
+    }
+
+    @Override
+    public void close() {
+        if (nativeHandle != 0) {
+            freeCudfTable(nativeHandle);
+            nativeHandle = 0;
+        }
+        if (columns != null) {
+            for (int i = 0; i < columns.length; i++) {
+                columns[i].close();
+                columns[i] = null;
+            }
+            columns = null;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Table{" +
+                "columns=" + Arrays.toString(columns) +
+                ", cudfTable=" + nativeHandle +
+                ", rows=" + rows +
+                '}';
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // NATIVE APIs
+    /////////////////////////////////////////////////////////////////////////////
+
+    private static native long createCudfTable(long[] cudfColumnPointers) throws CudfException;
+
+    private static native void freeCudfTable(long handle) throws CudfException;
+
+    /**
+     * Ugly long function to read CSV.  This is a long function to avoid the overhead of reaching into a java
+     * object to try and pull out all of the options.  If this becomes unwieldy we can change it.
+     * @param columnNames names of all of the columns, even the ones filtered out
+     * @param dTypes types of all of the columns as strings.  Why strings? who knows.
+     * @param filterColumnNames name of the columns to read, or an empty array if we want to read all of them
+     * @param filePath the path of the file to read, or null if no path should be read.
+     * @param address the address of the buffer to read from or 0 if we should not.
+     * @param length the length of the buffer to read from.
+     * @param headerRow the 0 based index row of the header can be -1
+     * @param delim character deliminator (must be ASCII).
+     * @param quote character quote (must be ASCII).
+     * @param comment character that starts a comment line (must be ASCII) use '\0'
+     * @param nullValues values that should be treated as nulls
+     */
+    private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
+                                            String filePath, long address, long length,
+                                            int headerRow, byte delim, byte quote,
+                                            byte comment, String[] nullValues) throws CudfException;
+
+    /**
+     * Read in Parquet formatted data.
+     * @param filterColumnNames name of the columns to read, or an empty array if we want to read all of them
+     * @param filePath the path of the file to read, or null if no path should be read.
+     * @param address the address of the buffer to read from or 0 if we should not.
+     * @param length the length of the buffer to read from.
+     */
+    private static native long[] gdfReadParquet(String[] filterColumnNames,
+                                                String filePath, long address, long length) throws CudfException;
+
+    private static native void gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending, long outputTable,
+                                          boolean areNullsSmallest) throws CudfException;
+
+    private static native long[] gdfLeftJoin(long leftTable, int[] leftJoinCols, long rightTable,
+                                             int[] rightJoinCols) throws CudfException;
+
+    private static native long[] gdfInnerJoin(long leftTable, int[] leftJoinCols, long rightTable,
+                                              int[] rightJoinCols) throws CudfException;
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    // TABLE CREATION APIs
+    /////////////////////////////////////////////////////////////////////////////
+
     public static Table readCSV(Schema schema, File path) {
         return readCSV(schema, CSVOptions.DEFAULT, path);
     }
 
     public static Table readCSV(Schema schema, CSVOptions opts, File path) {
-        CudfColumn[] columns = CudfTable.readCSV(schema, opts, path.getAbsolutePath());
-        return new Table(columns);
+        return new Table(
+                gdfReadCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                        opts.getIncludeColumnNames(), path.getAbsolutePath(),
+                        0, 0,
+                        opts.getHeaderRow(),
+                        opts.getDelim(),
+                        opts.getQuote(),
+                        opts.getComment(),
+                        opts.getNullValues()));
     }
 
     public static Table readCSV(Schema schema, byte[] buffer) {
@@ -139,9 +214,17 @@ public final class Table implements AutoCloseable {
         }
     }
 
-    static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
-        CudfColumn[] columns = CudfTable.readCSV(schema, opts, buffer, len);
-        return new Table(columns);
+    private static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
+        assert len > 0;
+        assert len <= buffer.getLength();
+        return new Table(gdfReadCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
+                opts.getIncludeColumnNames(), null,
+                buffer.getAddress(), len,
+                opts.getHeaderRow(),
+                opts.getDelim(),
+                opts.getQuote(),
+                opts.getComment(),
+                opts.getNullValues()));
     }
 
     public static Table readParquet(File path) {
@@ -149,8 +232,8 @@ public final class Table implements AutoCloseable {
     }
 
     public static Table readParquet(ParquetOptions opts, File path) {
-        CudfColumn[] columns = CudfTable.readParquet(opts, path);
-        return new Table(columns);
+        return new Table(gdfReadParquet(opts.getIncludeColumnNames(),
+                path.getAbsolutePath(), 0, 0));
     }
 
     public static Table readParquet(byte[] buffer) {
@@ -174,37 +257,44 @@ public final class Table implements AutoCloseable {
     }
 
     static Table readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
-        CudfColumn[] columns = CudfTable.readParquet(opts, buffer, len);
-        return new Table(columns);
+        return new Table(gdfReadParquet(opts.getIncludeColumnNames(),
+                null, buffer.getAddress(), len));
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // TABLE MANIPULATION APIs
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Return the {@link ColumnVector} at the specified index. The caller is responsible to close it once done to free
-     * resources
+     * Orders the table using the sortkeys returning a new allocated table. The caller is responsible for cleaning up
+     * the {@link ColumnVector} returned as part of the output {@link Table}
+     *
+     * Example usage: orderBy(true, Table.asc(0), Table.desc(3)...);
+     *
+     * @param areNullsSmallest - represents if nulls are to be considered smaller than non-nulls.
+     * @param args - Suppliers to initialize sortKeys.
+     * @return Sorted Table
      */
-    public ColumnVector getColumn(int index) {
-        assert index < columnVectors.length;
-        columnVectors[index].incRefCount();
-        return columnVectors[index];
-    }
-
-    public final long getRowCount() {
-        return rows;
-    }
-
-    public final int getNumberOfColumns() {
-        return columnVectors.length;
-    }
-
-    @Override
-    public void close() {
-        if (cudfTable != null) {
-            cudfTable.close();
+    public Table orderBy(boolean areNullsSmallest, OrderByArg... args){
+        assert args.length <= columns.length;
+        long[] sortKeys = new long[args.length];
+        boolean[] isDescending = new boolean[args.length];
+        for (int i = 0 ; i < args.length ; i++) {
+            int index = args[i].index;
+            assert (index >= 0 && index < columns.length) :
+                    "index is out of range 0 <= " + index + " < " + columns.length;
+            isDescending[i] = args[i].isDescending;
+            sortKeys[i] = columns[index].getNativeCudfColumnAddress();
         }
-        for (int i = 0 ; i < columnVectors.length ; i++) {
-            columnVectors[i].close();
-            columnVectors[i] = null;
+        Table outputTable = Table.newOutputTable(this.columns);
+
+        gdfOrderBy(nativeHandle, sortKeys, isDescending, outputTable.nativeHandle, areNullsSmallest);
+        // We allocated the ColumnVectors in Java before the output was calculated therefore
+        // we have to update them from native values
+        for (ColumnVector columnVector : outputTable.columns) {
+            columnVector.updateFromNative();
         }
+        return outputTable;
     }
 
     public static OrderByArg asc(final int index) {
@@ -219,20 +309,15 @@ public final class Table implements AutoCloseable {
         int[] joinIndicesArray = new int[indices.length];
         for (int i = 0 ; i < indices.length ; i++) {
             joinIndicesArray[i] = indices[i];
-            assert joinIndicesArray[i] >= 0 && joinIndicesArray[i] < columnVectors.length :
-                    "join index is out of range 0 <= " + joinIndicesArray[i] + " < " + columnVectors.length;
+            assert joinIndicesArray[i] >= 0 && joinIndicesArray[i] < columns.length :
+                    "join index is out of range 0 <= " + joinIndicesArray[i] + " < " + columns.length;
         }
         return new JoinColumns(this, joinIndicesArray);
     }
 
-    @Override
-    public String toString() {
-        return "Table{" +
-                "columnVectors=" + Arrays.toString(columnVectors) +
-                ", cudfTable=" + cudfTable +
-                ", rows=" + rows +
-                '}';
-    }
+    /////////////////////////////////////////////////////////////////////////////
+    // HELPER CLASSES
+    /////////////////////////////////////////////////////////////////////////////
 
     public static final class OrderByArg {
         final int index;
@@ -263,11 +348,11 @@ public final class Table implements AutoCloseable {
          * @return Joined {@link Table}
          */
         public Table leftJoin(JoinColumns rightJoinIndices) {
-            CudfColumn[] columns = CudfTable.leftJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
-            return new Table(columns);
+            return new Table(gdfLeftJoin(this.table.nativeHandle, indices,
+                    rightJoinIndices.table.nativeHandle, rightJoinIndices.indices));
         }
 
-	/**
+        /**
          * Joins two tables on the join columns that are passed in.
          * Usage:
          *      Table t1 ...
@@ -277,10 +362,14 @@ public final class Table implements AutoCloseable {
          * @return Joined {@link Table}
          */
         public Table innerJoin(JoinColumns rightJoinIndices) {
-            CudfColumn[] columns = CudfTable.innerJoin(this.table.cudfTable, indices, rightJoinIndices.table.cudfTable, rightJoinIndices.indices);
-            return new Table(columns);
+            return new Table(gdfInnerJoin(this.table.nativeHandle, indices,
+                    rightJoinIndices.table.nativeHandle, rightJoinIndices.indices));
         }
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // BUILDER
+    /////////////////////////////////////////////////////////////////////////////
 
     /**
      * Create a table on the GPU with data from the CPU.  This is not fast and intended mostly for

@@ -37,6 +37,9 @@ import java.util.stream.StreamSupport;
  * to increment the reference count.
  */
 public final class ColumnVector implements AutoCloseable {
+    static {
+        NativeDepsLoader.loadNativeDeps();
+    }
     private static final Logger log = LoggerFactory.getLogger(ColumnVector.class);
     static final boolean REF_COUNT_DEBUG = Boolean.getBoolean("ai.rapids.refcount.debug");
 
@@ -76,23 +79,24 @@ public final class ColumnVector implements AutoCloseable {
         return new ColumnVector(type, tsTimeUnit, rows, data, valid);
     }
 
-    ColumnVector(CudfColumn cudfColumn) {
-        assert cudfColumn != null;
+    ColumnVector(long nativePointer) {
+        assert nativePointer != 0;
         ColumnVectorCleaner.register(this, offHeap);
-        this.type = cudfColumn.getDtype();
+        offHeap.nativeCudfColumnHandle = nativePointer;
+        this.type = getDType(nativePointer);
         offHeap.hostData = null;
-        this.rows = cudfColumn.getSize();
-        this.nullCount = cudfColumn.getNullCount();
-        this.tsTimeUnit = cudfColumn.getTimeUnit();
-        DeviceMemoryBuffer data = new DeviceMemoryBuffer(cudfColumn.getDataPtr(), this.rows * type.sizeInBytes);
+        this.rows = getRowCount(nativePointer);
+        this.nullCount = getNullCount(nativePointer);
+        this.tsTimeUnit = getTimeUnit(nativePointer);
+        DeviceMemoryBuffer data = new DeviceMemoryBuffer(getDataPtr(nativePointer), this.rows * type.sizeInBytes);
         DeviceMemoryBuffer valid = null;
-        if (cudfColumn.getValidPtr() != 0) {
+        long validPtr = getValidPtr(nativePointer);
+        if (validPtr != 0) {
             // We are not using the BitVectorHelper.getValidityAllocationSizeInBytes() because cudfColumn was
             // initialized by cudf and not by cudfjni
-            valid = new DeviceMemoryBuffer(cudfColumn.getValidPtr(), BitVectorHelper.getValidityLengthInBytes(rows));
+            valid = new DeviceMemoryBuffer(validPtr, BitVectorHelper.getValidityLengthInBytes(rows));
         }
         this.offHeap.deviceData = new BufferEncapsulator<>(data, valid);
-        this.offHeap.cudfColumn = cudfColumn;
         this.refCount = 0;
         incRefCount();
     }
@@ -147,10 +151,10 @@ public final class ColumnVector implements AutoCloseable {
      * Update any internal accounting from what is in the Native Code
      */
     final void updateFromNative() {
-        assert offHeap.cudfColumn != null;
-        this.nullCount = offHeap.cudfColumn.getNullCount();
-        this.rows = offHeap.cudfColumn.getSize();
-        this.tsTimeUnit = offHeap.cudfColumn.getTimeUnit();
+        assert offHeap.nativeCudfColumnHandle != 0;
+        this.nullCount = getNullCount(offHeap.nativeCudfColumnHandle);
+        this.rows = getRowCount(offHeap.nativeCudfColumnHandle);
+        this.tsTimeUnit = getTimeUnit(offHeap.nativeCudfColumnHandle);
     }
 
     /**
@@ -177,7 +181,7 @@ public final class ColumnVector implements AutoCloseable {
                 ", hostData=" + offHeap.hostData +
                 ", deviceData=" + offHeap.deviceData +
                 ", nullCount=" + nullCount +
-                ", cudfColumn=" + offHeap.cudfColumn +
+                ", cudfColumn=" + offHeap.nativeCudfColumnHandle +
                 '}';
     }
 
@@ -438,7 +442,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector year() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeYear(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeYear(this, result);
         result.updateFromNative();
         return result;
     }
@@ -454,7 +458,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector month() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeMonth(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeMonth(this, result);
         result.updateFromNative();
         return result;
     }
@@ -470,7 +474,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector day() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeDay(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeDay(this, result);
         result.updateFromNative();
         return result;
     }
@@ -486,7 +490,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector hour() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeHour(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeHour(this, result);
         result.updateFromNative();
         return result;
     }
@@ -502,7 +506,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector minute() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeMinute(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeMinute(this, result);
         result.updateFromNative();
         return result;
     }
@@ -518,7 +522,7 @@ public final class ColumnVector implements AutoCloseable {
     public ColumnVector second() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
         ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeSecond(getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfExtractDatetimeSecond(this, result);
         result.updateFromNative();
         return result;
     }
@@ -553,7 +557,7 @@ public final class ColumnVector implements AutoCloseable {
         assert getNullCount() == 0;
 
         ColumnVector result = newOutputVector(type, TimeUnit.NONE, v1, this);
-        Cudf.gdfAddGeneric(getCudfColumn(), v1.getCudfColumn(), result.getCudfColumn());
+        Cudf.gdfAddGeneric(this, v1, result);
         result.updateFromNative();
         return result;
     }
@@ -573,20 +577,60 @@ public final class ColumnVector implements AutoCloseable {
      * exact same version of libcudf as this is released for.
      */
     public final long getNativeCudfColumnAddress() {
-        return getCudfColumn().getNativeHandle();
-    }
-
-    final CudfColumn getCudfColumn() {
-        if (offHeap.cudfColumn == null) {
+        if (offHeap.nativeCudfColumnHandle == 0) {
             assert rows <= Integer.MAX_VALUE;
             assert getNullCount() <= Integer.MAX_VALUE;
             checkHasDeviceData();
-            offHeap.cudfColumn = new CudfColumn(type, tsTimeUnit, (int)rows, (int) getNullCount(), offHeap.deviceData.data.getAddress(),
-                    (offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress())
-            );
+            offHeap.nativeCudfColumnHandle = allocateCudfColumn();
+            cudfColumnViewAugmented(offHeap.nativeCudfColumnHandle,
+                    offHeap.deviceData.data.getAddress(),
+                    offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress(),
+                    (int)rows, type.nativeId,
+                    (int)getNullCount(), tsTimeUnit.getNativeId());
         }
-        return offHeap.cudfColumn;
+        return offHeap.nativeCudfColumnHandle;
     }
+
+    private static native long allocateCudfColumn() throws CudfException;
+
+    /**
+     * Set a CuDF column given data and validity bitmask pointers, size, and datatype, and
+     * count of null (non-valid) elements
+     *
+     * @param cudfColumnHandle     native handle of gdf_column.
+     * @param dataPtr    Pointer to data.
+     * @param valid      Pointer to validity bitmask for the data.
+     * @param size       Number of rows in the column.
+     * @param dtype      Data type of the column.
+     * @param null_count The number of non-valid elements in the validity bitmask.
+     * @param timeUnit   {@link TimeUnit}
+     */
+    private static native void cudfColumnViewAugmented(long cudfColumnHandle, long dataPtr, long valid,
+                                               int size, int dtype, int null_count,
+                                               int timeUnit) throws CudfException;
+
+
+    private static native void freeCudfColumn(long cudfColumnHandle) throws CudfException;
+
+    private static native long getDataPtr(long cudfColumnHandle) throws CudfException;
+
+    private static native long getValidPtr(long cudfColumnHandle) throws CudfException;
+
+    private static native int getRowCount(long cudfColumnHandle) throws CudfException;
+
+    private static DType getDType(long cudfColumnHandle) throws CudfException {
+        return DType.fromNative(getDTypeInternal(cudfColumnHandle));
+    }
+
+    private static native int getDTypeInternal(long cudfColumnHandle) throws CudfException;
+
+    private static TimeUnit getTimeUnit(long cudfColumnHandle) throws CudfException {
+        return TimeUnit.fromNative(getTimeUnitInternal(cudfColumnHandle));
+    }
+
+    private static native int getTimeUnitInternal(long cudfColumnHandle) throws CudfException;
+
+    private static native int getNullCount(long cudfColumnHandle) throws CudfException;
 
     /////////////////////////////////////////////////////////////////////////////
     // HELPER CLASSES
@@ -650,7 +694,7 @@ public final class ColumnVector implements AutoCloseable {
     protected static final class OffHeapState implements ColumnVectorCleaner.Cleaner {
         public BufferEncapsulator<HostMemoryBuffer> hostData;
         public BufferEncapsulator<DeviceMemoryBuffer> deviceData;
-        public CudfColumn cudfColumn;
+        private long nativeCudfColumnHandle = 0;
         private final List<RefCountDebugItem> refCountDebug;
 
         public OffHeapState() {
@@ -692,9 +736,9 @@ public final class ColumnVector implements AutoCloseable {
                 deviceData = null;
                 neededCleanup = true;
             }
-            if (cudfColumn != null) {
-                cudfColumn.close();
-                cudfColumn = null;
+            if (nativeCudfColumnHandle != 0) {
+                freeCudfColumn(nativeCudfColumnHandle);
+                nativeCudfColumnHandle = 0;
                 neededCleanup = true;
             }
             if (neededCleanup && logErrorIfNotClean) {

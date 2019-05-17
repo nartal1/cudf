@@ -22,7 +22,7 @@
 
 extern "C" {
 
-JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfTable_createCudfTable(JNIEnv *env,
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Table_createCudfTable(JNIEnv *env,
         jclass classObject,
         jlongArray cudfColumns) {
     JNI_NULL_CHECK(env, cudfColumns, "input columns are null", 0);
@@ -34,7 +34,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_CudfTable_createCudfTable(JNIEnv *en
     } CATCH_STD(env, 0);
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_free(JNIEnv *env, jclass classObject, jlong handle) {
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_freeCudfTable(JNIEnv *env, jclass classObject, jlong handle) {
     cudf::table* table = reinterpret_cast<cudf::table*>(handle);
     delete table;
 }
@@ -58,7 +58,7 @@ cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, const cudf::native_j
   return device;
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
         jclass jClassObject,
         jlong jInputTable,
         jlongArray jSortKeysGdfcolumns,
@@ -112,7 +112,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_CudfTable_gdfOrderBy(JNIEnv *env,
     } CATCH_STD(env, );
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* env,
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(JNIEnv* env,
        jclass jClassObject,
        jobjectArray colNames,
        jobjectArray dataTypes,
@@ -251,7 +251,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadCSV(JNIEnv* en
     } CATCH_STD(env, NULL);
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv* env,
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadParquet(JNIEnv* env,
        jclass jClassObject,
        jobjectArray filterColNames,
        jstring inputfilepath,
@@ -305,7 +305,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfReadParquet(JNIEnv
     } CATCH_STD(env, NULL);
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfLeftJoin(
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(
     JNIEnv *env, jclass clazz, jlong leftTable,
     jintArray leftColJoinIndices, jlong rightTable,
     jintArray rightColJoinIndices) {
@@ -347,7 +347,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfLeftJoin(
   CATCH_STD(env, NULL);
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_CudfTable_gdfInnerJoin(
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(
     JNIEnv *env, jclass clazz, jlong leftTable,
     jintArray leftColJoinIndices, jlong rightTable,
     jintArray rightColJoinIndices) {
