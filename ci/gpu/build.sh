@@ -36,10 +36,18 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai/label/cuda${CUDA_REL} -c rapidsai-nightly/label/cuda${CUDA_REL} rmm=${RMM_VERSION} nvstrings=${NVSTRINGS_VERSION}
 
+logger "Install Openjdk"
+conda install -c anaconda openjdk
+
+logger "Install maven"
+conda install --no-deps -c conda-forge maven
+
 logger "Check versions..."
 python --version
 $CC --version
 $CXX --version
+java -version
+mvn -version
 conda list
 
 ################################################################################
@@ -87,3 +95,11 @@ conda install -c conda-forge -y feather-format
 logger "Python py.test for cuDF..."
 cd $WORKSPACE/python
 py.test --cache-clear --junitxml=${WORKSPACE}/junit-cudf.xml -v --cov-config=.coveragerc --cov=cudf --cov-report=xml:${WORKSPACE}/cudf-coverage.xml --cov-report term
+
+################################################################################
+# BUILD and TEST libcudfjni
+################################################################################
+
+logger "Build cudfjni"
+cd $WORKSPACE/java
+mvn clean test
