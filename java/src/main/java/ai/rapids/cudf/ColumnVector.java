@@ -721,11 +721,14 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     /**
      * Cast to Byte - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to bytes
+     * Same applies to Timestamp and Date32 types
      * @return A new vector allocated on the GPU
      */
     public ColumnVector asBytes(){
         ColumnVector result = newOutputVector(rows, hasValidityVector(), DType.INT8);
         Cudf.gdfCastTo(getCudfColumn(), result.getCudfColumn());
+        result.updateFromNative();
         return result;
     }
 
