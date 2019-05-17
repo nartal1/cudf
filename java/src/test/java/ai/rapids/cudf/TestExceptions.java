@@ -32,20 +32,4 @@ public class TestExceptions {
             assertTrue(cause instanceof CudaException);
         }
     }
-
-    // TODO something odd is happening and once this runs cuda always see bad memory access
-    // and even when we clear it device synchronize brings it back again.
-//    @Test
-//    public void testCudaCausedCudfException() {
-//        assumeTrue(Cuda.isEnvCompatibleForTesting());
-//        try (CudfColumn badRHS = new CudfColumn(100, 0, 5, DType.INT32);
-//             CudfColumn badLHS = new CudfColumn(200, 0, 5, DType.INT32);
-//             CudfColumn badOutput = new CudfColumn(300, 0, 5, DType.INT32)) {
-//            Cudf.gdfAddI32(badLHS, badRHS, badOutput);
-//            fail("An exception should have been thrown!!!");
-//        } catch (CudfException cudfe) {
-//            Throwable cause = cudfe.getCause();
-//            assertTrue(cause instanceof CudaException);
-//        }
-//    }
 }

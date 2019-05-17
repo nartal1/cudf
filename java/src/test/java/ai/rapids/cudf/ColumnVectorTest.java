@@ -35,11 +35,11 @@ public class ColumnVectorTest {
         DeviceMemoryBuffer mockValidBuffer = mock(DeviceMemoryBuffer.class, Mockito.RETURNS_DEEP_STUBS);
 
         try (ColumnVector v0 = new ColumnVector(DType.INT32, TimeUnit.NONE, 0, mockDataBuffer, mockValidBuffer)) {
-            v0.getCudfColumn();
+            v0.getNativeCudfColumnAddress();
         }
 
         try (ColumnVector v1 = new ColumnVector(DType.INT32, TimeUnit.NONE, Long.MAX_VALUE, mockDataBuffer, mockValidBuffer)) {
-            assertThrows(AssertionError.class, () -> v1.getCudfColumn());
+            assertThrows(AssertionError.class, () -> v1.getNativeCudfColumnAddress());
         }
     }
 
@@ -47,7 +47,7 @@ public class ColumnVectorTest {
     void testCudfColumnFromHostVector() {
         HostMemoryBuffer mockDataBuffer = mock(HostMemoryBuffer.class);
         try (ColumnVector v = new ColumnVector(DType.INT32, TimeUnit.NONE, 10, 0, mockDataBuffer, null)) {
-            assertThrows(IllegalStateException.class, () -> v.getCudfColumn());
+            assertThrows(IllegalStateException.class, () -> v.getNativeCudfColumnAddress());
         }
     }
 
