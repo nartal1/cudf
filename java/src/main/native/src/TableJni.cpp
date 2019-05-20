@@ -57,20 +57,38 @@ cudf::jni_rmm_unique_ptr<int8_t> copyToDevice(JNIEnv * env, const cudf::native_j
   cudf::jniCudaCheck(env, cudaMemcpy(device.get(), host.get(), byteLen, cudaMemcpyHostToDevice));
   return device;
 }
+/**
+ * This method creates a vector of cudf::gdf_column_wrapper using vector of gdf_columns. The type and validity vectors of
+ * cudf::gdf_column_wrappers are based on the inputCols and shouldn't be used with operations that expect the output table
+ * to be different in type from the input e.g. joins have more columns than either one of the input tables and they can also
+ * have nulls even if the input tables don't.
+ *
+ * @param in size - Size of the output vectors
+ * @param inputCols - The input cols on which the output is based
+ * @param numCols - The number of columns
+ * @return - gdf_column_wrapper vector based on inputCols
+ */
+std::vector<cudf::gdf_column_wrapper> createOutputColumnsBasedOnInput(gdf_size_type size,
+                                               gdf_column** inputCols,
+                                               gdf_size_type numCols) {
+    std::vector<cudf::gdf_column_wrapper> outputCols;
+    for (auto i = 0 ; i < numCols ; i++) {
+        outputCols.emplace_back(size, inputCols[i]->dtype, inputCols[i]->valid != NULL);
+    }
+    return std::move(outputCols);
+}
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
         jclass jClassObject,
         jlong jInputTable,
         jlongArray jSortKeysGdfcolumns,
         jbooleanArray jIsDescending,
-        jlong jOutputTable,
         jboolean jAreNullsSmallest) {
 
     //input validations & verifications
-    JNI_NULL_CHECK(env, jInputTable, "input table is null", );
-    JNI_NULL_CHECK(env, jSortKeysGdfcolumns, "input table is null", );
-    JNI_NULL_CHECK(env, jIsDescending, "sort order array is null", );
-    JNI_NULL_CHECK(env, jOutputTable, "output table is null", );
+    JNI_NULL_CHECK(env, jInputTable, "input table is null", NULL);
+    JNI_NULL_CHECK(env, jSortKeysGdfcolumns, "input table is null", NULL);
+    JNI_NULL_CHECK(env, jIsDescending, "sort order array is null", NULL);
 
     try {
         cudf::native_jpointerArray<gdf_column> nSortKeysGdfcolumns(env, jSortKeysGdfcolumns);
@@ -79,13 +97,14 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
         jsize numColumnsIsDesc = nIsDescending.size();
 
         if ( numColumnsIsDesc != numColumns) {
-            JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "columns and isDescending lengths don't match", );
+            JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", "columns and isDescending lengths don't match", NULL);
         }
 
         auto isDescending = copyToDevice(env, nIsDescending);
 
-        cudf::table* outputTable = reinterpret_cast<cudf::table*>(jOutputTable);
         cudf::table* inputTable = reinterpret_cast<cudf::table*>(jInputTable);
+        auto outputColumns = createOutputColumnsBasedOnInput(inputTable->num_rows(), inputTable->begin(), inputTable->num_columns());
+
         bool areNullsSmallest = static_cast<bool>(jAreNullsSmallest);
 
         auto col_data = cudf::jniRmmAlloc<int32_t>(env, nSortKeysGdfcolumns[0]->size * sizeof(int32_t), 0);
@@ -107,9 +126,26 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
 
 
         cudf::jniCudfCheck(env, gdf_order_by(nSortKeysGdfcolumns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, &context));
-        
-        gather(inputTable, col_data.get(), outputTable);
-    } CATCH_STD(env, );
+
+        std::vector<gdf_column*> cols(inputTable->num_columns());
+
+        for (auto i = 0 ; i < outputColumns.size() ; i++) {
+            cols[i] = outputColumns[i].get();
+        }
+
+        std::unique_ptr<cudf::table> outputTable(new cudf::table(cols.data(), cols.size()));
+
+        gather(inputTable, col_data.get(), outputTable.get());
+
+        cudf::native_jlongArray nativeHandles(env,
+                                              reinterpret_cast<jlong*>(outputTable->begin()),
+                                              outputTable->num_columns());
+        // release ownership so cudf::gdf_column_wrapper doesn't delete the columns
+        for (auto i = 0 ; i < outputColumns.size() ; i++) {
+            outputColumns[i].release();
+        }
+        return nativeHandles.get_jlongArray();
+    } CATCH_STD(env, NULL);
 }
 
 JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(JNIEnv* env,
