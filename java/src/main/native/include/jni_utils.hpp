@@ -762,6 +762,54 @@ namespace cudf {
   };
 
   /**
+   * Wrapper for gdf_column. This class owns the underlying gdf_column and release() should be called before assuming
+   * ownership of the underlying gdf_column.
+   */
+  class gdf_column_wrapper {
+  public:
+      gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool hasValidityBuffer) {
+        col = new gdf_column();
+        gdf_column_view(col, nullptr, nullptr, size, dtype);
+
+        if (size > 0) {
+            RMM_TRY(RMM_ALLOC(&col->data, size * gdf_dtype_size(col->dtype), 0));
+            if (hasValidityBuffer) {
+                RMM_TRY(RMM_ALLOC(&col->valid, gdf_valid_allocation_size(size), 0));
+            }
+        }
+    }
+
+    ~gdf_column_wrapper() {
+        if (col) {
+            RMM_FREE(col->data, 0);
+            RMM_FREE(col->valid, 0);
+            delete col;
+        }
+    }
+
+    gdf_column_wrapper(gdf_column_wrapper const &) = delete;
+
+    gdf_column_wrapper &operator=(gdf_column_wrapper const &) = delete;
+
+    gdf_column_wrapper(gdf_column_wrapper &&other) : col(other.col) {
+            other.col = nullptr;
+    }
+
+    gdf_column *operator->() const noexcept { return col; }
+
+    gdf_column *get() const noexcept { return col; }
+
+    gdf_column *release() noexcept {
+        auto temp = col;
+        col = nullptr;
+        return temp;
+    }
+
+    private:
+        gdf_column *col = nullptr;
+  };
+
+  /**
    * @brief create a cuda exception from a given cudaError_t
    */
   inline jthrowable cudaException(JNIEnv * const env, cudaError_t status, jthrowable cause = NULL) {
@@ -921,7 +969,6 @@ namespace cudf {
       }
     }
   }
-
 }
 
 #define JNI_THROW_NEW(env, clazz_name, message, ret_val) \

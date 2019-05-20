@@ -62,23 +62,6 @@ public final class ColumnVector implements AutoCloseable {
                         .collect(Collectors.toList()));
     }
 
-
-    private static ColumnVector newOutputVector(DType outputType, TimeUnit tsTimeUnit,
-                                                ColumnVector v1, ColumnVector v2) {
-        assert v1.rows == v2.rows;
-        return newOutputVector(outputType, tsTimeUnit, v1.rows, v1.hasValidityVector() || v2.hasValidityVector());
-    }
-
-    static ColumnVector newOutputVector(DType type, TimeUnit tsTimeUnit, long rows, boolean hasValidity) {
-        assert type != DType.INVALID;
-        DeviceMemoryBuffer data = DeviceMemoryBuffer.allocate(rows * type.sizeInBytes);
-        DeviceMemoryBuffer valid = null;
-        if (hasValidity) {
-            valid = DeviceMemoryBuffer.allocate(BitVectorHelper.getValidityAllocationSizeInBytes(rows));
-        }
-        return new ColumnVector(type, tsTimeUnit, rows, data, valid);
-    }
-
     ColumnVector(long nativePointer) {
         assert nativePointer != 0;
         ColumnVectorCleaner.register(this, offHeap);
@@ -145,16 +128,6 @@ public final class ColumnVector implements AutoCloseable {
         this.type = type;
         refCount = 0;
         incRefCount();
-    }
-
-    /**
-     * Update any internal accounting from what is in the Native Code
-     */
-    final void updateFromNative() {
-        assert offHeap.nativeCudfColumnHandle != 0;
-        this.nullCount = getNullCount(offHeap.nativeCudfColumnHandle);
-        this.rows = getRowCount(offHeap.nativeCudfColumnHandle);
-        this.tsTimeUnit = getTimeUnit(offHeap.nativeCudfColumnHandle);
     }
 
     /**
@@ -441,10 +414,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector year() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeYear(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeYear(this));
     }
 
     /**
@@ -457,10 +427,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector month() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeMonth(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeMonth(this));
     }
 
     /**
@@ -473,10 +440,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector day() {
         assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeDay(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeDay(this));
     }
 
     /**
@@ -489,10 +453,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector hour() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeHour(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeHour(this));
     }
 
     /**
@@ -505,10 +466,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector minute() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeMinute(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeMinute(this));
     }
 
     /**
@@ -521,10 +479,7 @@ public final class ColumnVector implements AutoCloseable {
      */
     public ColumnVector second() {
         assert type == DType.DATE64 || type == DType.TIMESTAMP;
-        ColumnVector result = ColumnVector.newOutputVector(DType.INT16, TimeUnit.NONE, rows, hasValidityVector());
-        Cudf.gdfExtractDatetimeSecond(this, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfExtractDatetimeSecond(this));
     }
 
 
@@ -556,10 +511,7 @@ public final class ColumnVector implements AutoCloseable {
         assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
         assert getNullCount() == 0;
 
-        ColumnVector result = newOutputVector(type, TimeUnit.NONE, v1, this);
-        Cudf.gdfAddGeneric(this, v1, result);
-        result.updateFromNative();
-        return result;
+        return new ColumnVector(Cudf.gdfAddGeneric(this, v1));
     }
 
     /////////////////////////////////////////////////////////////////////////////

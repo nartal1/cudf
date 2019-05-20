@@ -73,16 +73,6 @@ public final class Table implements AutoCloseable {
         this.rows = columns[0].getRowCount();
     }
 
-    private static Table newOutputTable(ColumnVector[] inputColumnVectors) {
-        ColumnVector[] outputColumnVectors = new ColumnVector[inputColumnVectors.length];
-        for (int i = 0 ; i < inputColumnVectors.length ; i++) {
-            outputColumnVectors[i] = ColumnVector.newOutputVector(inputColumnVectors[i].getType(), inputColumnVectors[i].getTimeUnit(), inputColumnVectors[i].getRowCount(),
-                    inputColumnVectors[i].hasValidityVector()
-            );
-        }
-        return new Table(outputColumnVectors);
-    }
-
     /**
      * Return the {@link ColumnVector} at the specified index. The caller is responsible to close it once done to free
      * resources
@@ -163,7 +153,7 @@ public final class Table implements AutoCloseable {
     private static native long[] gdfReadParquet(String[] filterColumnNames,
                                                 String filePath, long address, long length) throws CudfException;
 
-    private static native void gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending, long outputTable,
+    private static native long[] gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending,
                                           boolean areNullsSmallest) throws CudfException;
 
     private static native long[] gdfLeftJoin(long leftTable, int[] leftJoinCols, long rightTable,
@@ -286,15 +276,8 @@ public final class Table implements AutoCloseable {
             isDescending[i] = args[i].isDescending;
             sortKeys[i] = columns[index].getNativeCudfColumnAddress();
         }
-        Table outputTable = Table.newOutputTable(this.columns);
 
-        gdfOrderBy(nativeHandle, sortKeys, isDescending, outputTable.nativeHandle, areNullsSmallest);
-        // We allocated the ColumnVectors in Java before the output was calculated therefore
-        // we have to update them from native values
-        for (ColumnVector columnVector : outputTable.columns) {
-            columnVector.updateFromNative();
-        }
-        return outputTable;
+        return new Table(gdfOrderBy(nativeHandle, sortKeys, isDescending, areNullsSmallest));
     }
 
     public static OrderByArg asc(final int index) {

@@ -25,76 +25,47 @@ class Cudf {
 
     /* arith */
 
-    static void gdfAddGeneric(ColumnVector lhs, ColumnVector rhs, ColumnVector output) {
-        gdfAddGeneric(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfAddGeneric(ColumnVector lhs, ColumnVector rhs) {
+        return gdfAddGeneric(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfAddGeneric(long lhs, long rhs, long output) throws CudfException;
-
-
-    static void gdfAddI32(ColumnVector lhs, ColumnVector rhs, ColumnVector output) {
-        gdfAddI32(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
-    }
-
-    private static native void gdfAddI32(long lhs, long rhs, long output) throws CudfException;
-
-
-    static void gdfAddI64(ColumnVector lhs, ColumnVector rhs, ColumnVector output) {
-        gdfAddI64(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
-    }
-
-    private static native void gdfAddI64(long lhs, long rhs, long output) throws CudfException;
-
-
-    static void gdfAddF32(ColumnVector lhs, ColumnVector rhs, ColumnVector output) {
-        gdfAddF32(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
-    }
-
-    private static native void gdfAddF32(long lhs, long rhs, long output) throws CudfException;
-
-
-    static void gdfAddF64(ColumnVector lhs, ColumnVector rhs, ColumnVector output) {
-        gdfAddF64(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
-    }
-
-    private static native void gdfAddF64(long lhs, long rhs, long output) throws CudfException;
+    private static native long gdfAddGeneric(long lhs, long rhs) throws CudfException;
 
     /* datetime extract*/
 
-    static void gdfExtractDatetimeYear(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeYear(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeYear(ColumnVector input) {
+        return gdfExtractDatetimeYear(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeYear(long input, long output) throws CudfException;
+    private static native long gdfExtractDatetimeYear(long input) throws CudfException;
 
-    static void gdfExtractDatetimeMonth(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeMonth(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeMonth(ColumnVector input) {
+        return gdfExtractDatetimeMonth(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeMonth(long input, long output) throws CudfException;
+    private static native long gdfExtractDatetimeMonth(long input) throws CudfException;
 
-    static void gdfExtractDatetimeDay(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeDay(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeDay(ColumnVector input) {
+        return gdfExtractDatetimeDay(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeDay(long input, long output) throws CudfException;
+    private static native long gdfExtractDatetimeDay(long input) throws CudfException;
 
-    static void gdfExtractDatetimeHour(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeHour(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeHour(ColumnVector input) {
+        return gdfExtractDatetimeHour(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeHour(long input, long output) throws CudfException;
+    private static native long gdfExtractDatetimeHour(long input) throws CudfException;
 
-    static void gdfExtractDatetimeMinute(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeMinute(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeMinute(ColumnVector input) {
+        return gdfExtractDatetimeMinute(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeMinute(long input, long output) throws CudfException;
+    private static native long gdfExtractDatetimeMinute(long input) throws CudfException;
 
-    static void gdfExtractDatetimeSecond(ColumnVector input, ColumnVector output) {
-        gdfExtractDatetimeSecond(input.getNativeCudfColumnAddress(), output.getNativeCudfColumnAddress());
+    static long gdfExtractDatetimeSecond(ColumnVector input) {
+        return gdfExtractDatetimeSecond(input.getNativeCudfColumnAddress());
     }
 
-    private static native void gdfExtractDatetimeSecond(long input, long output) throws CudfException;
-
+    private static native long gdfExtractDatetimeSecond(long input) throws CudfException;
 }
