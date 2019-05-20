@@ -35,48 +35,47 @@ public class TableTest {
         assertEquals(expected.getNumberOfColumns(), table.getNumberOfColumns());
         assertEquals(expected.getRowCount(), table.getRowCount());
         for (int col = 0; col < expected.getNumberOfColumns(); col++) {
-            try (ColumnVector expect = expected.getColumn(col);
-                 ColumnVector cv = table.getColumn(col)) {
-                assertEquals(expect.getType(), cv.getType(), "Column " + col);
-                assertEquals(expect.getRowCount(), cv.getRowCount(), "Column " + col); // Yes this might be redundant
-                assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
-                expect.ensureOnHost();
-                cv.ensureOnHost();
-                DType type = expect.getType();
-                for (long row = 0; row < expect.getRowCount(); row++) {
-                    assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
-                    if (!expect.isNull(row)) {
-                        switch(type) {
-                            case INT8:
-                                assertEquals(expect.getByte(row), cv.getByte(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case INT16:
-                                assertEquals(expect.getShort(row), cv.getShort(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case INT32: //fall through
-                            case DATE32:
-                                assertEquals(expect.getInt(row), cv.getInt(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case INT64: // fall through
-                            case DATE64: // fall through
-                            case TIMESTAMP:
-                                assertEquals(expect.getLong(row), cv.getLong(row),
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case FLOAT32:
-                                assertEquals(expect.getFloat(row), cv.getFloat(row), 0.0001,
-                                        "Column " + col + " Row " + row);
-                                break;
-                            case FLOAT64:
-                                assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
-                                        "Column " + col + " Row " + row);
-                                break;
-                            default:
-                                throw new IllegalArgumentException(type + " is not supported yet");
-                        }
+            ColumnVector expect = expected.getColumn(col);
+            ColumnVector cv = table.getColumn(col);
+            assertEquals(expect.getType(), cv.getType(), "Column " + col);
+            assertEquals(expect.getRowCount(), cv.getRowCount(), "Column " + col); // Yes this might be redundant
+            assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
+            expect.ensureOnHost();
+            cv.ensureOnHost();
+            DType type = expect.getType();
+            for (long row = 0; row < expect.getRowCount(); row++) {
+                assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
+                if (!expect.isNull(row)) {
+                    switch(type) {
+                        case INT8:
+                            assertEquals(expect.getByte(row), cv.getByte(row),
+                                    "Column " + col + " Row " + row);
+                            break;
+                        case INT16:
+                            assertEquals(expect.getShort(row), cv.getShort(row),
+                                    "Column " + col + " Row " + row);
+                            break;
+                        case INT32: //fall through
+                        case DATE32:
+                            assertEquals(expect.getInt(row), cv.getInt(row),
+                                    "Column " + col + " Row " + row);
+                            break;
+                        case INT64: // fall through
+                        case DATE64: // fall through
+                        case TIMESTAMP:
+                            assertEquals(expect.getLong(row), cv.getLong(row),
+                                    "Column " + col + " Row " + row);
+                            break;
+                        case FLOAT32:
+                            assertEquals(expect.getFloat(row), cv.getFloat(row), 0.0001,
+                                    "Column " + col + " Row " + row);
+                            break;
+                        case FLOAT64:
+                            assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
+                                    "Column " + col + " Row " + row);
+                            break;
+                        default:
+                            throw new IllegalArgumentException(type + " is not supported yet");
                     }
                 }
             }
@@ -88,10 +87,9 @@ public class TableTest {
         int len = t.getNumberOfColumns();
         assertEquals(expectedTypes.length, len);
         for (int i = 0; i < len; i++) {
-            try (ColumnVector vec = t.getColumn(i)) {
-                DType type = vec.getType();
-                assertEquals(expectedTypes[i], type, "Types don't match at " + i);
-            }
+            ColumnVector vec = t.getColumn(i);
+            DType type = vec.getType();
+            assertEquals(expectedTypes[i], type, "Types don't match at " + i);
         }
     }
 
@@ -164,24 +162,6 @@ public class TableTest {
                         v2.close();
                     }
                 });
-            }
-        });
-    }
-
-    @Test
-    void testGetColumnIncreasesRefCount() {
-        assumeTrue(Cuda.isEnvCompatibleForTesting());
-        assertDoesNotThrow(() -> {
-            try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
-                 ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-                v1.ensureOnDevice();
-                v2.ensureOnDevice();
-                try (Table t = new Table(new ColumnVector[]{v1, v2})) {
-                    ColumnVector vector1 = t.getColumn(0);
-                    ColumnVector vector2 = t.getColumn(1);
-                    vector1.close();
-                    vector2.close();
-                }
             }
         });
     }

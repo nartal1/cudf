@@ -84,12 +84,12 @@ public final class Table implements AutoCloseable {
     }
 
     /**
-     * Return the {@link ColumnVector} at the specified index. The caller is responsible to close it once done to free
-     * resources
+     * Return the {@link ColumnVector} at the specified index. If you want to keep a reference to
+     * the column around past the life time of the table, you will need to increment the reference
+     * count on the column yourself.
      */
     public ColumnVector getColumn(int index) {
         assert index < columns.length;
-        columns[index].incRefCount();
         return columns[index];
     }
 
