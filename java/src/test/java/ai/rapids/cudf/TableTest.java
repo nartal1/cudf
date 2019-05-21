@@ -31,57 +31,64 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class TableTest {
     private static final File TEST_PARQUET_FILE = new File("src/test/resources/acq.parquet");
 
+    public static void assertColumnsAreEqual(ColumnVector expect, ColumnVector cv) {
+        assertColumnsAreEqual(expect, cv,"unnamed");
+    }
+
+    public static void assertColumnsAreEqual(ColumnVector expected, ColumnVector cv, String colName) {
+        assertEquals(expected.getType(), cv.getType(), "Column " + colName);
+        assertEquals(expected.getRowCount(), cv.getRowCount(), "Column " + colName);
+        assertEquals(expected.getNullCount(), cv.getNullCount(), "Column " + colName);
+        expected.ensureOnHost();
+        cv.ensureOnHost();
+        DType type = expected.getType();
+        for (long row = 0; row < expected.getRowCount(); row++) {
+            assertEquals(expected.isNull(row), cv.isNull(row), "NULL EQUALS Column " + colName + " Row " + row);
+            if (!expected.isNull(row)) {
+                switch(type) {
+                    case INT8:
+                        assertEquals(expected.getByte(row), cv.getByte(row),
+                                "Column " + colName + " Row " + row);
+                        break;
+                    case INT16:
+                        assertEquals(expected.getShort(row), cv.getShort(row),
+                                "Column " + colName + " Row " + row);
+                        break;
+                    case INT32: //fall through
+                    case DATE32:
+                        assertEquals(expected.getInt(row), cv.getInt(row),
+                                "Column " + colName + " Row " + row);
+                        break;
+                    case INT64: // fall through
+                    case DATE64: // fall through
+                    case TIMESTAMP:
+                        assertEquals(expected.getLong(row), cv.getLong(row),
+                                "Column " + colName + " Row " + row);
+                        break;
+                    case FLOAT32:
+                        assertEquals(expected.getFloat(row), cv.getFloat(row), 0.0001,
+                                "Column " + colName + " Row " + row);
+                        break;
+                    case FLOAT64:
+                        assertEquals(expected.getDouble(row), cv.getDouble(row), 0.0001,
+                                "Column " + colName + " Row " + row);
+                        break;
+                    default:
+                        throw new IllegalArgumentException(type + " is not supported yet");
+                }
+            }
+        }
+    }
+
     public static void assertTablesAreEqual(Table expected, Table table) {
         assertEquals(expected.getNumberOfColumns(), table.getNumberOfColumns());
         assertEquals(expected.getRowCount(), table.getRowCount());
         for (int col = 0; col < expected.getNumberOfColumns(); col++) {
             ColumnVector expect = expected.getColumn(col);
             ColumnVector cv = table.getColumn(col);
-            assertEquals(expect.getType(), cv.getType(), "Column " + col);
-            assertEquals(expect.getRowCount(), cv.getRowCount(), "Column " + col); // Yes this might be redundant
-            assertEquals(expect.getNullCount(), cv.getNullCount(), "Column " + col);
-            expect.ensureOnHost();
-            cv.ensureOnHost();
-            DType type = expect.getType();
-            for (long row = 0; row < expect.getRowCount(); row++) {
-                assertEquals(expect.isNull(row), cv.isNull(row), "Column " + col + " Row " + row);
-                if (!expect.isNull(row)) {
-                    switch(type) {
-                        case INT8:
-                            assertEquals(expect.getByte(row), cv.getByte(row),
-                                    "Column " + col + " Row " + row);
-                            break;
-                        case INT16:
-                            assertEquals(expect.getShort(row), cv.getShort(row),
-                                    "Column " + col + " Row " + row);
-                            break;
-                        case INT32: //fall through
-                        case DATE32:
-                            assertEquals(expect.getInt(row), cv.getInt(row),
-                                    "Column " + col + " Row " + row);
-                            break;
-                        case INT64: // fall through
-                        case DATE64: // fall through
-                        case TIMESTAMP:
-                            assertEquals(expect.getLong(row), cv.getLong(row),
-                                    "Column " + col + " Row " + row);
-                            break;
-                        case FLOAT32:
-                            assertEquals(expect.getFloat(row), cv.getFloat(row), 0.0001,
-                                    "Column " + col + " Row " + row);
-                            break;
-                        case FLOAT64:
-                            assertEquals(expect.getDouble(row), cv.getDouble(row), 0.0001,
-                                    "Column " + col + " Row " + row);
-                            break;
-                        default:
-                            throw new IllegalArgumentException(type + " is not supported yet");
-                    }
-                }
-            }
+            assertColumnsAreEqual(expect, cv, String.valueOf(col));
         }
     }
-
 
     public static void assertTableTypes(DType [] expectedTypes, Table t) {
         int len = t.getNumberOfColumns();

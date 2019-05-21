@@ -36,7 +36,7 @@ import java.util.stream.StreamSupport;
  * close to decrement the reference count when you are done with the column, and call inRefCount
  * to increment the reference count.
  */
-public final class ColumnVector implements AutoCloseable {
+public final class ColumnVector implements AutoCloseable, BinaryOperable {
     static {
         NativeDepsLoader.loadNativeDeps();
     }
@@ -182,6 +182,7 @@ public final class ColumnVector implements AutoCloseable {
     /**
      * Returns the type of this vector.
      */
+    @Override
     public DType getType() {
         return type;
     }
@@ -489,30 +490,229 @@ public final class ColumnVector implements AutoCloseable {
     /////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Add two vectors.
-     * Preconditions - vectors have to be the same size and same type. FLOAT32, FLOAT64, INT32 or INT64.
-     * NULLs are not currently supported.
-     *
-     * Postconditions - A new vector is allocated with the result. The caller owns the vector and
-     *                  is responsible for its lifecycle.
-     * Example:
-     *          try (ColumnVector v1 = ColumnVector.fromFloats(1.2f, 5.1f, ...);
-     *               ColumnVector v2 = ColumnVector.fromFloats(5.1f, 13.1f, ...);
-     *               ColumnVector v3 = v1.add(v2);
-     *            ...
-     *          }
-     *
-     * @param v1 - vector to be added to this vector.
-     * @return - A new vector allocated on the GPU of the same type as the input types.
+     * Multiple different unary operations.
+     * @param op the operation to perform
+     * @param outType the type of output you want.
+     * @return the result
      */
-    public ColumnVector add(ColumnVector v1) {
-        assert type == v1.getType();
-        assert type == DType.FLOAT32 || type == DType.FLOAT64 || type == DType.INT32 || type == DType.INT64;
-        assert v1.getRowCount() == getRowCount(); // cudf will check this too.
-        assert v1.getNullCount() == 0; // cudf add does not currently update nulls at all
-        assert getNullCount() == 0;
+    public ColumnVector unaryOp(UnaryOp op, DType outType) {
+        return new ColumnVector(Cudf.gdfUnaryMath(this, op, outType));
+    }
 
-        return new ColumnVector(Cudf.gdfAddGeneric(this, v1));
+    /**
+     * Calculate the sin.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector sin(DType outType) {
+        return unaryOp(UnaryOp.SIN, outType);
+    }
+
+    /**
+     * Calculate the sin, output defaults to same type.
+     */
+    public ColumnVector sin() {
+        return sin(type);
+    }
+
+    /**
+     * Calculate the cos.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector cos(DType outType) {
+        return unaryOp(UnaryOp.COS, outType);
+    }
+
+    /**
+     * Calculate the cos, output defaults to same type.
+     */
+    public ColumnVector cos() {
+        return cos(type);
+    }
+
+    /**
+     * Calculate the tan.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector tan(DType outType) {
+        return unaryOp(UnaryOp.TAN, outType);
+    }
+
+    /**
+     * Calculate the tan, output defaults to same type.
+     */
+    public ColumnVector tan() {
+        return tan(type);
+    }
+
+    /**
+     * Calculate the arcsin.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector arcsin(DType outType) {
+        return unaryOp(UnaryOp.ARCSIN, outType);
+    }
+
+    /**
+     * Calculate the arcsin, output defaults to same type.
+     */
+    public ColumnVector arcsin() {
+        return arcsin(type);
+    }
+
+    /**
+     * Calculate the arccos.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector arccos(DType outType) {
+        return unaryOp(UnaryOp.ARCCOS, outType);
+    }
+
+    /**
+     * Calculate the arccos, output defaults to same type.
+     */
+    public ColumnVector arccos() {
+        return arccos(type);
+    }
+
+    /**
+     * Calculate the arctan.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector arctan(DType outType) {
+        return unaryOp(UnaryOp.ARCTAN, outType);
+    }
+
+    /**
+     * Calculate the arctan, output defaults to same type.
+     */
+    public ColumnVector arctan() {
+        return arctan(type);
+    }
+
+    /**
+     * Calculate the exp.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector exp(DType outType) {
+        return unaryOp(UnaryOp.EXP, outType);
+    }
+
+    /**
+     * Calculate the exp, output defaults to same type.
+     */
+    public ColumnVector exp() {
+        return exp(type);
+    }
+
+    /**
+     * Calculate the log.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector log(DType outType) {
+        return unaryOp(UnaryOp.LOG, outType);
+    }
+
+    /**
+     * Calculate the log, output defaults to same type.
+     */
+    public ColumnVector log() {
+        return log(type);
+    }
+
+    /**
+     * Calculate the sqrt.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector sqrt(DType outType) {
+        return unaryOp(UnaryOp.SQRT, outType);
+    }
+
+    /**
+     * Calculate the sqrt, output defaults to same type.
+     */
+    public ColumnVector sqrt() {
+        return sqrt(type);
+    }
+
+    /**
+     * Calculate the ceil.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector ceil(DType outType) {
+        return unaryOp(UnaryOp.CEIL, outType);
+    }
+
+    /**
+     * Calculate the ceil, output defaults to same type.
+     */
+    public ColumnVector ceil() {
+        return ceil(type);
+    }
+
+    /**
+     * Calculate the floor.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector floor(DType outType) {
+        return unaryOp(UnaryOp.FLOOR, outType);
+    }
+
+    /**
+     * Calculate the floor, output defaults to same type.
+     */
+    public ColumnVector floor() {
+        return floor(type);
+    }
+
+    /**
+     * Calculate the abs.
+     * @param outType the type of output you want.
+     */
+    public ColumnVector abs(DType outType) {
+        return unaryOp(UnaryOp.ABS, outType);
+    }
+
+    /**
+     * Calculate the abs, output defaults to same type.
+     */
+    public ColumnVector abs() {
+        return abs(type);
+    }
+
+    /**
+     * Invert the bits
+     * @param outType the type of output you want.
+     */
+    public ColumnVector bitInvert(DType outType) {
+        return unaryOp(UnaryOp.BIT_INVERT, outType);
+    }
+
+    /**
+     * invert the bits, output defaults to same type.
+     */
+    public ColumnVector bitInvert() {
+        return bitInvert(type);
+    }
+
+    /**
+     * Multiple different binary operations.
+     * @param op the operation to perform
+     * @param rhs the rhs of the operation
+     * @param outType the type of output you want.
+     * @return the result
+     */
+    @Override
+    public ColumnVector binaryOp(BinaryOp op, BinaryOperable rhs, DType outType) {
+        if (rhs instanceof ColumnVector) {
+            ColumnVector cvRhs = (ColumnVector) rhs;
+            assert rows == cvRhs.getRowCount();
+            return new ColumnVector(Cudf.gdfBinaryOp(this, cvRhs, op, outType));
+        } else if (rhs instanceof Scalar) {
+            Scalar sRhs = (Scalar)rhs;
+            return new ColumnVector(Cudf.gdfBinaryOp(this, sRhs, op, outType));
+        } else {
+            throw new IllegalArgumentException(rhs.getClass() + " is not supported as a binary op with ColumnVector");
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -830,6 +1030,16 @@ public final class ColumnVector implements AutoCloseable {
      * but is much slower than using a regular array and should really only be used
      * for tests.
      */
+    public static ColumnVector fromBoxedBooleans(Boolean ... values) {
+        // TODO one BOOL8 is supported switch to that...
+        return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector from the given values.  This API supports inline nulls,
+     * but is much slower than using a regular array and should really only be used
+     * for tests.
+     */
     public static ColumnVector fromBoxedBytes(Byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
     }
@@ -1074,6 +1284,23 @@ public final class ColumnVector implements AutoCloseable {
                     appendNull();
                 } else {
                     append(b);
+                }
+            }
+            return this;
+        }
+
+        /**
+         * Append multiple values.  This is very slow and should really only be used for tests.
+         * @param values the values to append, including nulls.
+         * @return  this for chaining.
+         * @throws  {@link IndexOutOfBoundsException}
+         */
+        public final Builder appendBoxed(Boolean ... values) throws IndexOutOfBoundsException {
+            for (Boolean b: values) {
+                if (b == null) {
+                    appendNull();
+                } else {
+                    append(b ? (byte)1 : (byte)0);
                 }
             }
             return this;
