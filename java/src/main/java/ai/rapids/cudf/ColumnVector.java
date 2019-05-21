@@ -817,11 +817,11 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
 
     /**
-     * Cast to TimeStamp - ColumnVector
+     * Cast to Timestamp - ColumnVector
      * This method takes the value provided by the ColumnVector and casts to timestamp
      * @return A new vector allocated on the GPU
      */
-    public ColumnVector asTimeStamp(TimeUnit unit){
+    public ColumnVector asTimestamp(TimeUnit unit){
         return castTo(DType.TIMESTAMP, unit);
     }
 
