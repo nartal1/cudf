@@ -94,8 +94,8 @@ public class FloatColumnVectorTest {
                 ColumnVector floatColumnVector2 = shortColumnVector.asFloats()){
                 floatColumnVector1.ensureOnHost();
                 floatColumnVector2.ensureOnHost();
-                assertEquals( 4.3, floatColumnVector1.getFloat(0), 0.1);
-                assertEquals( 3.8, floatColumnVector1.getFloat(1), 0.1);
+                assertEquals( 4.3, floatColumnVector1.getFloat(0), 0.001);
+                assertEquals( 3.8, floatColumnVector1.getFloat(1), 0.001);
                 assertEquals(8, floatColumnVector1.getFloat(2));
                 assertEquals( 100, floatColumnVector2.getFloat(0));
             }
