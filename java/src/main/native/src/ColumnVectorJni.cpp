@@ -90,4 +90,25 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewAugmented
                 gdf_column_view_augmented(column, data, valid, size, cDtype, null_count, info));
 }
 
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_concatenate
+        (JNIEnv *env, jclass clazz, jlongArray columnHandles) {
+    JNI_NULL_CHECK(env, columnHandles, "input columns are null", 0);
+    try {
+      cudf::jni::native_jpointerArray<gdf_column> columns(env, columnHandles);
+      size_t total_size = 0;
+      bool need_validity = false;
+      for (int i = 0; i < columns.size(); ++i) {
+        total_size += columns[i]->size;
+        // Should be checking for null_count != 0 but libcudf is checking valid != nullptr
+        need_validity |= columns[i]->valid != nullptr;
+      }
+      if (total_size != static_cast<gdf_size_type>(total_size)) {
+        cudf::jni::throwJavaException(env, "java/lang/IllegalArgumentException",
+            "resulting column is too large");
+      }
+      cudf::jni::gdf_column_wrapper outcol(total_size, columns[0]->dtype, need_validity);
+      JNI_GDF_TRY(env, 0, gdf_column_concat(outcol.get(), columns.data(), columns.size()));
+      return reinterpret_cast<jlong>(outcol.release());
+    } CATCH_STD(env, 0);
+  }
 }

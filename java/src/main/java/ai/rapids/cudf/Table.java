@@ -162,6 +162,7 @@ public final class Table implements AutoCloseable {
     private static native long[] gdfInnerJoin(long leftTable, int[] leftJoinCols, long rightTable,
                                               int[] rightJoinCols) throws CudfException;
 
+    private static native long[] concatenate(long[] cudfTablePointers) throws CudfException;
 
     /////////////////////////////////////////////////////////////////////////////
     // TABLE CREATION APIs
@@ -249,6 +250,24 @@ public final class Table implements AutoCloseable {
     static Table readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
         return new Table(gdfReadParquet(opts.getIncludeColumnNames(),
                 null, buffer.getAddress(), len));
+    }
+
+    /**
+     * Concatenate multiple tables together to form a single table.
+     * The schema of each table (i.e.: number of columns and types of each column) must be equal
+     * across all tables and will determine the schema of the resulting table.
+     */
+    public static Table concatenate(Table... tables) {
+        if (tables.length < 2) {
+            throw new IllegalArgumentException("concatenate requires 2 or more tables");
+        }
+        int numColumns = tables[0].getNumberOfColumns();
+        long[] tableHandles = new long[tables.length];
+        for (int i = 0; i < tables.length; ++i) {
+            tableHandles[i] = tables[i].nativeHandle;
+            assert tables[i].getNumberOfColumns() == numColumns : "all tables must have the same schema";
+        }
+        return new Table(concatenate(tableHandles));
     }
 
     /////////////////////////////////////////////////////////////////////////////
