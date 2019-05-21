@@ -24,6 +24,7 @@
 #include <utility>
 
 namespace cudf {
+namespace jni {
 
   /**
    * @brief indicates that a JNI error of some kind was thrown and the main function should return.
@@ -897,9 +898,9 @@ namespace cudf {
       {
         jthrowable cudaE = NULL;
         if (RMM_ERROR_CUDA_ERROR == rmmStatus) {
-          cudaE = cudf::cudaException(env, cudaGetLastError());
+          cudaE = cudaException(env, cudaGetLastError());
         }
-        jthrowable jt = cudf::rmmException(env, rmmStatus, cudaE);
+        jthrowable jt = rmmException(env, rmmStatus, cudaE);
         if (jt != NULL) {
           jthrowable orig = env->ExceptionOccurred();
           if (orig != NULL) {
@@ -933,9 +934,9 @@ namespace cudf {
     { 
       jthrowable cudaE = NULL; 
       if (RMM_ERROR_CUDA_ERROR == rmmStatus) {
-        cudaE = cudf::cudaException(env, cudaGetLastError());
+        cudaE = cudaException(env, cudaGetLastError());
       }
-      jthrowable jt = cudf::rmmException(env, rmmStatus, cudaE);
+      jthrowable jt = rmmException(env, rmmStatus, cudaE);
       if (jt != NULL) {
         env->Throw(jt);
         throw jni_exception("RMM Error...");
@@ -948,7 +949,7 @@ namespace cudf {
     if (cudaSuccess != cudaStatus ) {
       // Clear the last error so it does not propagate.
       cudaGetLastError();
-      jthrowable jt = cudf::cudaException(env, cudaStatus);
+      jthrowable jt = cudaException(env, cudaStatus);
       if (jt != NULL) {
         env->Throw(jt);
         throw jni_exception("CUDA ERROR");
@@ -960,16 +961,17 @@ namespace cudf {
     if (GDF_SUCCESS != gdfStatus) {
       jthrowable cudaE = NULL;
       if (GDF_CUDA_ERROR == gdfStatus) {
-        cudaE = cudf::cudaException(env, cudaGetLastError());
+        cudaE = cudaException(env, cudaGetLastError());
       }
-      jthrowable jt = cudf::cudfException(env, gdfStatus, cudaE);
+      jthrowable jt = cudfException(env, gdfStatus, cudaE);
       if (jt != NULL) {
         env->Throw(jt);
         throw jni_exception("CUDF ERROR");
       }
     }
   }
-}
+} // namespace jni
+} // namespace cudf
 
 #define JNI_THROW_NEW(env, clazz_name, message, ret_val) \
 {\
@@ -988,7 +990,7 @@ namespace cudf {
   { \
     /* Clear the last error so it does not propagate.*/ \
     cudaGetLastError(); \
-    jthrowable jt = cudf::cudaException(env, internal_cudaStatus); \
+    jthrowable jt = cudf::jni::cudaException(env, internal_cudaStatus); \
     if (jt != NULL) { \
       env->Throw(jt); \
     } \
@@ -1003,9 +1005,9 @@ namespace cudf {
   { \
     jthrowable cudaE = NULL; \
     if (RMM_ERROR_CUDA_ERROR == internal_rmmStatus) { \
-        cudaE = cudf::cudaException(env, cudaGetLastError()); \
+        cudaE = cudf::jni::cudaException(env, cudaGetLastError()); \
     } \
-    jthrowable jt = cudf::rmmException(env, internal_rmmStatus, cudaE); \
+    jthrowable jt = cudf::jni::rmmException(env, internal_rmmStatus, cudaE); \
     if (jt != NULL) { \
       env->Throw(jt); \
     } \
@@ -1020,9 +1022,9 @@ namespace cudf {
   { \
     jthrowable cudaE = NULL; \
     if (GDF_CUDA_ERROR == internal_gdfStatus) { \
-        cudaE = cudf::cudaException(env, cudaGetLastError()); \
+        cudaE = cudf::jni::cudaException(env, cudaGetLastError()); \
     } \
-    jthrowable jt = cudf::cudfException(env, internal_gdfStatus, cudaE); \
+    jthrowable jt = cudf::jni::cudfException(env, internal_gdfStatus, cudaE); \
     if (jt != NULL) { \
       env->Throw(jt); \
     } \
@@ -1047,7 +1049,7 @@ namespace cudf {
 #define CATCH_STD(env, ret_val) \
     catch (const std::bad_alloc& e) { \
         JNI_THROW_NEW(env, "java/lang/OutOfMemoryError", "Could not allocate native memory", ret_val); \
-    } catch (const cudf::jni_exception& e) { \
+    } catch (const cudf::jni::jni_exception& e) { \
         /* indicates that a java exception happened, just return so java can throw it. */ \
         return ret_val; \
     } catch (const cudf::cuda_error& e) { \
