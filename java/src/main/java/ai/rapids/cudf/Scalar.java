@@ -83,6 +83,10 @@ public final class Scalar implements BinaryOperable {
         timeUnit = unit;
     }
 
+    public static Scalar fromBool(boolean value) {
+        return new Scalar(value ? 1 : 0, DType.BOOL8, TimeUnit.NONE);
+    }
+
     public static Scalar fromByte(byte value) {
         return new Scalar(value, DType.INT8, TimeUnit.NONE);
     }

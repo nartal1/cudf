@@ -137,11 +137,14 @@ public final class Table implements AutoCloseable {
      * @param quote character quote (must be ASCII).
      * @param comment character that starts a comment line (must be ASCII) use '\0'
      * @param nullValues values that should be treated as nulls
+     * @param trueValues values that should be treated as boolean true
+     * @param falseValues values that should be treated as boolean false
      */
     private static native long[] gdfReadCSV(String[] columnNames, String[] dTypes, String[] filterColumnNames,
                                             String filePath, long address, long length,
                                             int headerRow, byte delim, byte quote,
-                                            byte comment, String[] nullValues) throws CudfException;
+                                            byte comment, String[] nullValues,
+                                            String[] trueValues, String[] falseValues) throws CudfException;
 
     /**
      * Read in Parquet formatted data.
@@ -181,7 +184,9 @@ public final class Table implements AutoCloseable {
                         opts.getDelim(),
                         opts.getQuote(),
                         opts.getComment(),
-                        opts.getNullValues()));
+                        opts.getNullValues(),
+                        opts.getTrueValues(),
+                        opts.getFalseValues()));
     }
 
     public static Table readCSV(Schema schema, byte[] buffer) {
@@ -215,7 +220,9 @@ public final class Table implements AutoCloseable {
                 opts.getDelim(),
                 opts.getQuote(),
                 opts.getComment(),
-                opts.getNullValues()));
+                opts.getNullValues(),
+                opts.getTrueValues(),
+                opts.getFalseValues()));
     }
 
     public static Table readParquet(File path) {
@@ -382,6 +389,13 @@ public final class Table implements AutoCloseable {
         private final List<TimeUnit> units = new ArrayList<>();
         private final List<Object> typeErasedData = new ArrayList<>();
 
+        public TestBuilder column(Boolean... values) {
+            types.add(DType.BOOL8);
+            units.add(TimeUnit.NONE);
+            typeErasedData.add(values);
+            return this;
+        }
+
         public TestBuilder column(Byte... values) {
             types.add(DType.INT8);
             units.add(TimeUnit.NONE);
@@ -455,6 +469,9 @@ public final class Table implements AutoCloseable {
         private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
             ColumnVector ret;
             switch(type) {
+                case BOOL8:
+                    ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
+                    break;
                 case INT8:
                     ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
                     break;

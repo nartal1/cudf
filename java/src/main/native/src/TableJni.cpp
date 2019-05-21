@@ -26,7 +26,7 @@ namespace jni {
 /**
  * Copy contents of a jbooleanArray into an array of int8_t pointers
  */
-jni_rmm_unique_ptr<int8_t> copy_to_device(JNIEnv * env, const native_jbooleanArray &nArr) {
+static jni_rmm_unique_ptr<int8_t> copy_to_device(JNIEnv * env, const native_jbooleanArray &nArr) {
   jsize len = nArr.size();
   size_t byteLen = len * sizeof(int8_t);
   const jboolean *tmp = nArr.data();
@@ -167,7 +167,9 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(JNIEnv* env,
        jbyte delim,
        jbyte quote,
        jbyte comment,
-       jobjectArray nullValues) {
+       jobjectArray nullValues,
+       jobjectArray trueValues,
+       jobjectArray falseValues) {
     JNI_NULL_CHECK(env, nullValues, "nullValues must be supplied, even if it is empty", NULL);
 
     bool read_buffer = true;
@@ -207,12 +209,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(JNIEnv* env,
       }
 
       cudf::jni::native_jstringArray nNullValues(env, nullValues);
-      int num_null_values = nNullValues.size();
-      char const** c_null_values = NULL;
-      if (num_null_values > 0) {
-        c_null_values = nNullValues.as_c_array();
-      } 
-
+      cudf::jni::native_jstringArray nTrueValues(env, trueValues);
+      cudf::jni::native_jstringArray nFalseValues(env, falseValues);
       cudf::jni::native_jstringArray nFilterColNames(env, filterColNames);
 
       csv_read_arg read_arg{};
@@ -255,17 +253,15 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(JNIEnv* env,
       read_arg.skipfooter = 0;
       read_arg.skip_blank_lines = true;
 
-      char const* trueVals[2] = {"True", "TRUE"};
-      char const* falseVals[2] = {"False", "FALSE"};
-      read_arg.true_values = trueVals;
-      read_arg.num_true_values = 2;
-      read_arg.false_values = falseVals;
-      read_arg.num_false_values = 2;
+      read_arg.true_values = nTrueValues.as_c_array();
+      read_arg.num_true_values = nTrueValues.size();
+      read_arg.false_values = nFalseValues.as_c_array();
+      read_arg.num_false_values = nFalseValues.size();
 
-      read_arg.num_na_values = num_null_values;
-      read_arg.na_values = c_null_values;
+      read_arg.num_na_values = nNullValues.size();
+      read_arg.na_values = nNullValues.as_c_array();
       read_arg.keep_default_na = false;  ///< Keep the default NA values
-      read_arg.na_filter = num_null_values > 0;
+      read_arg.na_filter = read_arg.num_na_values > 0;
 
       read_arg.prefix = NULL;
       read_arg.mangle_dupe_cols = true;
