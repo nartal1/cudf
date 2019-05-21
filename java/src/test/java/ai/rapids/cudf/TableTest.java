@@ -461,7 +461,7 @@ public class TableTest {
                      .column( 93, 186, 193, 257,  84,  22, 184, 231,  80,  12)
                      .build()) {
             assertTablesAreEqual(expected, orderedJoinedTable);
-	}
+        }
     }
 
     @Test
@@ -485,10 +485,9 @@ public class TableTest {
         }
     }
 
-
     @Test
     void testInnerJoinWithOnlyCommonKeys() {
-	try (Table leftTable = new Table.TestBuilder()
+        try (Table leftTable = new Table.TestBuilder()
                      .column(360, 326, 254, 306, 109, 361, 251, 335, 301, 317)
                      .column(323, 172,  11, 243,  57, 143, 305,  95, 147,  58)
                      .build();
@@ -505,5 +504,43 @@ public class TableTest {
                      .build()) {
             assertTablesAreEqual(expected, orderedJoinedTable);
         }
-    }    
+    }
+
+    @Test
+    void testConcatNoNulls() {
+        try (Table t1 = new Table.TestBuilder()
+                 .column(   1,    2,    3)
+                 .column(11.0, 12.0, 13.0).build();
+             Table t2 = new Table.TestBuilder()
+                 .column(   4,    5)
+                 .column(14.0, 15.0).build();
+             Table t3 = new Table.TestBuilder()
+                 .column(   6,    7,    8,    9)
+                 .column(16.0, 17.0, 18.0, 19.0).build();
+             Table concat = Table.concatenate(t1, t2, t3);
+             Table expected = new Table.TestBuilder()
+                 .column(   1,    2,    3,    4,    5,    6,    7,    8,    9)
+                 .column(11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0).build()) {
+            assertTablesAreEqual(expected, concat);
+        }
+    }
+
+    @Test
+    void testConcatWithNulls() {
+        try (Table t1 = new Table.TestBuilder()
+            .column(   1, null,    3)
+            .column(11.0, 12.0, 13.0).build();
+             Table t2 = new Table.TestBuilder()
+                 .column(   4, null)
+                 .column(14.0, 15.0).build();
+             Table t3 = new Table.TestBuilder()
+                 .column(   6,    7,    8,    9)
+                 .column(null, null, 18.0, 19.0).build();
+             Table concat = Table.concatenate(t1, t2, t3);
+             Table expected = new Table.TestBuilder()
+                 .column(   1, null,    3,    4, null,    6,    7,    8,    9)
+                 .column(11.0, 12.0, 13.0, 14.0, 15.0, null, null, 18.0, 19.0).build()) {
+            assertTablesAreEqual(expected, concat);
+        }
+    }
 }

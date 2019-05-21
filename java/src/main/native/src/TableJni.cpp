@@ -436,4 +436,58 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(
   }
   CATCH_STD(env, NULL);
 }
-};
+
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_concatenate(JNIEnv *env,
+    jclass clazz, jlongArray tableHandles) {
+  JNI_NULL_CHECK(env, tableHandles, "input tables are null", NULL);
+  try {
+    cudf::jni::native_jpointerArray<cudf::table> tables(env, tableHandles);
+
+    // calculate output table size and whether each column needs a validity vector
+    int num_columns = tables[0]->num_columns();
+    std::vector<bool> need_validity(num_columns);
+    size_t total_size = 0;
+    for (int table_idx = 0; table_idx < tables.size(); ++table_idx) {
+      total_size += tables[table_idx]->num_rows();
+      for (int col_idx = 0; col_idx < num_columns; ++col_idx) {
+        gdf_column const* col = tables[table_idx]->get_column(col_idx);
+        // Should be checking for null_count != 0 but libcudf is checking valid != nullptr
+        if (col->valid != nullptr) {
+          need_validity[col_idx] = true;
+        }
+      }
+    }
+
+    // check for overflow
+    if (total_size != static_cast<gdf_size_type>(total_size)) {
+      cudf::jni::throwJavaException(env, "java/lang/IllegalArgumentException",
+          "resulting column is too large");
+    }
+
+    std::vector<cudf::jni::gdf_column_wrapper> outcols;
+    outcols.reserve(num_columns);
+    std::vector<gdf_column*> outcol_ptrs(num_columns);
+    std::vector<gdf_column*> concat_input_ptrs(tables.size());
+    for (int col_idx = 0; col_idx < num_columns; ++col_idx) {
+      outcols.emplace_back(total_size, tables[0]->get_column(col_idx)->dtype,
+          need_validity[col_idx]);
+      outcol_ptrs[col_idx] = outcols[col_idx].get();
+      for (int table_idx = 0; table_idx < tables.size(); ++table_idx) {
+        concat_input_ptrs[table_idx] = tables[table_idx]->get_column(col_idx);
+      }
+      JNI_GDF_TRY(env, NULL, gdf_column_concat(outcol_ptrs[col_idx],
+          concat_input_ptrs.data(), tables.size()));
+    }
+
+    cudf::jni::native_jlongArray outcol_handles(env,
+        reinterpret_cast<jlong*>(outcol_ptrs.data()), num_columns);
+    jlongArray result = outcol_handles.get_jlongArray();
+    for (int i = 0; i < num_columns; ++i) {
+      outcols[i].release();
+    }
+
+    return result;
+  } CATCH_STD(env, NULL);
+}
+
+}  // extern "C"

@@ -785,6 +785,8 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     private static native int getNullCount(long cudfColumnHandle) throws CudfException;
 
+    private static native long concatenate(long[] columnHandles) throws CudfException;
+
     /////////////////////////////////////////////////////////////////////////////
     // HELPER CLASSES
     /////////////////////////////////////////////////////////////////////////////
@@ -1123,6 +1125,21 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      */
     public static ColumnVector timestampsFromBoxedLongs(TimeUnit tsTimeUnit, Long ... values) {
         return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendBoxed(values));
+    }
+
+    /**
+     * Create a new vector by concatenating multiple columns together.
+     * Note that all columns must have the same type.
+     */
+    public static ColumnVector concatenate(ColumnVector ... columns) {
+        if (columns.length < 2) {
+            throw new IllegalArgumentException("Concatenate requires 2 or more columns");
+        }
+        long[] columnHandles = new long[columns.length];
+        for (int i = 0; i < columns.length; ++i) {
+            columnHandles[i] = columns[i].getNativeCudfColumnAddress();
+        }
+        return new ColumnVector(concatenate(columnHandles));
     }
 
     /**
