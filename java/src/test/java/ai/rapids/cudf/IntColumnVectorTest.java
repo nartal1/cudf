@@ -152,27 +152,4 @@ public class IntColumnVectorTest {
             Mockito.verify(mockValidBuffer).doClose();
         }
     }
-
-    @Test
-    public void testAdd() {
-        assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector intColumnVector1 = ColumnVector.build(DType.INT32, 4, Range.appendInts(1, 5));
-             ColumnVector intColumnVector2 = ColumnVector.build(DType.INT32, 4, Range.appendInts(10, 50, 10))) {
-
-            intColumnVector1.ensureOnDevice();
-            intColumnVector2.ensureOnDevice();
-
-            try (ColumnVector intColumnVector3 = intColumnVector1.add(intColumnVector2)) {
-                intColumnVector3.ensureOnHost();
-                assertEquals(4, intColumnVector3.getRowCount());
-                assertEquals(0, intColumnVector3.getNullCount());
-                for (int i = 0; i < 4; i++) {
-                    long v1 = intColumnVector1.getInt(i);
-                    long v2 = intColumnVector2.getInt(i);
-                    long v3 = intColumnVector3.getInt(i);
-                    assertEquals(v1 + v2, v3);
-                }
-            }
-        }
-    }
 }

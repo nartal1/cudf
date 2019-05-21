@@ -154,27 +154,4 @@ public class FloatColumnVectorTest {
             Mockito.verify(mockValidBuffer).doClose();
         }
     }
-
-    @Test
-    public void testAdd() {
-        assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector floatColumnVector1 = ColumnVector.build(DType.FLOAT32, 5, Range.appendFloats(1.1f, 5.5f));
-             ColumnVector floatColumnVector2 = ColumnVector.build(DType.FLOAT32, 5, Range.appendFloats(10,  60, 10))) {
-
-            floatColumnVector1.ensureOnDevice();
-            floatColumnVector2.ensureOnDevice();
-
-            try (ColumnVector floatColumnVector3 = floatColumnVector1.add(floatColumnVector2)) {
-                floatColumnVector3.ensureOnHost();
-                assertEquals(5, floatColumnVector3.getRowCount());
-                assertEquals(0, floatColumnVector3.getNullCount());
-                for (int i = 0; i < 5; i++) {
-                    float v1 = floatColumnVector1.getFloat(i);
-                    float v2 = floatColumnVector2.getFloat(i);
-                    float v3 = floatColumnVector3.getFloat(i);
-                    assertEquals(v1 + v2, v3,0.001);
-                }
-            }
-        }
-    }
 }

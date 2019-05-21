@@ -25,11 +25,37 @@ class Cudf {
 
     /* arith */
 
-    static long gdfAddGeneric(ColumnVector lhs, ColumnVector rhs) {
-        return gdfAddGeneric(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress());
+    static long gdfUnaryMath(ColumnVector input, UnaryOp op, DType outputType) {
+        return gdfUnaryMath(input.getNativeCudfColumnAddress(), op.nativeId, outputType.nativeId);
     }
 
-    private static native long gdfAddGeneric(long lhs, long rhs) throws CudfException;
+    private static native long gdfUnaryMath(long input, int op, int dtype);
+
+    static long gdfBinaryOp(ColumnVector lhs, ColumnVector rhs, BinaryOp op, DType outputType) {
+        return gdfBinaryOpVV(lhs.getNativeCudfColumnAddress(), rhs.getNativeCudfColumnAddress(),
+                op.nativeId, outputType.nativeId);
+    }
+
+    private static native long gdfBinaryOpVV(long lhs, long rhs, int op, int dtype);
+
+    static long gdfBinaryOp(Scalar lhs, ColumnVector rhs, BinaryOp op, DType outputType) {
+        return gdfBinaryOpSV(lhs.intTypeStorage, lhs.floatTypeStorage, lhs.doubleTypeStorage, lhs.isValid, lhs.type.nativeId,
+                rhs.getNativeCudfColumnAddress(), op.nativeId, outputType.nativeId);
+    }
+
+    private static native long gdfBinaryOpSV(long lhsIntValues, float lhsFValue, double lhsDValue, boolean lhsIsValid, int lhsDtype,
+                                             long rhs,
+                                             int op, int dtype);
+
+    static long gdfBinaryOp(ColumnVector lhs, Scalar rhs, BinaryOp op, DType outputType) {
+        return gdfBinaryOpVS(lhs.getNativeCudfColumnAddress(),
+                rhs.intTypeStorage, rhs.floatTypeStorage, rhs.doubleTypeStorage, rhs.isValid, rhs.type.nativeId,
+                op.nativeId, outputType.nativeId);
+    }
+
+    private static native long gdfBinaryOpVS(long lhs,
+                                             long rhsIntValues, float rhsFValue, double rhsDValue, boolean rhsIsValid, int rhsDtype,
+                                             int op, int dtype);
 
     /* datetime extract*/
 
