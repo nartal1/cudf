@@ -24,6 +24,10 @@ public enum DType {
     FLOAT32(4, 5, "float32"),
     FLOAT64(8, 6, "float64"),
     /**
+     * Byte wise true non-0/false 0.  In general true will be 1.
+     */
+    BOOL8(1, 7, "bool"),
+    /**
      * Days since the UNIX epoch
      */
     DATE32(4, 8, "date32"),

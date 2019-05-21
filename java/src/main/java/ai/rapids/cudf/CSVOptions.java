@@ -33,6 +33,8 @@ public class CSVOptions extends ColumnFilterOptions {
     private final byte quote;
     private final byte comment;
     private final String[] nullValues;
+    private final String[] trueValues;
+    private final String[] falseValues;
 
     private CSVOptions(Builder builder) {
         super(builder);
@@ -42,10 +44,22 @@ public class CSVOptions extends ColumnFilterOptions {
         comment = builder.comment;
         nullValues = builder.nullValues.toArray(
                 new String[builder.nullValues.size()]);
+        trueValues = builder.trueValues.toArray(
+                new String[builder.trueValues.size()]);
+        falseValues = builder.falseValues.toArray(
+                new String[builder.falseValues.size()]);
     }
 
     String[] getNullValues() {
         return nullValues;
+    }
+
+    String[] getTrueValues() {
+        return trueValues;
+    }
+
+    String[] getFalseValues() {
+        return falseValues;
     }
 
     int getHeaderRow() {
@@ -76,6 +90,9 @@ public class CSVOptions extends ColumnFilterOptions {
         private byte delim = ',';
         private byte quote = '"';
         private final Set<String> nullValues = new HashSet<>();
+        private final Set<String> trueValues = new HashSet<>();
+        private final Set<String> falseValues = new HashSet<>();
+
 
         /**
          * Row of the header data (0 based counting).  Negative is no header.
@@ -141,6 +158,20 @@ public class CSVOptions extends ColumnFilterOptions {
         public Builder withNullValue(String ... nvs) {
             for (String nv : nvs) {
                 nullValues.add(nv);
+            }
+            return this;
+        }
+
+        public Builder withTrueValue(String ... tvs) {
+            for (String tv : tvs) {
+                trueValues.add(tv);
+            }
+            return this;
+        }
+
+        public Builder withFalseValue(String ... fvs) {
+            for (String fv : fvs) {
+                falseValues.add(fv);
             }
             return this;
         }

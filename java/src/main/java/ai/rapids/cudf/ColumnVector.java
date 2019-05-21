@@ -352,7 +352,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      * Get the value at index.
      */
     public byte getByte(long index) {
-        assert type == DType.INT8;
+        assert type == DType.INT8 || type == DType.BOOL8;
         assertsForGet(index);
         return offHeap.hostData.data.getByte(index * type.sizeInBytes);
     }
@@ -958,6 +958,13 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     /**
      * Create a new vector from the given values.
      */
+    public static ColumnVector boolFromBytes(byte ... values) {
+        return build(DType.BOOL8, values.length, (b) -> b.appendArray(values));
+    }
+
+    /**
+     * Create a new vector from the given values.
+     */
     public static ColumnVector fromBytes(byte ... values) {
         return build(DType.INT8, values.length, (b) -> b.appendArray(values));
     }
@@ -1031,8 +1038,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      * for tests.
      */
     public static ColumnVector fromBoxedBooleans(Boolean ... values) {
-        // TODO one BOOL8 is supported switch to that...
-        return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+        return build(DType.BOOL8, values.length, (b) -> b.appendBoxed(values));
     }
 
     /**
@@ -1169,7 +1175,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
         }
 
         public final Builder append(byte value) {
-            assert type == DType.INT8;
+            assert type == DType.INT8 || type == DType.BOOL8;
             assert currentIndex < rows;
             data.setByte(currentIndex *  type.sizeInBytes, value);
             currentIndex++;
@@ -1178,7 +1184,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
         public final Builder append(byte value, long count) {
             assert (count + currentIndex) <= rows;
-            assert type == DType.INT8;
+            assert type == DType.INT8 || type == DType.BOOL8;
             data.setMemory(currentIndex * type.sizeInBytes, count, value);
             currentIndex += count;
             return this;
@@ -1226,7 +1232,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
         public final Builder appendArray(byte ... values) {
             assert (values.length + currentIndex) <= rows;
-            assert type == DType.INT8;
+            assert type == DType.INT8 || type == DType.BOOL8;
             data.setBytes(currentIndex * type.sizeInBytes, values, 0, values.length);
             currentIndex += values.length;
             return this;

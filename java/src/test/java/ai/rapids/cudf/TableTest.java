@@ -46,6 +46,7 @@ public class TableTest {
             assertEquals(expected.isNull(row), cv.isNull(row), "NULL EQUALS Column " + colName + " Row " + row);
             if (!expected.isNull(row)) {
                 switch(type) {
+                    case BOOL8: // fall through
                     case INT8:
                         assertEquals(expected.getByte(row), cv.getByte(row),
                                 "Column " + colName + " Row " + row);
@@ -54,7 +55,7 @@ public class TableTest {
                         assertEquals(expected.getShort(row), cv.getShort(row),
                                 "Column " + colName + " Row " + row);
                         break;
-                    case INT32: //fall through
+                    case INT32: // fall through
                     case DATE32:
                         assertEquals(expected.getInt(row), cv.getInt(row),
                                 "Column " + colName + " Row " + row);
@@ -324,6 +325,44 @@ public class TableTest {
                 .column( 111.0, 112.0, 113.0, 114.0, 115.0, 116.0,  null, 118.2, 119.8)
                 .build();
              Table table = Table.readCSV(TableTest.CSV_DATA_BUFFER_SCHEMA, opts, TableTest.CSV_DATA_BUFFER, bytesToIgnore, CSV_DATA_BUFFER.length - bytesToIgnore)) {
+            assertTablesAreEqual(expected, table);
+        }
+    }
+
+    @Test
+    void testReadCSVBool() {
+        final byte[] CSV_DATA_WITH_BOOL = ("A|B|C\n" +
+                "0,true,120\n" +
+                "1,True,121\n" +
+                "2,false,122\n" +
+                "3,false,123\n" +
+                "4,TRUE,124\n" +
+                "5,true,125\n" +
+                "6,true,126\n" +
+                "7,NULL,127\n" +
+                "8,false,128\n" +
+                "9,false,129").getBytes(StandardCharsets.UTF_8);
+
+        final Schema CSV_DATA_WITH_BOOL_SCHEMA = Schema.builder()
+                .column(DType.INT32, "A")
+                .column(DType.BOOL8, "B")
+                .column(DType.INT64, "C")
+                .build();
+
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        CSVOptions opts = CSVOptions.builder()
+                .includeColumn("A")
+                .includeColumn("B")
+                .hasHeader(true)
+                .withNullValue("NULL")
+                .withTrueValue("true", "True", "TRUE")
+                .withFalseValue("false")
+                .build();
+        try (Table expected = new Table.TestBuilder()
+                .column(    0,    1,     2,     3,    4,    5,    6,    7,     8,     9)
+                .column( true, true, false, false, true, true, true, null, false, false)
+                .build();
+             Table table = Table.readCSV(CSV_DATA_WITH_BOOL_SCHEMA, opts, CSV_DATA_WITH_BOOL)) {
             assertTablesAreEqual(expected, table);
         }
     }

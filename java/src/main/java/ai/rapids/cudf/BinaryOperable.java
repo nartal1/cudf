@@ -34,6 +34,8 @@ public interface BinaryOperable {
      * objects. This may change in the future, but for now the types returned will be stripped of
      * time units.  You can still get the desired behavior by casting the things involved to the
      * same time units doing the math, and casting it to a result with the desired time units.
+     *
+     * BOOL8 is treated like an INT8.  Math on boolean operations makes little since.
      */
     static DType implicitConversion(BinaryOperable lhs, BinaryOperable rhs) {
         DType a = lhs.getType();
@@ -56,7 +58,8 @@ public interface BinaryOperable {
         if (a == DType.INT16 || b == DType.INT16) {
             return DType.INT16;
         }
-        if (a == DType.INT8 || b == DType.INT8) {
+        if (a == DType.INT8 || b == DType.INT8 ||
+                a == DType.BOOL8 || b == DType.BOOL8) {
             return DType.INT8;
         }
         throw new IllegalArgumentException("Unsupported types " + a + " and " + b);
@@ -196,10 +199,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs == lhs 1 is true 0 is false.  The output type is INT8.
+     * rhs == lhs 1 is true 0 is false.  The output type is BOOL8.
      */
     default ColumnVector equal(BinaryOperable rhs) {
-        return equal(rhs, DType.INT8);
+        return equal(rhs, DType.BOOL8);
     }
 
     /**
@@ -210,10 +213,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs != lhs 1 is true 0 is false. The output type is INT8.
+     * rhs != lhs 1 is true 0 is false. The output type is BOOL8.
      */
     default ColumnVector notEqual(BinaryOperable rhs) {
-        return notEqual(rhs, DType.INT8);
+        return notEqual(rhs, DType.BOOL8);
     }
 
     /**
@@ -224,10 +227,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs < lhs 1 is true 0 is false.  The output type is INT8.
+     * rhs < lhs 1 is true 0 is false.  The output type is BOOL8.
      */
     default ColumnVector less(BinaryOperable rhs) {
-        return less(rhs, DType.INT8);
+        return less(rhs, DType.BOOL8);
     }
 
     /**
@@ -238,10 +241,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs > lhs 1 is true 0 is false.  The output type is INT8.
+     * rhs > lhs 1 is true 0 is false.  The output type is BOOL8.
      */
     default ColumnVector greater(BinaryOperable rhs) {
-        return greater(rhs, DType.INT8);
+        return greater(rhs, DType.BOOL8);
     }
 
     /**
@@ -252,10 +255,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs <= lhs 1 is true 0 is false.  The output type is INT8.
+     * rhs <= lhs 1 is true 0 is false.  The output type is BOOL8.
      */
     default ColumnVector lessOrEqual(BinaryOperable rhs) {
-        return lessOrEqual(rhs, DType.INT8);
+        return lessOrEqual(rhs, DType.BOOL8);
     }
 
     /**
@@ -266,10 +269,10 @@ public interface BinaryOperable {
     }
 
     /**
-     * rhs >= lhs 1 is true 0 is false.  The output type is INT8.
+     * rhs >= lhs 1 is true 0 is false.  The output type is BOOL8.
      */
     default ColumnVector greaterOrEqual(BinaryOperable rhs) {
-        return greaterOrEqual(rhs, DType.INT8);
+        return greaterOrEqual(rhs, DType.BOOL8);
     }
 
     /**
