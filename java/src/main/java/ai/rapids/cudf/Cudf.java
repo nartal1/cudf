@@ -95,10 +95,10 @@ class Cudf {
 
     private static native long gdfExtractDatetimeSecond(long input) throws CudfException;
 
-    static long gdfCastToByte(ColumnVector input) {
-        return gdfCastToByte(input.getNativeCudfColumnAddress());
+    static long gdfCast(ColumnVector input, DType outType, TimeUnit outUnit) {
+        return gdfCast(input.getNativeCudfColumnAddress(), outType.nativeId, outUnit.getNativeId());
     }
 
-    private static native long gdfCastToByte(long input) throws CudfException;
+    private static native long gdfCast(long input, int dTypeNative, int timeUnitNative) throws CudfException;
 
 }
