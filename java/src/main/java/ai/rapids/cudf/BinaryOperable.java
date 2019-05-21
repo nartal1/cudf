@@ -35,7 +35,8 @@ public interface BinaryOperable {
      * time units.  You can still get the desired behavior by casting the things involved to the
      * same time units doing the math, and casting it to a result with the desired time units.
      *
-     * BOOL8 is treated like an INT8.  Math on boolean operations makes little since.
+     * BOOL8 is treated like an INT8.  Math on boolean operations makes little sense.  If
+     * you want to to stay as a BOOL8 you will need to explicitly specify the output type.
      */
     static DType implicitConversion(BinaryOperable lhs, BinaryOperable rhs) {
         DType a = lhs.getType();
