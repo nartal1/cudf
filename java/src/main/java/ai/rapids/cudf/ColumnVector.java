@@ -166,9 +166,10 @@ public final class ColumnVector implements AutoCloseable {
      * Increment the reference count for this column.  You need to call close on this
      * to decrement the reference count again.
      */
-    public void incRefCount() {
+    public ColumnVector incRefCount() {
         refCount++;
         offHeap.addRef();
+        return this;
     }
 
     /**
