@@ -21,7 +21,10 @@ pipeline {
 
     stages {
         stage('Compile') {
-            sh 'ci/gpu/build.sh'
+            steps {
+                sh 'ci/cpu/build.sh' 
+                sh 'ci/gpu/build.sh'
+            }
         }
     }
 }
