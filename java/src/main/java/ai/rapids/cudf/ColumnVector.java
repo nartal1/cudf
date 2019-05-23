@@ -716,6 +716,116 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
 
     /////////////////////////////////////////////////////////////////////////////
+    // TYPE CAST
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Generic method to cast ColumnVector
+     * When casting from a Date, Timestamp, or Boolean to a numerical type the underlying numerical representation
+     * of the data will be used for the cast. In the cast of Timestamp this means the TimeUnit is ignored and lost.
+     * When casting between Date32, Date64, and Timestamp the units of time are used.
+     * @param type type of the resulting ColumnVector
+     * @param unit the unit of time, really only applicable for TIMESTAMP.
+     * @return A new vector allocated on the GPU
+     */
+    ColumnVector castTo(DType type, TimeUnit unit) {
+        return new ColumnVector(Cudf.gdfCast(this, type, unit));
+    }
+
+    /**
+     * Cast to Byte - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to byte
+     * When casting from a Date, Timestamp, or Boolean to a byte type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asBytes(){
+        return castTo(DType.INT8, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Short - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to short
+     * When casting from a Date, Timestamp, or Boolean to a short type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asShorts(){
+        return castTo(DType.INT16, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Int - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to int
+     * When casting from a Date, Timestamp, or Boolean to a int type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asInts(){
+        return castTo(DType.INT32, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Long - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to long
+     * When casting from a Date, Timestamp, or Boolean to a long type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asLongs(){
+        return castTo(DType.INT64, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Float - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to float
+     * When casting from a Date, Timestamp, or Boolean to a float type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asFloats(){
+        return castTo(DType.FLOAT32, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Double - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to double
+     * When casting from a Date, Timestamp, or Boolean to a double type the underlying numerical representation
+     * of the data will be used for the cast.
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asDoubles(){
+        return castTo(DType.FLOAT64, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Date32 - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to date32
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asDate32(){
+        return castTo(DType.DATE32, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Date64 - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to date64
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asDate64(){
+        return castTo(DType.DATE64, TimeUnit.NONE);
+    }
+
+    /**
+     * Cast to Timestamp - ColumnVector
+     * This method takes the value provided by the ColumnVector and casts to timestamp
+     * @return A new vector allocated on the GPU
+     */
+    public ColumnVector asTimestamp(TimeUnit unit){
+        return castTo(DType.TIMESTAMP, unit);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
     // INTERNAL/NATIVE ACCESS
     /////////////////////////////////////////////////////////////////////////////
 

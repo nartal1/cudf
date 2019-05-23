@@ -176,4 +176,18 @@ public class TimestampColumnVectorTest {
             }
         }
     }
+
+    @Test
+    public void testCastToTimestamp(){
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector date64ColumnVector = ColumnVector.timestampsFromLongs(TIMES_MS)){
+            date64ColumnVector.ensureOnDevice();
+            try (ColumnVector timestampColumnVector = date64ColumnVector.asTimestamp(TimeUnit.SECONDS)){
+                timestampColumnVector.ensureOnHost();
+                assertEquals(-131968728L, timestampColumnVector.getLong(0));
+                assertEquals(1530705600L, timestampColumnVector.getLong(1));
+                assertEquals(1674631932L, timestampColumnVector.getLong(2));
+            }
+        }
+    }
 }

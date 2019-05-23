@@ -77,4 +77,20 @@ public class Date32ColumnVectorTest {
             }
         }
     }
+
+    @Test
+    public void castToDate32() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector intColumnVector = ColumnVector.fromInts(DATES)){
+            intColumnVector.ensureOnDevice();
+            try (ColumnVector date32ColumnVector = intColumnVector.asDate32()){
+                date32ColumnVector.ensureOnHost();
+                assertEquals(17897, date32ColumnVector.getInt(0));
+                assertEquals(17532, date32ColumnVector.getInt(1));
+                assertEquals(17167, date32ColumnVector.getInt(2));
+                assertEquals(16802, date32ColumnVector.getInt(3));
+                assertEquals(16437, date32ColumnVector.getInt(4));
+            }
+        }
+    }
 }

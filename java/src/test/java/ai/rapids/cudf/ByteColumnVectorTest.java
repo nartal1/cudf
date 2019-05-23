@@ -87,6 +87,31 @@ public class ByteColumnVectorTest {
     }
 
     @Test
+    public void testCastToByte() {
+        final int [] DATES = {17897}; //Jan 01, 2019
+
+        try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
+            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
+            ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES)) {
+            doubleColumnVector.ensureOnDevice();
+            shortColumnVector.ensureOnDevice();
+            dateColumnVector.ensureOnDevice();
+            try (ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
+                ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
+                ColumnVector byteColumnVector3 = dateColumnVector.asBytes()){
+                byteColumnVector1.ensureOnHost();
+                byteColumnVector2.ensureOnHost();
+                byteColumnVector3.ensureOnHost();
+                assertEquals(byteColumnVector1.getByte(0), 4);
+                assertEquals(byteColumnVector1.getByte(1), 3);
+                assertEquals(byteColumnVector1.getByte(2), 8);
+                assertEquals(byteColumnVector2.getByte(0), 100);
+                assertEquals(byteColumnVector3.getByte(0), -23);
+            }
+        }
+    }
+
+    @Test
     public void testOverrunningTheBuffer() {
         try (ColumnVector.Builder builder = ColumnVector.builder(DType.INT8, 3)) {
             assertThrows(AssertionError.class, () -> builder.append((byte)2).appendNull().append((byte)5, (byte)4).build());

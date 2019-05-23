@@ -200,4 +200,16 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
     } CATCH_STD(env, 0);
 }
 
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
+        (JNIEnv * env, jclass, jlong inputPtr, jint dtype, jint timeUnit) {
+    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+    try {
+        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_dtype cDType = static_cast<gdf_dtype>(dtype);
+        cudf::jni::gdf_column_wrapper output(input->size, cDType, input->null_count != 0);
+        output.get()->dtype_info.time_unit = static_cast<gdf_time_unit>(timeUnit);
+        JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
+        return reinterpret_cast<jlong>(output.release());
+    } CATCH_STD(env, 0);
+}
 }
