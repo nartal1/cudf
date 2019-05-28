@@ -229,13 +229,13 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     /////////////////////////////////////////////////////////////////////////////
 
     private void checkHasDeviceData() {
-        if (offHeap.deviceData == null) {
+        if (offHeap.deviceData == null && rows != 0) {
             throw new IllegalStateException("Vector not on Device");
         }
     }
 
     private void checkHasHostData() {
-        if (offHeap.hostData == null) {
+        if (offHeap.hostData == null && rows != 0) {
             throw new IllegalStateException("Vector not on Host");
         }
     }
@@ -244,7 +244,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      * Be sure the data is on the device.
      */
     public final void ensureOnDevice() {
-        if (offHeap.deviceData == null) {
+        if (offHeap.deviceData == null && rows != 0) {
             checkHasHostData();
 
             DeviceMemoryBuffer deviceDataBuffer = DeviceMemoryBuffer.allocate(offHeap.hostData.data.getLength());
@@ -277,7 +277,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      * Be sure the data is on the host.
      */
     public final void ensureOnHost() {
-        if (offHeap.hostData == null) {
+        if (offHeap.hostData == null && rows != 0) {
             checkHasDeviceData();
 
             HostMemoryBuffer hostDataBuffer = HostMemoryBuffer.allocate(offHeap.deviceData.data.getLength());
@@ -715,6 +715,119 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
         }
     }
 
+    /**
+     * Computes the sum of all values in the column, returning a scalar
+     * of the same type as this column.
+     */
+    public Scalar sum() {
+        return sum(type);
+    }
+
+    /**
+     * Computes the sum of all values in the column, returning a scalar
+     * of the specified type.
+     */
+    public Scalar sum(DType outType) {
+        return reduction(ReductionOp.SUM, outType);
+    }
+
+    /**
+     * Returns the minimum of all values in the column, returning a scalar
+     * of the same type as this column.
+     */
+    public Scalar min() {
+        return min(type);
+    }
+
+    /**
+     * Returns the minimum of all values in the column, returning a scalar
+     * of the specified type.
+     */
+    public Scalar min(DType outType) {
+        return reduction(ReductionOp.MIN, outType);
+    }
+
+    /**
+     * Returns the maximum of all values in the column, returning a scalar
+     * of the same type as this column.
+     */
+    public Scalar max() {
+        return max(type);
+    }
+
+    /**
+     * Returns the maximum of all values in the column, returning a scalar
+     * of the specified type.
+     */
+    public Scalar max(DType outType) {
+        return reduction(ReductionOp.MAX, outType);
+    }
+
+    /**
+     * Returns the product of all values in the column, returning a scalar
+     * of the same type as this column.
+     */
+    public Scalar product() {
+        return product(type);
+    }
+
+    /**
+     * Returns the product of all values in the column, returning a scalar
+     * of the specified type.
+     */
+    public Scalar product(DType outType) {
+        return reduction(ReductionOp.PRODUCT, outType);
+    }
+
+    /**
+     * Returns the sum of squares of all values in the column, returning a
+     * scalar of the same type as this column.
+     */
+    public Scalar sumOfSquares() {
+        return sumOfSquares(type);
+    }
+
+    /**
+     * Returns the sum of squares of all values in the column, returning a
+     * scalar of the specified type.
+     */
+    public Scalar sumOfSquares(DType outType) {
+        return reduction(ReductionOp.SUMOFSQUARES, outType);
+    }
+
+    /**
+     * Computes the reduction of the values in all rows of a column.
+     * Overflows in reductions are not detected. Specifying a higher precision
+     * output type may prevent overflow. Only the MIN and MAX ops are
+     * supported for reduction of non-arithmetic types (DATE32, TIMESTAMP...)
+     * The null values are skipped for the operation.
+     *
+     * @param op The reduction operation to perform
+     * @return The scalar result of the reduction operation. If the column is
+     *         empty or the reduction operation fails then the
+     *         {@link Scalar#isValid()} method of the result will return false.
+     */
+    public Scalar reduction(ReductionOp op) {
+      return reduction(op, type);
+    }
+
+    /**
+     * Computes the reduction of the values in all rows of a column.
+     * Overflows in reductions are not detected. Specifying a higher precision
+     * output type may prevent overflow. Only the MIN and MAX ops are
+     * supported for reduction of non-arithmetic types (DATE32, TIMESTAMP...)
+     * The null values are skipped for the operation.
+     *
+     * @param op The reduction operation to perform
+     * @param outType The type of scalar value to return
+     * @return The scalar result of the reduction operation. If the column is
+     *         empty or the reduction operation fails then the
+     *         {@link Scalar#isValid()} method of the result will return false.
+     */
+    public Scalar reduction(ReductionOp op, DType outType) {
+        return Cudf.reduction(this, op, outType);
+    }
+
     /////////////////////////////////////////////////////////////////////////////
     // TYPE CAST
     /////////////////////////////////////////////////////////////////////////////
@@ -845,9 +958,16 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
             assert getNullCount() <= Integer.MAX_VALUE;
             checkHasDeviceData();
             offHeap.nativeCudfColumnHandle = allocateCudfColumn();
+            long dataAddr = 0;
+            long validAddr = 0;
+            if (rows != 0) {
+                dataAddr = offHeap.deviceData.data.getAddress();
+                if (offHeap.deviceData.valid != null) {
+                    validAddr = offHeap.deviceData.valid.getAddress();
+                }
+            }
             cudfColumnViewAugmented(offHeap.nativeCudfColumnHandle,
-                    offHeap.deviceData.data.getAddress(),
-                    offHeap.deviceData.valid == null ? 0 : offHeap.deviceData.valid.getAddress(),
+                    dataAddr, validAddr,
                     (int)rows, type.nativeId,
                     (int)getNullCount(), tsTimeUnit.getNativeId());
         }
