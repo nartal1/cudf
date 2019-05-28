@@ -84,7 +84,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewAugmented
     void *data = reinterpret_cast<void *>(dataPtr);
     gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(jValid);
     gdf_dtype cDtype = static_cast<gdf_dtype>(dtype);
-    gdf_dtype_extra_info info;
+    gdf_dtype_extra_info info{};
     info.time_unit = static_cast<gdf_time_unit>(timeUnit);
     JNI_GDF_TRY(env, ,
                 gdf_column_view_augmented(column, data, valid, size, cDtype, null_count, info));

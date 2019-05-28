@@ -57,6 +57,12 @@ class Cudf {
                                              long rhsIntValues, float rhsFValue, double rhsDValue, boolean rhsIsValid, int rhsDtype,
                                              int op, int dtype);
 
+    static Scalar reduction(ColumnVector v, ReductionOp op, DType outType) {
+        return reduction(v.getNativeCudfColumnAddress(), op.nativeId, outType.nativeId);
+    }
+
+    private static native Scalar reduction(long v, int op, int dtype);
+
     /* datetime extract*/
 
     static long gdfExtractDatetimeYear(ColumnVector input) {

@@ -18,14 +18,12 @@
 
 package ai.rapids.cudf;
 
+import java.util.Objects;
+
 /**
  * A single scalar value.
  */
 public final class Scalar implements BinaryOperable {
-    static {
-        NativeDepsLoader.loadNativeDeps();
-    }
-
     /**
      * Generic NULL value.
      */
@@ -83,6 +81,30 @@ public final class Scalar implements BinaryOperable {
         timeUnit = unit;
     }
 
+    // These are invoked by native code to construct scalars.
+    static Scalar fromNull(int dtype) {
+        return new Scalar(DType.fromNative(dtype), TimeUnit.NONE);
+    }
+
+    static Scalar timestampFromNull(int nativeTimeUnit) {
+        return timestampFromNull(TimeUnit.fromNative(nativeTimeUnit));
+    }
+
+    static Scalar timestampFromLong(long value, int nativeTimeUnit) {
+        return timestampFromLong(value, TimeUnit.fromNative(nativeTimeUnit));
+    }
+
+    // These Scalar factory methods are called from native code.
+    // If a new scalar type is supported then CudfJni also needs to be updated.
+
+    public static Scalar fromNull(DType dtype) {
+        return new Scalar(dtype, TimeUnit.NONE);
+    }
+
+    public static Scalar timestampFromNull(TimeUnit timeUnit) {
+        return new Scalar(DType.TIMESTAMP, timeUnit);
+    }
+
     public static Scalar fromBool(boolean value) {
         return new Scalar(value ? 1 : 0, DType.BOOL8, TimeUnit.NONE);
     }
@@ -130,9 +152,85 @@ public final class Scalar implements BinaryOperable {
         return new Scalar(value, DType.FLOAT64, TimeUnit.NONE);
     }
 
+    public boolean isValid() {
+        return isValid;
+    }
+
     @Override
     public DType getType() {
         return type;
+    }
+
+    /**
+     * Returns the boolean stored in this scalar. Only valid if the type is
+     * {@link DType#BOOL8}.
+     */
+    public boolean getBoolean() {
+        assert type == DType.BOOL8;
+        return intTypeStorage != 0;
+    }
+
+    /**
+     * Returns the byte stored in this scalar. Only valid if the type is
+     * {@link DType#BOOL8}.
+     */
+    public byte getByte() {
+        assert type == DType.INT8;
+        return (byte) intTypeStorage;
+    }
+
+    /**
+     * Returns the short stored in this scalar. Only valid if the type is
+     * {@link DType#INT16}.
+     */
+    public short getShort() {
+        assert type == DType.INT16;
+        return (short) intTypeStorage;
+    }
+
+    /**
+     * Returns the int stored in this scalar. Only valid if the type is
+     * {@link DType#INT32} or {@link DType#DATE32}.
+     */
+    public int getInt() {
+        assert type == DType.INT32 || type == DType.DATE32;
+        return (int) intTypeStorage;
+    }
+
+    /**
+     * Returns the long stored in this scalar. Only valid if the type is
+     * {@link DType#INT64}, {@link DType#DATE64}, or {@link DType#TIMESTAMP}.
+     */
+    public long getLong() {
+        assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
+        return intTypeStorage;
+    }
+
+    /**
+     * Returns the float stored in this scalar. Only valid if the type is
+     * {@link DType#FLOAT32}.
+     */
+    public float getFloat() {
+        assert type == DType.FLOAT32;
+        return floatTypeStorage;
+    }
+
+    /**
+     * Returns the double stored in this scalar. Only valid if the type is
+     * {@link DType#FLOAT64}.
+     */
+    public double getDouble() {
+        assert type == DType.FLOAT64;
+        return doubleTypeStorage;
+    }
+
+    /**
+     * Returns the time units associated with this scalar. Only valid if the
+     * type is {@link DType#TIMESTAMP}.
+     */
+    public TimeUnit getTimeUnit() {
+        assert type == DType.TIMESTAMP;
+        return timeUnit;
     }
 
     @Override
@@ -143,5 +241,66 @@ public final class Scalar implements BinaryOperable {
         } else {
             throw new IllegalArgumentException(rhs.getClass() + " is not supported as a binary op with Scalar");
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Scalar scalar = (Scalar) o;
+        return intTypeStorage == scalar.intTypeStorage &&
+            Float.compare(scalar.floatTypeStorage, floatTypeStorage) == 0 &&
+            Double.compare(scalar.doubleTypeStorage, doubleTypeStorage) == 0 &&
+            isValid == scalar.isValid &&
+            type == scalar.type &&
+            timeUnit == scalar.timeUnit;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(intTypeStorage, floatTypeStorage, doubleTypeStorage, type, isValid, timeUnit);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Scalar{type=");
+        sb.append(type);
+        sb.append(" value=");
+
+        switch (type) {
+        case BOOL8:
+            sb.append(getBoolean());
+            break;
+        case INT8:
+            sb.append(getByte());
+            break;
+        case INT16:
+            sb.append(getShort());
+            break;
+        case INT32:
+        case DATE32:
+            sb.append(getInt());
+            break;
+        case INT64:
+        case DATE64:
+            sb.append(getLong());
+            break;
+        case FLOAT32:
+            sb.append(getFloat());
+            break;
+        case FLOAT64:
+            sb.append(getDouble());
+            break;
+        case TIMESTAMP:
+            sb.append(getLong());
+            sb.append(" unit=");
+            sb.append(getTimeUnit());
+            break;
+        default:
+            throw new IllegalArgumentException("Unknown scalar type: " + type);
+        }
+
+        sb.append("}");
+        return sb.toString();
     }
 }
