@@ -1108,7 +1108,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
                                                int size, int dtype, int null_count,
                                                int timeUnit) throws CudfException;
 
-
     /**
      * Translate the host side string representation of strings into the device side representation
      * and populate the cudfColumn with it.
@@ -1139,7 +1138,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      */
     private static native long[] getStringDataAndOffsetsBack(long cudfColumnHandle);
 
-    private static native void freeCudfColumn(long cudfColumnHandle) throws CudfException;
+    static native void freeCudfColumn(long cudfColumnHandle, boolean isDeepClean) throws CudfException;
 
     private static native long getDataPtr(long cudfColumnHandle) throws CudfException;
 
@@ -1282,7 +1281,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
                 neededCleanup = true;
             }
             if (nativeCudfColumnHandle != 0) {
-                freeCudfColumn(nativeCudfColumnHandle);
+                freeCudfColumn(nativeCudfColumnHandle, false);
                 nativeCudfColumnHandle = 0;
                 neededCleanup = true;
             }

@@ -50,10 +50,12 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_allocateCudfColumn
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn
-        (JNIEnv *env, jobject jObject, jlong handle) {
+        (JNIEnv *env, jobject jObject, jlong handle, jboolean deep_clean) {
     gdf_column *column = reinterpret_cast<gdf_column *>(handle);
     if (column != NULL) {
-      if (column->dtype == GDF_STRING) {
+      if (deep_clean) {
+        gdf_column_free(column);
+      } else if (column->dtype == GDF_STRING) {
         NVStrings::destroy(static_cast<NVStrings *>(column->data));
       } else if (column->dtype == GDF_STRING_CATEGORY) {
         NVCategory::destroy(static_cast<NVCategory *>(column->dtype_info.category));
