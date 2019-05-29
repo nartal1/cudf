@@ -18,6 +18,7 @@
 
 package ai.rapids.cudf;
 
+import java.util.EnumSet;
 import java.util.Objects;
 
 /**
@@ -28,6 +29,10 @@ public final class Scalar implements BinaryOperable {
      * Generic NULL value.
      */
     public static final Scalar NULL = new Scalar(DType.INT8, TimeUnit.NONE);
+
+    private static final EnumSet<DType> INTEGRAL_TYPES = EnumSet.of(
+        DType.BOOL8, DType.INT8, DType.INT16, DType.INT32, DType.INT64,
+        DType.DATE32, DType.DATE64, DType.TIMESTAMP);
 
     /*
      * In the native code all of the value are stored in a union with separate entries for each
@@ -161,75 +166,92 @@ public final class Scalar implements BinaryOperable {
         return type;
     }
 
-    /**
-     * Returns the boolean stored in this scalar. Only valid if the type is
-     * {@link DType#BOOL8}.
-     */
+    /** Returns the scalar value as a boolean. */
     public boolean getBoolean() {
-        assert type == DType.BOOL8;
-        return intTypeStorage != 0;
+        if (INTEGRAL_TYPES.contains(type)) {
+            return intTypeStorage != 0;
+        } else if (type == DType.FLOAT32) {
+            return floatTypeStorage != 0f;
+        } else if (type == DType.FLOAT64) {
+            return doubleTypeStorage != 0.;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the byte stored in this scalar. Only valid if the type is
-     * {@link DType#BOOL8}.
-     */
+    /** Returns the scalar value as a byte. */
     public byte getByte() {
-        assert type == DType.INT8;
-        return (byte) intTypeStorage;
+        if (INTEGRAL_TYPES.contains(type)) {
+            return (byte) intTypeStorage;
+        } else if (type == DType.FLOAT32) {
+            return (byte) floatTypeStorage;
+        } else if (type == DType.FLOAT64) {
+            return (byte) doubleTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the short stored in this scalar. Only valid if the type is
-     * {@link DType#INT16}.
-     */
+    /** Returns the scalar value as a short. */
     public short getShort() {
-        assert type == DType.INT16;
-        return (short) intTypeStorage;
+        if (INTEGRAL_TYPES.contains(type)) {
+            return (short) intTypeStorage;
+        } else if (type == DType.FLOAT32) {
+            return (short) floatTypeStorage;
+        } else if (type == DType.FLOAT64) {
+            return (short) doubleTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the int stored in this scalar. Only valid if the type is
-     * {@link DType#INT32} or {@link DType#DATE32}.
-     */
+    /** Returns the scalar value as an int. */
     public int getInt() {
-        assert type == DType.INT32 || type == DType.DATE32;
-        return (int) intTypeStorage;
+        if (INTEGRAL_TYPES.contains(type)) {
+            return (int) intTypeStorage;
+        } else if (type == DType.FLOAT32) {
+            return (int) floatTypeStorage;
+        } else if (type == DType.FLOAT64) {
+            return (int) doubleTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the long stored in this scalar. Only valid if the type is
-     * {@link DType#INT64}, {@link DType#DATE64}, or {@link DType#TIMESTAMP}.
-     */
+    /** Returns the scalar value as a long. */
     public long getLong() {
-        assert type == DType.INT64 || type == DType.DATE64 || type == DType.TIMESTAMP;
-        return intTypeStorage;
+        if (INTEGRAL_TYPES.contains(type)) {
+            return intTypeStorage;
+        } else if (type == DType.FLOAT32) {
+            return (long) floatTypeStorage;
+        } else if (type == DType.FLOAT64) {
+            return (long) doubleTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the float stored in this scalar. Only valid if the type is
-     * {@link DType#FLOAT32}.
-     */
+    /** Returns the scalar value as a float. */
     public float getFloat() {
-        assert type == DType.FLOAT32;
-        return floatTypeStorage;
+        if (type == DType.FLOAT32) {
+            return floatTypeStorage;
+        } else if (type == DType.FLOAT64) {
+            return (float) doubleTypeStorage;
+        } else if (INTEGRAL_TYPES.contains(type)) {
+            return intTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the double stored in this scalar. Only valid if the type is
-     * {@link DType#FLOAT64}.
-     */
+    /** Returns the scalar value as a double. */
     public double getDouble() {
-        assert type == DType.FLOAT64;
-        return doubleTypeStorage;
+        if (type == DType.FLOAT64) {
+            return doubleTypeStorage;
+        } else if (type == DType.FLOAT32) {
+            return floatTypeStorage;
+        } else if (INTEGRAL_TYPES.contains(type)) {
+            return intTypeStorage;
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
     }
 
-    /**
-     * Returns the time units associated with this scalar. Only valid if the
-     * type is {@link DType#TIMESTAMP}.
-     */
+    /** Returns the time unit associated with this scalar. */
     public TimeUnit getTimeUnit() {
-        assert type == DType.TIMESTAMP;
         return timeUnit;
     }
 
