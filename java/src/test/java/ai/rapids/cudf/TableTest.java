@@ -75,6 +75,11 @@ public class TableTest {
                         assertEquals(expected.getDouble(row), cv.getDouble(row), 0.0001,
                                 "Column " + colName + " Row " + row);
                         break;
+                    case STRING: // fall through
+                    case STRING_CATEGORY:
+                        assertEquals(expected.getJavaString(row), cv.getJavaString(row),
+                                "Column " + colName + " Row " + row);
+                        break;
                     default:
                         throw new IllegalArgumentException(type + " is not supported yet");
                 }
@@ -331,39 +336,41 @@ public class TableTest {
     }
 
     @Test
-    void testReadCSVBool() {
-        final byte[] CSV_DATA_WITH_BOOL = ("A|B|C\n" +
-                "0,true,120\n" +
-                "1,True,121\n" +
-                "2,false,122\n" +
-                "3,false,123\n" +
-                "4,TRUE,124\n" +
-                "5,true,125\n" +
-                "6,true,126\n" +
-                "7,NULL,127\n" +
-                "8,false,128\n" +
-                "9,false,129").getBytes(StandardCharsets.UTF_8);
+    void testReadCSVOtherTypes() {
+        final byte[] CSV_DATA_WITH_TYPES = ("A,B,C,D\n" +
+                "0,true,120,\"zero\"\n" +
+                "1,True,121,\"one\"\n" +
+                "2,false,122,\"two\"\n" +
+                "3,false,123,\"three\"\n" +
+                "4,TRUE,124,\"four\"\n" +
+                "5,true,125,\"five\"\n" +
+                "6,true,126,\"six\"\n" +
+                "7,NULL,127,NULL\n" +
+                "8,false,128,\"eight\"\n" +
+                "9,false,129,\"nine\"").getBytes(StandardCharsets.UTF_8);
 
-        final Schema CSV_DATA_WITH_BOOL_SCHEMA = Schema.builder()
+        final Schema CSV_DATA_WITH_TYPES_SCHEMA = Schema.builder()
                 .column(DType.INT32, "A")
                 .column(DType.BOOL8, "B")
                 .column(DType.INT64, "C")
+                .column(DType.STRING, "D")
                 .build();
 
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         CSVOptions opts = CSVOptions.builder()
-                .includeColumn("A")
-                .includeColumn("B")
+                .includeColumn("A", "B", "D")
                 .hasHeader(true)
                 .withNullValue("NULL")
+                .withQuote('"')
                 .withTrueValue("true", "True", "TRUE")
                 .withFalseValue("false")
                 .build();
         try (Table expected = new Table.TestBuilder()
                 .column(    0,    1,     2,     3,    4,    5,    6,    7,     8,     9)
                 .column( true, true, false, false, true, true, true, null, false, false)
+                .column("zero", "one", "two", "three", "four", "five", "six", null, "eight", "nine")
                 .build();
-             Table table = Table.readCSV(CSV_DATA_WITH_BOOL_SCHEMA, opts, CSV_DATA_WITH_BOOL)) {
+             Table table = Table.readCSV(CSV_DATA_WITH_TYPES_SCHEMA, opts, CSV_DATA_WITH_TYPES)) {
             assertTablesAreEqual(expected, table);
         }
     }

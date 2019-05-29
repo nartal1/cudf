@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class UnaryOpTest {
     private static final Double[] DOUBLES_1 = new Double[]{ 1.0, 10.0, -100.1,  5.3, 50.0, 100.0,  null};
     private static final Integer[] INTS_1 = new Integer[]{ 1, 10, -100,  5, 50, 100,  null};
-
+    private static final String[] STRINGS_1 = new String[]{"1", "10", "-100", "5", "50", "100", null};
 
     // These tests are not for the correctness of the underlying implementation, but really just plumbing
 
@@ -208,6 +208,27 @@ public class UnaryOpTest {
             try (ColumnVector answer = icv.bitInvert();
                  ColumnVector expected = ColumnVector.fromBoxedInts(~1, ~10, ~-100, ~5, ~50, ~100, null)) {
                 assertColumnsAreEqual(expected, answer);
+            }
+        }
+    }
+
+    // String to string cat conversion has more to do with correctness as we wrote that all ourselves
+    @Test
+    public void testStringCastFullCircle() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector origStr = ColumnVector.fromStrings(STRINGS_1);
+             ColumnVector origCat = ColumnVector.categoryFromStrings(STRINGS_1)) {
+            origStr.ensureOnDevice();
+            origCat.ensureOnDevice();
+
+            try (ColumnVector cat = origStr.asStringCategories();
+                 ColumnVector str = origCat.asStrings();
+                 ColumnVector catAgain = str.asStringCategories();
+                 ColumnVector strAgain = cat.asStrings()) {
+                assertColumnsAreEqual(origCat, cat);
+                assertColumnsAreEqual(origStr, str);
+                assertColumnsAreEqual(origCat, catAgain);
+                assertColumnsAreEqual(origStr, strAgain);
             }
         }
     }

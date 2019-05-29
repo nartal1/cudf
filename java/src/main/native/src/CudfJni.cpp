@@ -17,6 +17,9 @@
 #include "reduction.hpp"
 #include "jni_utils.hpp"
 
+using unique_nvcat_ptr = std::unique_ptr<NVCategory, decltype(&NVCategory::destroy)>;
+using unique_nvstr_ptr = std::unique_ptr<NVStrings, decltype(&NVStrings::destroy)>;
+
 namespace cudf {
 namespace jni {
 
@@ -204,6 +207,62 @@ static void gdf_scalar_init(gdf_scalar * scalar, jlong intValues, jfloat fValue,
     }
 }
 
+static jni_rmm_unique_ptr<gdf_valid_type> copy_validity(JNIEnv * env,
+        gdf_size_type size, gdf_size_type null_count, gdf_valid_type *valid) {
+  jni_rmm_unique_ptr<gdf_valid_type> ret{};
+  if (null_count > 0) {
+    gdf_size_type copy_size = ((size + 7)/8);
+    gdf_size_type alloc_size = gdf_valid_allocation_size(size);
+    ret = jniRmmAlloc<gdf_valid_type>(env, alloc_size);
+    JNI_CUDA_TRY(env, 0,
+      cudaMemcpy(ret.get(), valid, copy_size, cudaMemcpyDeviceToDevice));
+  }
+  return ret;
+}
+
+static jlong cast_string_cat_to(JNIEnv * env, NVCategory * cat,
+        gdf_dtype target_type, gdf_time_unit target_unit, 
+        gdf_size_type size, gdf_size_type null_count, gdf_valid_type *valid) {
+    switch (target_type) {
+        case GDF_STRING:
+            {
+              unique_nvstr_ptr str(cat->to_strings(), &NVStrings::destroy);
+
+              jni_rmm_unique_ptr<gdf_valid_type> valid_copy = copy_validity(env, size, null_count, valid);
+
+              gdf_column_wrapper output(size, target_type, null_count,
+                    str.release(), valid_copy.release());
+              return reinterpret_cast<jlong>(output.release());
+            }
+        default:
+            throw std::logic_error("Unsupported type to cast a string_cat to");
+    }
+}
+
+static jlong cast_string_to(JNIEnv * env, NVStrings * str,
+        gdf_dtype target_type, gdf_time_unit target_unit, 
+        gdf_size_type size, gdf_size_type null_count, gdf_valid_type *valid) {
+    switch (target_type) {
+        case GDF_STRING_CATEGORY:
+            {
+              unique_nvcat_ptr cat(NVCategory::create_from_strings(*str), &NVCategory::destroy);
+              auto cat_data = jniRmmAlloc<int>(env, sizeof(int) * size);
+              if (size != cat->get_values(cat_data.get(), true)) {
+                JNI_THROW_NEW(env, "java/lang/IllegalStateException",
+                        "Internal Error copying str cat data", 0);
+              }
+              
+              jni_rmm_unique_ptr<gdf_valid_type> valid_copy = copy_validity(env, size, null_count, valid);
+
+              gdf_column_wrapper output(size, target_type, null_count,
+                    cat_data.release(), valid_copy.release(), cat.release());
+              return reinterpret_cast<jlong>(output.release());
+            }
+        default:
+            throw std::logic_error("Unsupported type to cast a string to");
+    }
+}
+
 } // namespace jni
 } // namespace cudf
 
@@ -375,10 +434,22 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
     try {
         gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
         gdf_dtype cDType = static_cast<gdf_dtype>(dtype);
-        cudf::jni::gdf_column_wrapper output(input->size, cDType, input->null_count != 0);
-        output.get()->dtype_info.time_unit = static_cast<gdf_time_unit>(timeUnit);
-        JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
-        return reinterpret_cast<jlong>(output.release());
+        gdf_time_unit time_unit = static_cast<gdf_time_unit>(timeUnit);
+        size_t size = input->size;
+        if (input->dtype == GDF_STRING) {
+            NVStrings * str = static_cast<NVStrings *>(input->data);
+            return cudf::jni::cast_string_to(env, str, cDType, time_unit, size,
+                    input->null_count, input->valid);
+        } else if (input->dtype == GDF_STRING_CATEGORY && cDType == GDF_STRING) {
+            NVCategory * cat = static_cast<NVCategory *>(input->dtype_info.category);
+            return cudf::jni::cast_string_cat_to(env, cat, cDType, time_unit, size,
+                    input->null_count, input->valid);
+        } else {
+            cudf::jni::gdf_column_wrapper output(input->size, cDType, input->null_count != 0);
+            output.get()->dtype_info.time_unit = time_unit;
+            JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
+            return reinterpret_cast<jlong>(output.release());
+        }
     } CATCH_STD(env, 0);
 }
 

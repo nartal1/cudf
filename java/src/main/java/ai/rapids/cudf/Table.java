@@ -411,6 +411,13 @@ public final class Table implements AutoCloseable {
         private final List<TimeUnit> units = new ArrayList<>();
         private final List<Object> typeErasedData = new ArrayList<>();
 
+        public TestBuilder column(String... values) {
+            types.add(DType.STRING);
+            units.add(TimeUnit.NONE);
+            typeErasedData.add(values);
+            return this;
+        }
+
         public TestBuilder column(Boolean... values) {
             types.add(DType.BOOL8);
             units.add(TimeUnit.NONE);
@@ -481,6 +488,13 @@ public final class Table implements AutoCloseable {
             return this;
         }
 
+        public TestBuilder categoryColumn(String... values) {
+            types.add(DType.STRING_CATEGORY);
+            units.add(TimeUnit.NONE);
+            typeErasedData.add(values);
+            return this;
+        }
+
         public TestBuilder timestampColumn(TimeUnit unit, Long... values) {
             types.add(DType.TIMESTAMP);
             units.add(unit);
@@ -491,6 +505,12 @@ public final class Table implements AutoCloseable {
         private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
             ColumnVector ret;
             switch(type) {
+                case STRING:
+                    ret = ColumnVector.fromStrings((String[]) dataArray);
+                    break;
+                case STRING_CATEGORY:
+                    ret = ColumnVector.categoryFromStrings((String[]) dataArray);
+                    break;
                 case BOOL8:
                     ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
                     break;

@@ -38,7 +38,15 @@ public enum DType {
     /**
      * Exact timestamp encoded with int64 since the UNIX epoch (Default unit ms)
      */
-    TIMESTAMP(8, 10, "timestamp");
+    TIMESTAMP(8, 10, "timestamp"),
+    STRING(0, 12, "str"),
+    // IMPLEMENTATION DETAIL: The sizeInBytes is 4 for STRING_CATEGORY because the dictionary is
+    // stored in the data pointer as ints.  This makes some of the code in ColumnVector common
+    // for STRING_CATEGORY.
+    /**
+     * Strings, but stored on the device with a dictionary for compression.
+     */
+    STRING_CATEGORY(4, 13, "not-supported");
 
     final int sizeInBytes;
     final int nativeId;
