@@ -22,7 +22,7 @@ package ai.rapids.cudf;
  * This class represents an address held in the host memory.
  */
 class HostMemoryBuffer extends MemoryBuffer {
-    private HostMemoryBuffer(long address, long length) {
+    HostMemoryBuffer(long address, long length) {
         super(address, length);
     }
 
@@ -44,6 +44,20 @@ class HostMemoryBuffer extends MemoryBuffer {
         long requestedAddress = this.address + offset;
         addressOutOfBoundsCheck(requestedAddress, 1,"getByte");
         return UnsafeMemoryAccessor.getByte(requestedAddress);
+    }
+
+    /**
+     * Copy a set of bytes to an array from the buffer starting at offset.
+     * @param dstOffset the offset from the address to start copying to
+     * @param dst the data to be copied.
+     */
+    public final void getBytes(byte[] dst, long dstOffset, long srcOffset, long len) {
+        assert len > 0;
+        assert len <= dst.length - dstOffset;
+        assert srcOffset >= 0;
+        long requestedAddress = this.address + srcOffset;
+        addressOutOfBoundsCheck(requestedAddress, len, "getBytes");
+        UnsafeMemoryAccessor.getBytes(dst, dstOffset, requestedAddress, len);
     }
 
     /**
@@ -257,13 +271,13 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param length - number of bytes to set
      * @param value - value to be set
      */
-    public void setMemory(long offset, long length, byte value) {
+    public final void setMemory(long offset, long length, byte value) {
         addressOutOfBoundsCheck(address + offset, length, "set memory");
         UnsafeMemoryAccessor.setMemory(address + offset, length, value);
     }
 
-    public void copyMemory(long fromAddress, long len) {
-        addressOutOfBoundsCheck(address, len, "copy memory");
+    public final void copyFromMemory(long fromAddress, long len) {
+        addressOutOfBoundsCheck(address, len, "copy from memory");
         UnsafeMemoryAccessor.copyMemory(null, fromAddress, null, address, len);
     }
 
@@ -274,9 +288,9 @@ class HostMemoryBuffer extends MemoryBuffer {
      * @param srcOffset offset in bytes to start copying from in srcData
      * @param length number of bytes to copy
      */
-    public void copyRange(long destOffset, HostMemoryBuffer srcData, long srcOffset, long length) {
-        addressOutOfBoundsCheck(address + destOffset, length, "copy range dest");
-        srcData.addressOutOfBoundsCheck(srcData.address + srcOffset, length, "copy range source");
+    public final void copyFromHostBuffer(long destOffset, HostMemoryBuffer srcData, long srcOffset, long length) {
+        addressOutOfBoundsCheck(address + destOffset, length, "copy from dest");
+        srcData.addressOutOfBoundsCheck(srcData.address + srcOffset, length, "copy from source");
         UnsafeMemoryAccessor.copyMemory(null, srcData.address + srcOffset, null,
                                                             address + destOffset, length);
     }
@@ -285,7 +299,7 @@ class HostMemoryBuffer extends MemoryBuffer {
      * Method to copy from a DeviceMemoryBuffer to a HostMemoryBuffer
      * @param deviceMemoryBuffer - Buffer to copy data from
      */
-    public void copyFromDeviceBuffer(DeviceMemoryBuffer deviceMemoryBuffer) {
+    public final void copyFromDeviceBuffer(DeviceMemoryBuffer deviceMemoryBuffer) {
         addressOutOfBoundsCheck(address, deviceMemoryBuffer.length, "copy range dest");
         assert !deviceMemoryBuffer.closed;
         Cuda.memcpy(address, deviceMemoryBuffer.address, deviceMemoryBuffer.length,

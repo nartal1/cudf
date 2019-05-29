@@ -20,6 +20,9 @@
 #include "utilities/error_utils.hpp"
 #include "table.hpp"
 
+#include <nvstrings/NVCategory.h>
+#include <nvstrings/NVStrings.h>
+
 #include <jni.h>
 #include <string>
 #include <utility>
@@ -771,7 +774,10 @@ namespace jni {
   private:
       gdf_column* col = nullptr;
   public:
-      gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool has_validity_buffer) {
+    gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool has_validity_buffer) {
+        if (dtype == GDF_STRING || dtype == GDF_STRING_CATEGORY) {
+          throw std::logic_error("STRINGS ARE NOT SUPPORTED WITH THIS CONSTRUCTOR");
+        }
         col = new gdf_column();
         gdf_column_view(col, nullptr, nullptr, size, dtype);
 
@@ -783,10 +789,18 @@ namespace jni {
         }
     }
 
+    gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, int null_count,
+            void * data, gdf_valid_type * valid, void * cat = NULL) {
+        col = new gdf_column();
+        gdf_column_view(col, data, valid, size, dtype);
+        col->dtype_info.category = cat;
+        col->null_count = null_count;
+    }
+
     ~gdf_column_wrapper() {
         if (col) {
-            RMM_FREE(col->data, 0);
-            RMM_FREE(col->valid, 0);
+            // Purposely ignore the result, we don't want to throw in a destructor
+            gdf_column_free(col);
             delete col;
         }
     }
@@ -796,7 +810,7 @@ namespace jni {
     gdf_column_wrapper &operator=(gdf_column_wrapper const &) = delete;
 
     gdf_column_wrapper(gdf_column_wrapper &&other) : col(other.col) {
-            other.col = nullptr;
+        other.col = nullptr;
     }
 
     gdf_column *operator->() const noexcept { return col; }
@@ -957,19 +971,31 @@ namespace jni {
   template <typename T>
   struct rmm_deleter {
     private:
-      JNIEnv * const env;
+      JNIEnv * env;
       cudaStream_t stream;
 
     public:
-      rmm_deleter(JNIEnv * const env, cudaStream_t stream = 0) noexcept :
+      rmm_deleter(JNIEnv * const env = NULL, cudaStream_t stream = 0) noexcept :
           env(env),
           stream(stream) {}
+
+      rmm_deleter(const rmm_deleter& other) noexcept :
+          env(other.env),
+          stream(other.stream) {}
+
+      rmm_deleter& operator=(const rmm_deleter& other) {
+         env = other.env;
+         stream = other.stream;
+         return *this;
+      }
 
     inline void operator() (T* ptr) {
       rmmError_t rmmStatus = RMM_FREE(ptr, stream);
       if (RMM_SUCCESS != rmmStatus)
       {
         jthrowable cudaE = NULL;
+        // a NULL env should never happen for something that is going to
+        // actually delete things...
         if (RMM_ERROR_CUDA_ERROR == rmmStatus) {
           cudaE = cudaException(env, cudaGetLastError());
         }

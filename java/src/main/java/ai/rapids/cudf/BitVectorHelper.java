@@ -33,7 +33,7 @@ final class BitVectorHelper {
         if (shiftBits > 0) {
             shiftSrcLeftAndWriteToDst(src, dst, dstByteIndex, shiftBits, rows);
         } else {
-            dst.copyRange(dstByteIndex, src, 0, getValidityLengthInBytes(rows));
+            dst.copyFromHostBuffer(dstByteIndex, src, 0, getValidityLengthInBytes(rows));
         }
     }
 
@@ -67,7 +67,7 @@ final class BitVectorHelper {
     /**
      * This method returns the length in bytes needed to represent X number of rows
      * e.g. getValidityLengthInBytes(5) => 1 byte
-     *      getLenghtInBytes(7) => 1 byte
+     *      getLengthInBytes(7) => 1 byte
      *      getValidityLengthInBytes(14) => 2 bytes
      */
     static long getValidityLengthInBytes(long rows) {

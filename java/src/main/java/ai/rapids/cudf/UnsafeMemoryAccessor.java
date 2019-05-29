@@ -120,6 +120,19 @@ class UnsafeMemoryAccessor {
     }
 
     /**
+     * Copy out an array of bytes.
+     * @param dst where to write the data
+     * @param dstOffset index into values to start writing at.
+     * @param address src memory address
+     * @param len the number of bytes to copy
+     * @throws IndexOutOfBoundsException
+     */
+    public static void getBytes(byte[] dst, long dstOffset, long address, long len) {
+        copyMemory(null, address,
+                dst, UnsafeMemoryAccessor.BYTE_ARRAY_OFFSET + dstOffset, len);
+    }
+
+    /**
      * Returns the Integer value at this address
      * @param address - memory address
      * @return - value
