@@ -18,6 +18,7 @@
 #include "rmm/rmm.h"
 #include "cudf.h"
 #include "utilities/error_utils.hpp"
+#include "table.hpp"
 
 #include <jni.h>
 #include <string>
@@ -767,14 +768,16 @@ namespace jni {
    * ownership of the underlying gdf_column.
    */
   class gdf_column_wrapper {
+  private:
+      gdf_column* col = nullptr;
   public:
-      gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool hasValidityBuffer) {
+      gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool has_validity_buffer) {
         col = new gdf_column();
         gdf_column_view(col, nullptr, nullptr, size, dtype);
 
         if (size > 0) {
             RMM_TRY(RMM_ALLOC(&col->data, size * gdf_dtype_size(col->dtype), 0));
-            if (hasValidityBuffer) {
+            if (has_validity_buffer) {
                 RMM_TRY(RMM_ALLOC(&col->valid, gdf_valid_allocation_size(size), 0));
             }
         }
@@ -805,9 +808,79 @@ namespace jni {
         col = nullptr;
         return temp;
     }
+  };
 
-    private:
-        gdf_column *col = nullptr;
+  /**
+   * Class to create tables used in outputs of operations. Please read the constructor comments
+   */
+  class output_table {
+  private:
+      std::vector<cudf::jni::gdf_column_wrapper> wrappers;
+      std::vector<gdf_column*> cols;
+      std::unique_ptr<cudf::table> cudf_table;
+      JNIEnv* const env;
+
+  public:
+      /**
+       * @brief This constructs a vector of cudf::jni::gdf_column_wrapper using vector of gdf_columns from
+       * the provided cudf::table. The type and validity vectors of cudf::jni::gdf_column_wrappers are based
+       * on the input_cols and shouldn't be used with operations that expect the output table to be different in type
+       * from the input e.g. joins have more columns than either one of the input tables and they can also
+       * have nulls even if the input tables don't.
+       *
+       * @param in env - JNIEnv
+       * @param in input_table - cudf::table on which to base the output table
+       */
+      output_table(JNIEnv* env, cudf::table* const input_table) : env(env) {
+          gdf_column** const input_cols = input_table->begin();
+          gdf_size_type const size = input_table->num_rows();
+          for (int i = 0; i < input_table->num_columns(); ++i) {
+              wrappers.emplace_back(size, input_cols[i]->dtype,
+                      input_cols[i]->valid != NULL);
+          }
+      }
+
+      /**
+       * @brief return a vector of gdf_column*. This object still owns the gdf_columns and will release them
+       * upon destruction
+       */
+      std::vector<gdf_column*> get_gdf_columns() {
+          if (cols.empty()) {
+              cols.resize(wrappers.size());
+
+              for (int i = 0; i < wrappers.size(); i++) {
+                  cols[i] = wrappers[i].get();
+              }
+          }
+          return cols;
+      }
+
+      /**
+       * Returns a pointer to cudf::table
+       * Note: The cudf::table pointer will be released when output_table goes out of scope
+       */
+      cudf::table* get_cudf_table() {
+          get_gdf_columns();
+          if (!cudf_table) {
+              cudf_table.reset(new cudf::table(cols.data(), cols.size()));
+          }
+          return cudf_table.get();
+      }
+
+      /**
+       * This method return a jlongArray with the addresses of gdf_columns.
+       * Note: The caller owns the gdf_columns subsequently
+       */
+      jlongArray get_native_handles_and_release() {
+          get_gdf_columns();
+          cudf::jni::native_jlongArray native_handles(env,
+                  reinterpret_cast<jlong*>(cols.data()), cols.size());
+          // release ownership so cudf::gdf_column_wrapper doesn't delete the columns
+          for (int i = 0; i < wrappers.size(); i++) {
+              wrappers[i].release();
+          }
+          return native_handles.get_jlongArray();
+      }
   };
 
   /**
@@ -1036,6 +1109,13 @@ namespace jni {
 {\
   if (obj == 0) { \
         JNI_THROW_NEW(env, "java/lang/NullPointerException", error_msg, ret_val); \
+  } \
+}
+
+#define JNI_ARG_CHECK(env, obj, error_msg, ret_val) \
+{\
+  if (!obj) { \
+        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException", error_msg, ret_val); \
   } \
 }
 

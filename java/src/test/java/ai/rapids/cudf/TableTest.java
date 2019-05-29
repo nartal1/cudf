@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -476,7 +477,7 @@ public class TableTest {
                      .column(   0,    1,    2,    3,    4,    5,    6,    7,    8,    9)
                      .column(null, null, null, null, null,  211,  199, null, 1233,  321)
                      .build();
-             Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(0));
+             Table joinedTable = leftTable.onColumns(0).leftJoin(rightTable.onColumns(0));
              Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1))) {
             assertTablesAreEqual(expected, orderedJoinedTable);
         }
@@ -492,7 +493,7 @@ public class TableTest {
                      .column(306, 301, 360, 109, 335, 254, 317, 361, 251, 326)
                      .column( 84, 257,  80,  93, 231, 193,  22,  12, 186, 184)
                      .build();
-             Table joinedTable = leftTable.joinColumns(0).leftJoin(rightTable.joinColumns(new int[]{0}));
+             Table joinedTable = leftTable.onColumns(0).leftJoin(rightTable.onColumns(new int[]{0}));
              Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1));
              Table expected = new Table.TestBuilder()
                      .column( 57, 305,  11, 147, 243,  58, 172,  95, 323, 143)
@@ -518,7 +519,7 @@ public class TableTest {
                      .column(   5,    6,        8,    9)
                      .column( 211,  199,     1233,  321)
                      .build();
-             Table joinedTable = leftTable.joinColumns(0).innerJoin(rightTable.joinColumns(0));
+             Table joinedTable = leftTable.onColumns(0).innerJoin(rightTable.onColumns(0));
              Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1))) {
             assertTablesAreEqual(expected, orderedJoinedTable);
         }
@@ -534,7 +535,7 @@ public class TableTest {
                      .column(306, 301, 360, 109, 335, 254, 317, 361, 251, 326)
                      .column( 84, 257,  80,  93, 231, 193,  22,  12, 186, 184)
                      .build();
-             Table joinedTable = leftTable.joinColumns(0).innerJoin(rightTable.joinColumns(new int[]{0}));
+             Table joinedTable = leftTable.onColumns(0).innerJoin(rightTable.onColumns(new int[]{0}));
              Table orderedJoinedTable = joinedTable.orderBy(true, Table.asc(1));
              Table expected = new Table.TestBuilder()
                      .column( 57, 305,  11, 147, 243,  58, 172,  95, 323, 143)
@@ -580,6 +581,50 @@ public class TableTest {
                  .column(   1, null,    3,    4, null,    6,    7,    8,    9)
                  .column(11.0, 12.0, 13.0, 14.0, 15.0, null, null, 18.0, 19.0).build()) {
             assertTablesAreEqual(expected, concat);
+        }
+    }
+
+    @Test
+    void testMurmur3BasedPartition() {
+        final int count = 1024 * 1024;
+        try (ColumnVector aIn = ColumnVector.build(DType.INT64, count, Range.appendLongs(count));
+             ColumnVector bIn = ColumnVector.build(DType.INT32, count, (b) -> {
+                 for (int i = 0; i < count; i++) {
+                     b.append(i / 2);
+                 }
+             })) {
+            HashSet<Long> expected = new HashSet<>();
+            for (long i = 0; i < count; i++) {
+                expected.add(i);
+            }
+            aIn.ensureOnDevice();
+            bIn.ensureOnDevice();
+            try (Table input = new Table(new ColumnVector[]{aIn, bIn});
+                 PartitionedTable output = input.onColumns(0).partition(5, HashFunction.MURMUR3)) {
+                int[] parts = output.getPartitions();
+                assertEquals(5, parts.length);
+                assertEquals(0, parts[0]);
+                int previous = 0;
+                long rows = 0;
+                for (int i = 1; i < parts.length; i++) {
+                    assertTrue(parts[i] >= previous);
+                    rows += parts[i] - previous;
+                    previous = parts[i];
+                }
+                assertTrue(rows <= count);
+                ColumnVector aOut = output.getColumn(0);
+                ColumnVector bOut = output.getColumn(1);
+
+                aOut.ensureOnHost();
+                bOut.ensureOnHost();
+                for (int i = 0; i < count; i++) {
+                    long fromA = aOut.getLong(i);
+                    long fromB = bOut.getInt(i);
+                    assertTrue(expected.remove(fromA));
+                    assertEquals(fromA / 2, fromB);
+                }
+                assertTrue(expected.isEmpty());
+            }
         }
     }
 }
