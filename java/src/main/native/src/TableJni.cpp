@@ -42,28 +42,6 @@ static jni_rmm_unique_ptr<int8_t> copy_to_device(JNIEnv * env, const native_jboo
   return device;
 }
 
-/**
- * This method creates a vector of cudf::jni::gdf_column_wrapper using vector of gdf_columns. The type and validity vectors of
- * cudf::jni::gdf_column_wrappers are based on the inputCols and shouldn't be used with operations that expect the output table
- * to be different in type from the input e.g. joins have more columns than either one of the input tables and they can also
- * have nulls even if the input tables don't.
- *
- * @param in size - Size of the output vectors
- * @param inputCols - The input cols on which the output is based
- * @param numCols - The number of columns
- * @return - gdf_column_wrapper vector based on inputCols
- */
-static std::vector<gdf_column_wrapper> createOutputColumnsBasedOnInput(gdf_size_type size,
-                                               gdf_column** inputCols,
-                                               gdf_size_type numCols) {
-    std::vector<gdf_column_wrapper> outputCols;
-    for (auto i = 0 ; i < numCols ; i++) {
-        outputCols.emplace_back(size, inputCols[i]->dtype, inputCols[i]->valid != NULL);
-    }
-    return std::move(outputCols);
-}
-
-
 } // namespace jni
 } // namespace cudf
 
@@ -111,7 +89,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
         auto isDescending = cudf::jni::copy_to_device(env, nIsDescending);
 
         cudf::table* inputTable = reinterpret_cast<cudf::table*>(jInputTable);
-        auto outputColumns = cudf::jni::createOutputColumnsBasedOnInput(inputTable->num_rows(), inputTable->begin(), inputTable->num_columns());
+        cudf::jni::output_table output(env, inputTable);
 
         bool areNullsSmallest = static_cast<bool>(jAreNullsSmallest);
 
@@ -135,24 +113,11 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env,
 
         cudf::jni::jniCudfCheck(env, gdf_order_by(nSortKeysGdfcolumns.data(), isDescending.get(), static_cast<size_t>(numColumns), &intermediateOutput, &context));
 
-        std::vector<gdf_column*> cols(inputTable->num_columns());
+        cudf::table* cudfTable = output.get_cudf_table();
 
-        for (auto i = 0 ; i < outputColumns.size() ; i++) {
-            cols[i] = outputColumns[i].get();
-        }
+        gather(inputTable, col_data.get(), cudfTable);
 
-        std::unique_ptr<cudf::table> outputTable(new cudf::table(cols.data(), cols.size()));
-
-        gather(inputTable, col_data.get(), outputTable.get());
-
-        cudf::jni::native_jlongArray nativeHandles(env,
-                                              reinterpret_cast<jlong*>(outputTable->begin()),
-                                              outputTable->num_columns());
-        // release ownership so cudf::gdf_column_wrapper doesn't delete the columns
-        for (auto i = 0 ; i < outputColumns.size() ; i++) {
-            outputColumns[i].release();
-        }
-        return nativeHandles.get_jlongArray();
+        return output.get_native_handles_and_release();
     } CATCH_STD(env, NULL);
 }
 
@@ -486,4 +451,37 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_concatenate(JNIEnv *env,
   } CATCH_STD(env, NULL);
 }
 
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfPartition(JNIEnv *env,
+        jclass clazz, jlong input_table, jintArray columns_to_hash,
+        jint cudf_hash_function, jint number_of_partitions,
+        jintArray output_offsets) {
+
+    JNI_NULL_CHECK(env, input_table, "input table is null", NULL);
+    JNI_NULL_CHECK(env, columns_to_hash, "columns_to_hash is null", NULL);
+    JNI_NULL_CHECK(env, output_offsets, "output_offsets is null", NULL);
+    JNI_ARG_CHECK(env, number_of_partitions > 0, "number_of_partitions is zero", NULL);
+
+    try {
+        cudf::table* n_input_table = reinterpret_cast<cudf::table*>(input_table);
+        cudf::jni::native_jintArray n_columns_to_hash(env, columns_to_hash);
+        gdf_hash_func n_cudf_hash_function =
+                static_cast<gdf_hash_func>(cudf_hash_function);
+        int n_number_of_partitions = static_cast<int>(number_of_partitions);
+        cudf::jni::native_jintArray nOutputOffsets(env, output_offsets);
+
+        JNI_ARG_CHECK(env, n_columns_to_hash.size() > 0, "columns_to_hash is zero", NULL);
+
+        cudf::jni::output_table output(env, n_input_table);
+
+        std::vector<gdf_column*> cols = output.get_gdf_columns();
+
+        JNI_GDF_TRY(env, NULL,
+                gdf_hash_partition(n_input_table->num_columns(), n_input_table->begin(),
+                        n_columns_to_hash.data(), n_columns_to_hash.size(),
+                        n_number_of_partitions, cols.data(), nOutputOffsets.data(),
+                        n_cudf_hash_function));
+
+        return output.get_native_handles_and_release();
+    }CATCH_STD(env, NULL);
+}
 }  // extern "C"

@@ -119,6 +119,12 @@ public final class Table implements AutoCloseable {
     // NATIVE APIs
     /////////////////////////////////////////////////////////////////////////////
 
+    private static native long[] gdfPartition(long inputTable,
+                                              int[] columnsToHash,
+                                              int cudfHashFunction,
+                                              int numberOfPartitions,
+                                              int[] outputOffsets) throws CudfException;
+
     private static native long createCudfTable(long[] cudfColumnPointers) throws CudfException;
 
     private static native void freeCudfTable(long handle) throws CudfException;
@@ -314,14 +320,14 @@ public final class Table implements AutoCloseable {
         return new OrderByArg(index, true);
     }
 
-    public JoinColumns joinColumns(int... indices) {
-        int[] joinIndicesArray = new int[indices.length];
+    public TableOperation onColumns(int... indices) {
+        int[] operationIndicesArray = new int[indices.length];
         for (int i = 0 ; i < indices.length ; i++) {
-            joinIndicesArray[i] = indices[i];
-            assert joinIndicesArray[i] >= 0 && joinIndicesArray[i] < columns.length :
-                    "join index is out of range 0 <= " + joinIndicesArray[i] + " < " + columns.length;
+            operationIndicesArray[i] = indices[i];
+            assert operationIndicesArray[i] >= 0 && operationIndicesArray[i] < columns.length :
+                    "operation index is out of range 0 <= " + operationIndicesArray[i] + " < " + columns.length;
         }
-        return new JoinColumns(this, joinIndicesArray);
+        return new TableOperation(this, operationIndicesArray);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -338,11 +344,11 @@ public final class Table implements AutoCloseable {
         }
     }
 
-    public static final class JoinColumns {
+    public static final class TableOperation {
         private final int[] indices;
         private final Table table;
 
-        JoinColumns(final Table table, final int... indices) {
+        TableOperation(final Table table, final int... indices) {
             this.indices = indices;
             this.table = table;
         }
@@ -352,11 +358,11 @@ public final class Table implements AutoCloseable {
          * Usage:
          *      Table t1 ...
          *      Table t2 ...
-         *      Table result = t1.joinColumns(0,1).leftJoin(t2.joinColumns(2,3));
+         *      Table result = t1.onColumns(0,1).leftJoin(t2.onColumns(2,3));
          * @param rightJoinIndices - Indices of the right table to join on
          * @return Joined {@link Table}
          */
-        public Table leftJoin(JoinColumns rightJoinIndices) {
+        public Table leftJoin(TableOperation rightJoinIndices) {
             return new Table(gdfLeftJoin(this.table.nativeHandle, indices,
                     rightJoinIndices.table.nativeHandle, rightJoinIndices.indices));
         }
@@ -366,13 +372,29 @@ public final class Table implements AutoCloseable {
          * Usage:
          *      Table t1 ...
          *      Table t2 ...
-         *      Table result = t1.joinColumns(0,1).innerJoin(t2.joinColumns(2,3));
+         *      Table result = t1.onColumns(0,1).innerJoin(t2.onColumns(2,3));
          * @param rightJoinIndices - Indices of the right table to join on
          * @return Joined {@link Table}
          */
-        public Table innerJoin(JoinColumns rightJoinIndices) {
+        public Table innerJoin(TableOperation rightJoinIndices) {
             return new Table(gdfInnerJoin(this.table.nativeHandle, indices,
                     rightJoinIndices.table.nativeHandle, rightJoinIndices.indices));
+        }
+
+        /**
+         * Partitions a table based on the number of partitions provided.
+         * @param numberOfPartitions - number of partitions to use
+         * @param hashFunction - hash function to use to partition
+         * @return - {@link PartitionedTable} - Table that exposes a limited functionality of the
+         *           {@link Table} class
+         */
+        public PartitionedTable partition(int numberOfPartitions, HashFunction hashFunction) {
+            int[] partitionOffsets = new int[numberOfPartitions];
+            return new PartitionedTable(new Table(gdfPartition(this.table.nativeHandle,
+                                        this.indices,
+                                        hashFunction.nativeId,
+                                        partitionOffsets.length,
+                                        partitionOffsets)), partitionOffsets);
         }
     }
 
