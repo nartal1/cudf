@@ -64,13 +64,23 @@ public final class Table implements AutoCloseable {
 
     private Table(long[] cudfColumns) {
         assert cudfColumns != null : "CudfColumns can't be null";
-
         this.columns = new ColumnVector[cudfColumns.length];
-        for (int i = 0 ; i < cudfColumns.length ; i++) {
-            this.columns[i] = new ColumnVector(cudfColumns[i]);
+        try {
+            for (int i = 0; i < cudfColumns.length; i++) {
+                this.columns[i] = new ColumnVector(cudfColumns[i]);
+            }
+            nativeHandle = createCudfTable(cudfColumns);
+            this.rows = columns[0].getRowCount();
+        } catch (Throwable t) {
+            for (int i = 0; i < cudfColumns.length; i++) {
+                if (this.columns[i] != null) {
+                    this.columns[i].close();
+                } else {
+                    ColumnVector.freeCudfColumn(cudfColumns[i], true);
+                }
+            }
+            throw t;
         }
-        nativeHandle = createCudfTable(cudfColumns);
-        this.rows = columns[0].getRowCount();
     }
 
     /**
