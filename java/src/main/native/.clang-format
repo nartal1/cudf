@@ -1,0 +1,195 @@
+---
+# Reference: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+Language:        Cpp
+# BasedOnStyle:  LLVM
+# cudf codebase all over the place on this one. That said
+# no alignment (-2 from indent) seems to be the norm
+AccessModifierOffset: -2
+# looks like we align in cudf
+AlignAfterOpenBracket: Align
+# looks like:
+# int aaaa = 12;
+# int b    = 23;
+# int ccc  = 23;
+# leaving OFF for now
+AlignConsecutiveAssignments: false
+# looks like:
+# int         aaaa = 12;
+# float       b = 23;
+# std::string ccc = 23;
+# leaving OFF for now
+AlignConsecutiveDeclarations: false
+# looks like:
+##define A                                                                      \
+#  int aaaa;                                                                    \
+#  int b;                                                                       \
+#  int dddddddddd;
+# leaving ON
+AlignEscapedNewlines: Right
+# looks like:
+# int aaa = bbbbbbbbbbbbbbb +
+#           ccccccccccccccc;
+AlignOperands:   true
+# looks like:
+# true:                                   false:
+# int a;     // My comment a      vs.     int a; // My comment a
+# int b = 2; // comment  b                int b = 2; // comment about b
+# leaving ON
+AlignTrailingComments: true
+# squeezes a long declaration's arguments to the next line:
+#true:
+#void myFunction(
+#	int a, int b, int c, int d, int e);
+#
+#false:
+#void myFunction(int a,
+#				int b,
+#				int c,
+#				int d,
+#				int e);
+# leaving ON
+AllowAllParametersOfDeclarationOnNextLine: true
+# TODO: changed to ON, as we use short blocks on same lines
+AllowShortBlocksOnASingleLine: true
+# set this to ON, I see this in a few places
+AllowShortCaseLabelsOnASingleLine: true
+# turning this OFF for now, as this will turn
+# functions into a single line eagerly.
+# TODO: revise later?
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+# deprecated option.. 
+# PenaltyReturnTypeOnItsOwnLine is giving this a weight
+# TODO: need to figure out how that works
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: MultiLine
+# true for these looks to allow programmer's style
+# if all the arguments for a function don't fit in a single line, 
+# with a value of "false", it'll split each argument into different lines
+# TODO: revise later?
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBraces: Custom
+BraceWrapping:   
+  AfterClass:      false
+  AfterControlStatement: false
+  AfterEnum:       false
+  AfterFunction:   false
+  AfterNamespace:  false
+  AfterObjCDeclaration: false
+  AfterStruct:     false
+  AfterUnion:      false
+  AfterExternBlock: false
+  BeforeCatch:     false
+  BeforeElse:      false
+  IndentBraces:    false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+# will break after operators when a line is too long
+BreakBeforeBinaryOperators: None
+# not in docs.. so that's nice
+BreakBeforeInheritanceComma: false
+# TODO: set this to false? It'll break inherigance list and align on colon,
+# it also places each inherited class in a different line
+BreakInheritanceList: BeforeColon
+# TODO: this seems like something we want to disable
+# try removing it 
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
+# TODO: not in docs?
+BreakAfterJavaFieldAnnotations: false
+BreakStringLiterals: true
+# so the line lengths in cudf are all over the place
+# lots of long line comments
+# did this to find the max line length per file
+# fgrep -R -e "?" *|cut -d ':' -f1|sort|uniq|xargs -I{} bash -c "awk '{print length}' {} | sort -rn | head -1"|sort -n
+# since they are all over the place, I picked 100.
+ColumnLimit:     100
+# TODO: we probably have some of these
+CommentPragmas:  '^ IWYU pragma:'
+# So it doesn't put subsequent namespaces in the same line
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+# TODO: adds spaces around the element list
+# in initializer: vector<T> x{ {}, ..., {} }
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+DisableFormat:   false
+ExperimentalAutoDetectBinPacking: false
+# } // namespace a => useful
+FixNamespaceComments: true
+ForEachMacros:   
+  - foreach
+  - Q_FOREACH
+  - BOOST_FOREACH
+IncludeBlocks:   Preserve
+IncludeCategories: 
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+    Priority:        3
+  - Regex:           '.*'
+    Priority:        1
+# TODO: can probably remove
+IncludeIsMainRegex: '(Test)?$'
+# TODO: could this be false?
+IndentCaseLabels: true
+IndentPPDirectives: None
+IndentWidth:     2
+IndentWrappedFunctionNames: false
+JavaScriptQuotes: Leave
+JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: true
+MacroBlockBegin: ''
+MacroBlockEnd:   ''
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+ObjCBinPackProtocolList: Auto
+ObjCBlockIndentWidth: 2
+ObjCSpaceAfterProperty: false
+ObjCSpaceBeforeProtocolList: true
+
+# Penalties: leaving unchanged for now
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60
+PointerAlignment: Left
+ReflowComments:  true
+SortIncludes:    true
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles:  false
+# TODO: this seems like could be turned off
+SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard:        Cpp11
+StatementMacros: 
+  - Q_UNUSED
+  - QT_REQUIRE_VERSION
+TabWidth:        8
+UseTab:          Never
+...
+
