@@ -2,35 +2,29 @@
 # Reference: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
 Language:        Cpp
 # BasedOnStyle:  LLVM
-# cudf codebase all over the place on this one. That said
-# no alignment (-2 from indent) seems to be the norm
+# no indentation (-2 from indent, which is 2)
 AccessModifierOffset: -2
-# looks like we align in cudf
 AlignAfterOpenBracket: Align
-# looks like:
 # int aaaa = 12;
 # int b    = 23;
 # int ccc  = 23;
-# leaving OFF for now
+# leaving OFF 
 AlignConsecutiveAssignments: false
-# looks like:
 # int         aaaa = 12;
 # float       b = 23;
 # std::string ccc = 23;
-# leaving OFF for now
+# leaving OFF 
 AlignConsecutiveDeclarations: false
-# looks like:
 ##define A                                                                      \
 #  int aaaa;                                                                    \
 #  int b;                                                                       \
 #  int dddddddddd;
 # leaving ON
 AlignEscapedNewlines: Right
-# looks like:
 # int aaa = bbbbbbbbbbbbbbb +
 #           ccccccccccccccc;
+# leaving ON
 AlignOperands:   true
-# looks like:
 # true:                                   false:
 # int a;     // My comment a      vs.     int a; // My comment a
 # int b = 2; // comment  b                int b = 2; // comment about b
@@ -49,29 +43,28 @@ AlignTrailingComments: true
 #				int e);
 # leaving ON
 AllowAllParametersOfDeclarationOnNextLine: true
-# TODO: changed to ON, as we use short blocks on same lines
+# changed to ON, as we use short blocks on same lines
 AllowShortBlocksOnASingleLine: true
-# set this to ON, I see this in a few places
+# set this to ON, we use this in a few places
 AllowShortCaseLabelsOnASingleLine: true
-# turning this OFF for now, as this will turn
-# functions into a single line eagerly.
-# TODO: revise later?
+# set this to ON
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-# deprecated option.. 
-# PenaltyReturnTypeOnItsOwnLine is giving this a weight
-# TODO: need to figure out how that works
+# Deprecated option.
+# PenaltyReturnTypeOnItsOwnLine applies, as we set this to None,
+# where it tries to break after the return type automatically
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: MultiLine
-# true for these looks to allow programmer's style
+
 # if all the arguments for a function don't fit in a single line, 
 # with a value of "false", it'll split each argument into different lines
-# TODO: revise later?
 BinPackArguments: true
 BinPackParameters: true
+
+# if this is set to Custom, the BraceWrapping flags apply
 BreakBeforeBraces: Custom
 BraceWrapping:   
   AfterClass:      false
@@ -89,28 +82,39 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
+
 # will break after operators when a line is too long
 BreakBeforeBinaryOperators: None
 # not in docs.. so that's nice
 BreakBeforeInheritanceComma: false
-# TODO: set this to false? It'll break inherigance list and align on colon,
-# it also places each inherited class in a different line
+# This will break inheritance list and align on colon,
+# it also places each inherited class in a different line.
+# Leaving ON
 BreakInheritanceList: BeforeColon
-# TODO: this seems like something we want to disable
-# try removing it 
-BreakBeforeTernaryOperators: true
+
+#
+#true:
+#veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription
+#	? firstValue
+#	: SecondValueVeryVeryVeryVeryLong;
+#
+#false:
+#veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
+#	firstValue :
+#	SecondValueVeryVeryVeryVeryLong;
+BreakBeforeTernaryOperators: false
+
 BreakConstructorInitializersBeforeComma: false
 BreakConstructorInitializers: BeforeColon
-# TODO: not in docs?
-BreakAfterJavaFieldAnnotations: false
+BreakAfterJavaFieldAnnotations: true
 BreakStringLiterals: true
-# so the line lengths in cudf are all over the place
-# lots of long line comments
-# did this to find the max line length per file
-# fgrep -R -e "?" *|cut -d ':' -f1|sort|uniq|xargs -I{} bash -c "awk '{print length}' {} | sort -rn | head -1"|sort -n
-# since they are all over the place, I picked 100.
+# So the line lengths in cudf are not following a limit, at the moment.
+# Usually it's a long comment that makes the line length inconsistent.
+# Command I used to find max line lengths (from cpp directory):
+#   find include src tests|grep "\." |xargs -I{} bash -c "awk '{print length}' {} | sort -rn | head -1"|sort -n
+# I picked 100, as it seemed somewhere around median
 ColumnLimit:     100
-# TODO: we probably have some of these
+# TODO: not aware of any of these at this time
 CommentPragmas:  '^ IWYU pragma:'
 # So it doesn't put subsequent namespaces in the same line
 CompactNamespaces: false
@@ -129,17 +133,21 @@ ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories: 
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+  - Regex:           '<[[:alnum:]]+>'
+    Priority:        0
+  - Regex:           '<[[:alnum:].]+>'
+    Priority:        1
+  - Regex:           '<.*>'
     Priority:        2
-  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+  - Regex:           '.*/.*'
     Priority:        3
   - Regex:           '.*'
-    Priority:        1
-# TODO: can probably remove
+    Priority:        4
+# if a header matches this in an include group, it will be moved up to the
+# top of the group. 
 IncludeIsMainRegex: '(Test)?$'
-# TODO: could this be false?
 IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWidth:     2
@@ -157,6 +165,7 @@ ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 
 # Penalties: leaving unchanged for now
+# https://stackoverflow.com/questions/26635370/in-clang-format-what-do-the-penalties-do
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
@@ -164,9 +173,14 @@ PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
 PenaltyBreakTemplateDeclaration: 10
 PenaltyExcessCharacter: 1000000
+# As currently set, we don't see return types being
+# left on their own line, leaving at 60
 PenaltyReturnTypeOnItsOwnLine: 60
-PointerAlignment: Left
+
+# char* foo vs char *foo, picking Right aligned
+PointerAlignment: Right
 ReflowComments:  true
+# leaving ON, but this could be something to turn OFF
 SortIncludes:    true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
@@ -180,7 +194,6 @@ SpaceBeforeRangeBasedForLoopColon: true
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles:  false
-# TODO: this seems like could be turned off
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false

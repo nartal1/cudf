@@ -15,17 +15,19 @@
  */
 #pragma once
 
-#include "cudf.h"
-#include "rmm/rmm.h"
-#include "table.hpp"
-#include "utilities/error_utils.hpp"
+#include <string>
+#include <utility>
+
+#include <jni.h>
 
 #include <nvstrings/NVCategory.h>
 #include <nvstrings/NVStrings.h>
 
-#include <jni.h>
-#include <string>
-#include <utility>
+#include "rmm/rmm.h"
+#include "utilities/error_utils.hpp"
+
+#include "cudf.h"
+#include "table.hpp"
 
 namespace cudf {
 namespace jni {
@@ -36,14 +38,14 @@ namespace jni {
  */
 class jni_exception : public std::runtime_error {
 public:
-  jni_exception(char const* const message) : std::runtime_error(message) {}
-  jni_exception(std::string const& message) : std::runtime_error(message) {}
+  jni_exception(char const *const message) : std::runtime_error(message) {}
+  jni_exception(std::string const &message) : std::runtime_error(message) {}
 };
 
 /**
  * @brief throw a java exception and a C++ one for flow control.
  */
-inline void throwJavaException(JNIEnv* const env, const char* clazz_name, const char* message) {
+inline void throwJavaException(JNIEnv *const env, const char *clazz_name, const char *message) {
   jclass exClass = env->FindClass(clazz_name);
   if (exClass != NULL) {
     env->ThrowNew(exClass, message);
@@ -55,7 +57,7 @@ inline void throwJavaException(JNIEnv* const env, const char* clazz_name, const 
  * @brief check if an java exceptions have been thrown and if so throw a C++
  * exception so the flow control stop processing.
  */
-inline void checkJavaException(JNIEnv* const env) {
+inline void checkJavaException(JNIEnv *const env) {
   if (env->ExceptionOccurred()) {
     // Not going to try to get the message out of the Exception, too complex and
     // might fail.
@@ -71,10 +73,10 @@ inline void checkJavaException(JNIEnv* const env) {
  */
 class native_jlongArray {
 private:
-  JNIEnv* const env;
+  JNIEnv *const env;
   jlongArray orig;
   int len;
-  mutable jlong* data_ptr;
+  mutable jlong *data_ptr;
 
   void init_data_ptr() const {
     if (orig != NULL && data_ptr == NULL) {
@@ -84,10 +86,10 @@ private:
   }
 
 public:
-  native_jlongArray(native_jlongArray const&) = delete;
-  native_jlongArray& operator=(native_jlongArray const&) = delete;
+  native_jlongArray(native_jlongArray const &) = delete;
+  native_jlongArray &operator=(native_jlongArray const &) = delete;
 
-  native_jlongArray(JNIEnv* const env, jlongArray orig)
+  native_jlongArray(JNIEnv *const env, jlongArray orig)
       : env(env), orig(orig), len(0), data_ptr(NULL) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
@@ -95,12 +97,12 @@ public:
     }
   }
 
-  native_jlongArray(JNIEnv* const env, int len)
+  native_jlongArray(JNIEnv *const env, int len)
       : env(env), orig(env->NewLongArray(len)), len(len), data_ptr(NULL) {
     checkJavaException(env);
   }
 
-  native_jlongArray(JNIEnv* const env, jlong* arr, int len)
+  native_jlongArray(JNIEnv *const env, jlong *arr, int len)
       : env(env), orig(env->NewLongArray(len)), len(len), data_ptr(NULL) {
     checkJavaException(env);
     env->SetLongArrayRegion(orig, 0, len, arr);
@@ -121,7 +123,7 @@ public:
     return data()[index];
   }
 
-  jlong& operator[](int index) {
+  jlong &operator[](int index) {
     if (orig == NULL) {
       throwJavaException(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
     }
@@ -131,12 +133,12 @@ public:
     return data()[index];
   }
 
-  const jlong* const data() const {
+  const jlong *const data() const {
     init_data_ptr();
     return data_ptr;
   }
 
-  jlong* data() {
+  jlong *data() {
     init_data_ptr();
     return data_ptr;
   }
@@ -177,26 +179,26 @@ private:
   native_jlongArray wrapped;
 
 public:
-  native_jpointerArray(native_jpointerArray const&) = delete;
-  native_jpointerArray& operator=(native_jpointerArray const&) = delete;
+  native_jpointerArray(native_jpointerArray const &) = delete;
+  native_jpointerArray &operator=(native_jpointerArray const &) = delete;
 
-  native_jpointerArray(JNIEnv* const env, jlongArray orig) : wrapped(env, orig) {}
+  native_jpointerArray(JNIEnv *const env, jlongArray orig) : wrapped(env, orig) {}
 
-  native_jpointerArray(JNIEnv* const env, int len) : wrapped(env, len) {}
+  native_jpointerArray(JNIEnv *const env, int len) : wrapped(env, len) {}
 
-  native_jpointerArray(JNIEnv* const env, T* arr, int len) : wrapped(env, arr, len) {}
+  native_jpointerArray(JNIEnv *const env, T *arr, int len) : wrapped(env, arr, len) {}
 
   bool isNull() const noexcept { return wrapped.isNull(); }
 
   int size() const noexcept { return wrapped.size(); }
 
-  T* operator[](int index) const { return data()[index]; }
+  T *operator[](int index) const { return data()[index]; }
 
-  T*& operator[](int index) { return data()[index]; }
+  T *&operator[](int index) { return data()[index]; }
 
-  T* const* data() const { return reinterpret_cast<T**>(wrapped.data()); }
+  T *const *data() const { return reinterpret_cast<T **>(wrapped.data()); }
 
-  T** data() { return reinterpret_cast<T**>(wrapped.data()); }
+  T **data() { return reinterpret_cast<T **>(wrapped.data()); }
 
   const jlongArray get_jlongArray() const { return wrapped.get_jlongArray(); }
 
@@ -224,50 +226,50 @@ private:
   D del;
 
 public:
-  unique_jpointerArray(unique_jpointerArray const&) = delete;
-  unique_jpointerArray& operator=(unique_jpointerArray const&) = delete;
+  unique_jpointerArray(unique_jpointerArray const &) = delete;
+  unique_jpointerArray &operator=(unique_jpointerArray const &) = delete;
 
-  unique_jpointerArray(JNIEnv* const env, jlongArray orig)
+  unique_jpointerArray(JNIEnv *const env, jlongArray orig)
       : wrapped(new native_jpointerArray<T>(env, orig)) {}
 
-  unique_jpointerArray(JNIEnv* const env, jlongArray orig, const D& del)
+  unique_jpointerArray(JNIEnv *const env, jlongArray orig, const D &del)
       : wrapped(new native_jpointerArray<T>(env, orig)), del(del) {}
 
-  unique_jpointerArray(JNIEnv* const env, int len)
+  unique_jpointerArray(JNIEnv *const env, int len)
       : wrapped(new native_jpointerArray<T>(env, len)) {}
 
-  unique_jpointerArray(JNIEnv* const env, int len, const D& del)
+  unique_jpointerArray(JNIEnv *const env, int len, const D &del)
       : wrapped(new native_jpointerArray<T>(env, len)), del(del) {}
 
-  unique_jpointerArray(JNIEnv* const env, T* arr, int len)
+  unique_jpointerArray(JNIEnv *const env, T *arr, int len)
       : wrapped(new native_jpointerArray<T>(env, arr, len)) {}
 
-  unique_jpointerArray(JNIEnv* const env, T* arr, int len, const D& del)
+  unique_jpointerArray(JNIEnv *const env, T *arr, int len, const D &del)
       : wrapped(new native_jpointerArray<T>(env, arr, len)), del(del) {}
 
   bool isNull() const noexcept { return wrapped == NULL || wrapped->isNull(); }
 
   int size() const noexcept { return wrapped == NULL ? 0 : wrapped->size(); }
 
-  void reset(int index, T* new_ptr = NULL) {
+  void reset(int index, T *new_ptr = NULL) {
     if (wrapped == NULL) {
       throw std::logic_error("using unique_jpointerArray after release");
     }
-    T* old = (*wrapped)[index];
+    T *old = (*wrapped)[index];
     if (old != new_ptr) {
       (*wrapped)[index] = new_ptr;
       del(old);
     }
   }
 
-  T* get(int index) {
+  T *get(int index) {
     if (wrapped == NULL) {
       throw std::logic_error("using unique_jpointerArray after release");
     }
     return (*wrapped)[index];
   }
 
-  T* const* get() {
+  T *const *get() {
     if (wrapped == NULL) {
       throw std::logic_error("using unique_jpointerArray after release");
     }
@@ -301,10 +303,10 @@ public:
  */
 class native_jintArray {
 private:
-  JNIEnv* const env;
+  JNIEnv *const env;
   jintArray orig;
   int len;
-  mutable jint* data_ptr;
+  mutable jint *data_ptr;
 
   void init_data_ptr() const {
     if (orig != NULL && data_ptr == NULL) {
@@ -314,10 +316,10 @@ private:
   }
 
 public:
-  native_jintArray(native_jintArray const&) = delete;
-  native_jintArray& operator=(native_jintArray const&) = delete;
+  native_jintArray(native_jintArray const &) = delete;
+  native_jintArray &operator=(native_jintArray const &) = delete;
 
-  native_jintArray(JNIEnv* const env, jintArray orig)
+  native_jintArray(JNIEnv *const env, jintArray orig)
       : env(env), orig(orig), len(0), data_ptr(NULL) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
@@ -339,7 +341,7 @@ public:
     return data()[index];
   }
 
-  jint& operator[](int index) {
+  jint &operator[](int index) {
     if (orig == NULL) {
       throwJavaException(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
     }
@@ -349,12 +351,12 @@ public:
     return data()[index];
   }
 
-  const jint* const data() const {
+  const jint *const data() const {
     init_data_ptr();
     return data_ptr;
   }
 
-  jint* data() {
+  jint *data() {
     init_data_ptr();
     return data_ptr;
   }
@@ -388,10 +390,10 @@ public:
  */
 class native_jbooleanArray {
 private:
-  JNIEnv* const env;
+  JNIEnv *const env;
   jbooleanArray orig;
   int len;
-  mutable jboolean* data_ptr;
+  mutable jboolean *data_ptr;
 
   void init_data_ptr() const {
     if (orig != NULL && data_ptr == NULL) {
@@ -401,10 +403,10 @@ private:
   }
 
 public:
-  native_jbooleanArray(native_jbooleanArray const&) = delete;
-  native_jbooleanArray& operator=(native_jbooleanArray const&) = delete;
+  native_jbooleanArray(native_jbooleanArray const &) = delete;
+  native_jbooleanArray &operator=(native_jbooleanArray const &) = delete;
 
-  native_jbooleanArray(JNIEnv* const env, jbooleanArray orig)
+  native_jbooleanArray(JNIEnv *const env, jbooleanArray orig)
       : env(env), orig(orig), len(0), data_ptr(NULL) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
@@ -426,7 +428,7 @@ public:
     return data()[index];
   }
 
-  jboolean& operator[](int index) {
+  jboolean &operator[](int index) {
     if (orig == NULL) {
       throwJavaException(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
     }
@@ -436,12 +438,12 @@ public:
     return data()[index];
   }
 
-  const jboolean* const data() const {
+  const jboolean *const data() const {
     init_data_ptr();
     return data_ptr;
   }
 
-  jboolean* data() {
+  jboolean *data() {
     init_data_ptr();
     return data_ptr;
   }
@@ -472,9 +474,9 @@ public:
  */
 class native_jstring {
 private:
-  JNIEnv* env;
+  JNIEnv *env;
   jstring orig;
-  mutable const char* cstr;
+  mutable const char *cstr;
   mutable size_t cstr_length;
 
   void init_cstr() const {
@@ -486,18 +488,18 @@ private:
   }
 
 public:
-  native_jstring(native_jstring const&) = delete;
-  native_jstring& operator=(native_jstring const&) = delete;
+  native_jstring(native_jstring const &) = delete;
+  native_jstring &operator=(native_jstring const &) = delete;
 
-  native_jstring(native_jstring&& other) noexcept
+  native_jstring(native_jstring &&other) noexcept
       : env(other.env), orig(other.orig), cstr(other.cstr), cstr_length(other.cstr_length) {
     other.cstr = NULL;
   }
 
-  native_jstring(JNIEnv* const env, jstring orig)
+  native_jstring(JNIEnv *const env, jstring orig)
       : env(env), orig(orig), cstr(NULL), cstr_length(0) {}
 
-  native_jstring& operator=(native_jstring const&& other) {
+  native_jstring &operator=(native_jstring const &&other) {
     if (orig != NULL && cstr != NULL) {
       env->ReleaseStringUTFChars(orig, cstr);
     }
@@ -510,7 +512,7 @@ public:
 
   bool isNull() const noexcept { return orig == NULL; }
 
-  const char* get() const {
+  const char *get() const {
     init_cstr();
     return cstr;
   }
@@ -545,12 +547,12 @@ public:
  */
 template <typename T> class native_jobjectArray {
 private:
-  JNIEnv* const env;
+  JNIEnv *const env;
   jobjectArray orig;
   int len;
 
 public:
-  native_jobjectArray(JNIEnv* const env, jobjectArray orig) : env(env), orig(orig), len(0) {
+  native_jobjectArray(JNIEnv *const env, jobjectArray orig) : env(env), orig(orig), len(0) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
       checkJavaException(env);
@@ -572,7 +574,7 @@ public:
     return ret;
   }
 
-  void set(int index, const T& val) {
+  void set(int index, const T &val) {
     if (orig == NULL) {
       throwJavaException(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
     }
@@ -587,10 +589,10 @@ public:
  */
 class native_jstringArray {
 private:
-  JNIEnv* const env;
+  JNIEnv *const env;
   native_jobjectArray<jstring> arr;
   mutable std::vector<native_jstring> cache;
-  mutable std::vector<const char*> c_cache;
+  mutable std::vector<const char *> c_cache;
 
   void init_cache() const {
     if (!arr.isNull() && cache.empty()) {
@@ -626,15 +628,15 @@ private:
   }
 
 public:
-  native_jstringArray(JNIEnv* const env, jobjectArray orig) : env(env), arr(env, orig) {}
+  native_jstringArray(JNIEnv *const env, jobjectArray orig) : env(env), arr(env, orig) {}
 
   bool isNull() const noexcept { return arr.isNull(); }
 
   int size() const noexcept { return arr.size(); }
 
-  native_jstring& operator[](int index) const { return get(index); }
+  native_jstring &operator[](int index) const { return get(index); }
 
-  native_jstring& get(int index) const {
+  native_jstring &get(int index) const {
     if (arr.isNull()) {
       throwJavaException(env, "java/lang/NullPointerException", "jstringArray pointer is NULL");
     }
@@ -642,7 +644,7 @@ public:
     return cache[index];
   }
 
-  const char** const as_c_array() const {
+  const char **const as_c_array() const {
     init_c_cache();
     return c_cache.data();
   }
@@ -652,12 +654,12 @@ public:
     update_caches(index, val);
   }
 
-  void set(int index, const native_jstring& val) {
+  void set(int index, const native_jstring &val) {
     arr.set(index, val.get_jstring());
     update_caches(index, val.get_jstring());
   }
 
-  void set(int index, const char* val) {
+  void set(int index, const char *val) {
     jstring str = env->NewStringUTF(val);
     checkJavaException(env);
     arr.set(index, str);
@@ -672,7 +674,7 @@ public:
  */
 class gdf_column_wrapper {
 private:
-  gdf_column* col = nullptr;
+  gdf_column *col = nullptr;
 
 public:
   gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, bool has_validity_buffer) {
@@ -690,8 +692,8 @@ public:
     }
   }
 
-  gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, int null_count, void* data,
-                     gdf_valid_type* valid, void* cat = NULL) {
+  gdf_column_wrapper(gdf_size_type size, gdf_dtype dtype, int null_count, void *data,
+                     gdf_valid_type *valid, void *cat = NULL) {
     col = new gdf_column();
     gdf_column_view(col, data, valid, size, dtype);
     col->dtype_info.category = cat;
@@ -706,17 +708,17 @@ public:
     }
   }
 
-  gdf_column_wrapper(gdf_column_wrapper const&) = delete;
+  gdf_column_wrapper(gdf_column_wrapper const &) = delete;
 
-  gdf_column_wrapper& operator=(gdf_column_wrapper const&) = delete;
+  gdf_column_wrapper &operator=(gdf_column_wrapper const &) = delete;
 
-  gdf_column_wrapper(gdf_column_wrapper&& other) : col(other.col) { other.col = nullptr; }
+  gdf_column_wrapper(gdf_column_wrapper &&other) : col(other.col) { other.col = nullptr; }
 
-  gdf_column* operator->() const noexcept { return col; }
+  gdf_column *operator->() const noexcept { return col; }
 
-  gdf_column* get() const noexcept { return col; }
+  gdf_column *get() const noexcept { return col; }
 
-  gdf_column* release() noexcept {
+  gdf_column *release() noexcept {
     auto temp = col;
     col = nullptr;
     return temp;
@@ -730,9 +732,9 @@ public:
 class output_table {
 private:
   std::vector<cudf::jni::gdf_column_wrapper> wrappers;
-  std::vector<gdf_column*> cols;
+  std::vector<gdf_column *> cols;
   std::unique_ptr<cudf::table> cudf_table;
-  JNIEnv* const env;
+  JNIEnv *const env;
 
 public:
   /**
@@ -747,8 +749,8 @@ public:
    * @param in env - JNIEnv
    * @param in input_table - cudf::table on which to base the output table
    */
-  output_table(JNIEnv* env, cudf::table* const input_table) : env(env) {
-    gdf_column** const input_cols = input_table->begin();
+  output_table(JNIEnv *env, cudf::table *const input_table) : env(env) {
+    gdf_column **const input_cols = input_table->begin();
     gdf_size_type const size = input_table->num_rows();
     for (int i = 0; i < input_table->num_columns(); ++i) {
       wrappers.emplace_back(size, input_cols[i]->dtype, input_cols[i]->valid != NULL);
@@ -759,7 +761,7 @@ public:
    * @brief return a vector of gdf_column*. This object still owns the
    * gdf_columns and will release them upon destruction
    */
-  std::vector<gdf_column*> get_gdf_columns() {
+  std::vector<gdf_column *> get_gdf_columns() {
     if (cols.empty()) {
       cols.resize(wrappers.size());
 
@@ -775,7 +777,7 @@ public:
    * Note: The cudf::table pointer will be released when output_table goes out
    * of scope
    */
-  cudf::table* get_cudf_table() {
+  cudf::table *get_cudf_table() {
     get_gdf_columns();
     if (!cudf_table) {
       cudf_table.reset(new cudf::table(cols.data(), cols.size()));
@@ -789,7 +791,7 @@ public:
    */
   jlongArray get_native_handles_and_release() {
     get_gdf_columns();
-    cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong*>(cols.data()),
+    cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(cols.data()),
                                                 cols.size());
     // release ownership so cudf::gdf_column_wrapper doesn't delete the columns
     for (int i = 0; i < wrappers.size(); i++) {
@@ -802,7 +804,7 @@ public:
 /**
  * @brief create a cuda exception from a given cudaError_t
  */
-inline jthrowable cudaException(JNIEnv* const env, cudaError_t status, jthrowable cause = NULL) {
+inline jthrowable cudaException(JNIEnv *const env, cudaError_t status, jthrowable cause = NULL) {
   jclass exClass = env->FindClass("ai/rapids/cudf/CudaException");
   if (exClass == NULL) {
     return NULL;
@@ -825,7 +827,7 @@ inline jthrowable cudaException(JNIEnv* const env, cudaError_t status, jthrowabl
 /**
  * @brief create a cudf exception from a given gdf_error
  */
-inline jthrowable cudfException(JNIEnv* const env, gdf_error status, jthrowable cause = NULL) {
+inline jthrowable cudfException(JNIEnv *const env, gdf_error status, jthrowable cause = NULL) {
   jclass exClass = env->FindClass("ai/rapids/cudf/CudfException");
   if (exClass == NULL) {
     return NULL;
@@ -848,7 +850,7 @@ inline jthrowable cudfException(JNIEnv* const env, gdf_error status, jthrowable 
 /**
  * @brief create a rmm exception from a given rmmError_t
  */
-inline jthrowable rmmException(JNIEnv* const env, rmmError_t status, jthrowable cause = NULL) {
+inline jthrowable rmmException(JNIEnv *const env, rmmError_t status, jthrowable cause = NULL) {
   jclass exClass = env->FindClass("ai/rapids/cudf/RmmException");
   if (exClass == NULL) {
     return NULL;
@@ -875,22 +877,22 @@ inline jthrowable rmmException(JNIEnv* const env, rmmError_t status, jthrowable 
  */
 template <typename T> struct rmm_deleter {
 private:
-  JNIEnv* env;
+  JNIEnv *env;
   cudaStream_t stream;
 
 public:
-  rmm_deleter(JNIEnv* const env = NULL, cudaStream_t stream = 0) noexcept
+  rmm_deleter(JNIEnv *const env = NULL, cudaStream_t stream = 0) noexcept
       : env(env), stream(stream) {}
 
-  rmm_deleter(const rmm_deleter& other) noexcept : env(other.env), stream(other.stream) {}
+  rmm_deleter(const rmm_deleter &other) noexcept : env(other.env), stream(other.stream) {}
 
-  rmm_deleter& operator=(const rmm_deleter& other) {
+  rmm_deleter &operator=(const rmm_deleter &other) {
     env = other.env;
     stream = other.stream;
     return *this;
   }
 
-  inline void operator()(T* ptr) {
+  inline void operator()(T *ptr) {
     rmmError_t rmmStatus = RMM_FREE(ptr, stream);
     if (RMM_SUCCESS != rmmStatus) {
       jthrowable cudaE = NULL;
@@ -925,9 +927,9 @@ template <typename T> using jni_rmm_unique_ptr = std::unique_ptr<T, rmm_deleter<
  * exceptions on errors.
  */
 template <typename T>
-inline jni_rmm_unique_ptr<T> jniRmmAlloc(JNIEnv* const env, const size_t size,
+inline jni_rmm_unique_ptr<T> jniRmmAlloc(JNIEnv *const env, const size_t size,
                                          const cudaStream_t stream = 0) {
-  T* ptr;
+  T *ptr;
   rmmError_t rmmStatus = RMM_ALLOC(&ptr, size, stream);
   if (RMM_SUCCESS != rmmStatus) {
     jthrowable cudaE = NULL;
@@ -943,7 +945,7 @@ inline jni_rmm_unique_ptr<T> jniRmmAlloc(JNIEnv* const env, const size_t size,
   return jni_rmm_unique_ptr<T>(ptr, rmm_deleter<T>(env, stream));
 }
 
-inline void jniCudaCheck(JNIEnv* const env, cudaError_t cudaStatus) {
+inline void jniCudaCheck(JNIEnv *const env, cudaError_t cudaStatus) {
   if (cudaSuccess != cudaStatus) {
     // Clear the last error so it does not propagate.
     cudaGetLastError();
@@ -955,7 +957,7 @@ inline void jniCudaCheck(JNIEnv* const env, cudaError_t cudaStatus) {
   }
 }
 
-inline void jniCudfCheck(JNIEnv* const env, gdf_error gdfStatus) {
+inline void jniCudfCheck(JNIEnv *const env, gdf_error gdfStatus) {
   if (GDF_SUCCESS != gdfStatus) {
     jthrowable cudaE = NULL;
     if (GDF_CUDA_ERROR == gdfStatus) {
@@ -1049,17 +1051,17 @@ inline void jniCudfCheck(JNIEnv* const env, gdf_error gdfStatus) {
   }
 
 #define CATCH_STD(env, ret_val)                                                                    \
-  catch (const std::bad_alloc& e) {                                                                \
+  catch (const std::bad_alloc &e) {                                                                \
     JNI_THROW_NEW(env, "java/lang/OutOfMemoryError", "Could not allocate native memory", ret_val); \
   }                                                                                                \
-  catch (const cudf::jni::jni_exception& e) {                                                      \
+  catch (const cudf::jni::jni_exception &e) {                                                      \
     /* indicates that a java exception happened, just return so java can throw                     \
      * it. */                                                                                      \
     return ret_val;                                                                                \
   }                                                                                                \
-  catch (const cudf::cuda_error& e) {                                                              \
+  catch (const cudf::cuda_error &e) {                                                              \
     JNI_THROW_NEW(env, "ai/rapids/cudf/CudaException", e.what(), ret_val);                         \
   }                                                                                                \
-  catch (const std::exception& e) {                                                                \
+  catch (const std::exception &e) {                                                                \
     JNI_THROW_NEW(env, "ai/rapids/cudf/CudfException", e.what(), ret_val);                         \
   }

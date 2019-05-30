@@ -18,7 +18,7 @@
 
 extern "C" {
 
-JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo(JNIEnv* env, jclass clazz) {
+JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo(JNIEnv *env, jclass clazz) {
   size_t free, total;
   JNI_CUDA_TRY(env, NULL, cudaMemGetInfo(&free, &total));
 
@@ -38,14 +38,14 @@ JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo(JNIEnv* env, jclas
   return infoObj;
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cuda_memcpy(JNIEnv* env, jclass, jlong dst, jlong src,
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cuda_memcpy(JNIEnv *env, jclass, jlong dst, jlong src,
                                                        jlong count, jint kind) {
   JNI_NULL_CHECK(env, dst, "dst memory pointer is null", );
   JNI_NULL_CHECK(env, src, "src memory pointer is null", );
-  JNI_CUDA_TRY(env, , cudaMemcpy((void*)dst, (const void*)src, count, (cudaMemcpyKind)kind));
+  JNI_CUDA_TRY(env, , cudaMemcpy((void *)dst, (const void *)src, count, (cudaMemcpyKind)kind));
 }
 
-JNIEXPORT jint JNICALL Java_ai_rapids_cudf_Cuda_getDevice(JNIEnv* env, jclass) {
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_Cuda_getDevice(JNIEnv *env, jclass) {
   jint dev;
   JNI_CUDA_TRY(env, -2, cudaGetDevice(&dev));
   return dev;
