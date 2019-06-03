@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include <memory>
 #include "reduction.hpp"
+#include "stream_compaction.hpp"
 #include "jni_utils.hpp"
 
 using unique_nvcat_ptr = std::unique_ptr<NVCategory, decltype(&NVCategory::destroy)>;
@@ -453,8 +455,29 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
     } CATCH_STD(env, 0);
 }
 
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_filter(JNIEnv* env, jclass,
+    jlong input_jcol, jlong mask_jcol) {
+  JNI_NULL_CHECK(env, input_jcol, "input column is null", 0);
+  JNI_NULL_CHECK(env, mask_jcol, "mask column is null", 0);
+  try {
+    gdf_column* input = reinterpret_cast<gdf_column*>(input_jcol);
+    gdf_column* mask = reinterpret_cast<gdf_column*>(mask_jcol);
+    std::unique_ptr<gdf_column, decltype(free)*> result(
+        static_cast<gdf_column*>(malloc(sizeof(gdf_column))), free);
+    if (result.get() == nullptr) {
+      cudf::jni::throwJavaException(env, "java/lang/OutOfMemoryError",
+          "Could not allocate native memory");
+    }
+    *result.get() = cudf::apply_boolean_mask(*input, *mask);
+    // workaround for apply_boolean_mask returning an uninitialized column name
+    result->col_name = nullptr;
+    return reinterpret_cast<jlong>(result.release());
+  } CATCH_STD(env, 0);
+}
+
 JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cudf_reduction(JNIEnv* env, jclass,
     jlong jcol, jint jop, jint jdtype) {
+  JNI_NULL_CHECK(env, jcol, "input column is null", 0);
   try {
     gdf_column* col = reinterpret_cast<gdf_column*>(jcol);
     gdf_reduction_op op = static_cast<gdf_reduction_op>(jop);
