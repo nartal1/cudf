@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <rmm/rmm_api.h>
-
 #include "jni_utils.hpp"
+
+#include <rmm/rmm_api.h>
 
 extern "C" {
 
