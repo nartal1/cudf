@@ -91,20 +91,19 @@ public class ByteColumnVectorTest {
         final int [] DATES = {17897}; //Jan 01, 2019
 
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
-            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
-            ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES)) {
-            try (ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
-                ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
-                ColumnVector byteColumnVector3 = dateColumnVector.asBytes()){
-                byteColumnVector1.ensureOnHost();
-                byteColumnVector2.ensureOnHost();
-                byteColumnVector3.ensureOnHost();
-                assertEquals(byteColumnVector1.getByte(0), 4);
-                assertEquals(byteColumnVector1.getByte(1), 3);
-                assertEquals(byteColumnVector1.getByte(2), 8);
-                assertEquals(byteColumnVector2.getByte(0), 100);
-                assertEquals(byteColumnVector3.getByte(0), -23);
-            }
+             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
+             ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES);
+             ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
+             ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
+             ColumnVector byteColumnVector3 = dateColumnVector.asBytes()) {
+            byteColumnVector1.ensureOnHost();
+            byteColumnVector2.ensureOnHost();
+            byteColumnVector3.ensureOnHost();
+            assertEquals(byteColumnVector1.getByte(0), 4);
+            assertEquals(byteColumnVector1.getByte(1), 3);
+            assertEquals(byteColumnVector1.getByte(2), 8);
+            assertEquals(byteColumnVector2.getByte(0), 100);
+            assertEquals(byteColumnVector3.getByte(0), -23);
         }
     }
 

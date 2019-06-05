@@ -102,15 +102,14 @@ public class ColumnVectorTest {
     void testConcatNoNulls() {
         try (ColumnVector v0 = ColumnVector.fromInts(1, 2, 3, 4);
              ColumnVector v1 = ColumnVector.fromInts(5, 6, 7);
-             ColumnVector v2 = ColumnVector.fromInts(8, 9)) {
-            try (ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
-                v.ensureOnHost();
-                assertEquals(9, v.getRowCount());
-                assertFalse(v.hasNulls());
-                assertFalse(v.hasValidityVector());
-                for (int i = 0; i < 9; ++i) {
-                    assertEquals(i + 1, v.getInt(i), "at index " + i);
-                }
+             ColumnVector v2 = ColumnVector.fromInts(8, 9);
+             ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
+            v.ensureOnHost();
+            assertEquals(9, v.getRowCount());
+            assertFalse(v.hasNulls());
+            assertFalse(v.hasValidityVector());
+            for (int i = 0; i < 9; ++i) {
+                assertEquals(i + 1, v.getInt(i), "at index " + i);
             }
         }
     }
@@ -119,18 +118,17 @@ public class ColumnVectorTest {
     void testConcatWithNulls() {
         try (ColumnVector v0 = ColumnVector.fromDoubles(1, 2, 3, 4);
              ColumnVector v1 = ColumnVector.fromDoubles(5, 6, 7);
-             ColumnVector v2 = ColumnVector.fromBoxedDoubles(null, 9.0)) {
-            try (ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
-                v.ensureOnHost();
-                assertEquals(9, v.getRowCount());
-                assertTrue(v.hasNulls());
-                assertTrue(v.hasValidityVector());
-                for (int i = 0; i < 9; ++i) {
-                    if (i != 7) {
-                        assertEquals(i + 1, v.getDouble(i), "at index " + i);
-                    } else {
-                        assertTrue(v.isNull(i), "at index " + i);
-                    }
+             ColumnVector v2 = ColumnVector.fromBoxedDoubles(null, 9.0);
+             ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
+            v.ensureOnHost();
+            assertEquals(9, v.getRowCount());
+            assertTrue(v.hasNulls());
+            assertTrue(v.hasValidityVector());
+            for (int i = 0; i < 9; ++i) {
+                if (i != 7) {
+                    assertEquals(i + 1, v.getDouble(i), "at index " + i);
+                } else {
+                    assertTrue(v.isNull(i), "at index " + i);
                 }
             }
         }

@@ -182,10 +182,9 @@ public class TableTest {
     void testGetRows() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
-             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-            try (Table t = new Table(new ColumnVector[]{v1, v2})) {
-                assertEquals(5, t.getRowCount());
-            }
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             Table t = new Table(new ColumnVector[]{v1, v2})) {
+            assertEquals(5, t.getRowCount());
         }
     }
 
@@ -211,10 +210,9 @@ public class TableTest {
     void testGetNumberOfColumns() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
-             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-            try (Table t = new Table(new ColumnVector[]{v1, v2})) {
-                assertEquals(2, t.getNumberOfColumns());
-            }
+             ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
+             Table t = new Table(new ColumnVector[]{v1, v2})) {
+            assertEquals(2, t.getNumberOfColumns());
         }
     }
 

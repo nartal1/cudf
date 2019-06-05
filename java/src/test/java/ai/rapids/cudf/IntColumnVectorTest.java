@@ -85,16 +85,15 @@ public class IntColumnVectorTest {
     @Test
     public void testCastToInt() {
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
-            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100})){
-            try (ColumnVector intColumnVector1 = doubleColumnVector.asInts();
-                ColumnVector intColumnVector2 = shortColumnVector.asInts()){
-                intColumnVector1.ensureOnHost();
-                intColumnVector2.ensureOnHost();
-                assertEquals(4, intColumnVector1.getInt(0));
-                assertEquals(3, intColumnVector1.getInt(1));
-                assertEquals(8, intColumnVector1.getInt(2));
-                assertEquals(100, intColumnVector2 .getInt(0));
-            }
+             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
+             ColumnVector intColumnVector1 = doubleColumnVector.asInts();
+             ColumnVector intColumnVector2 = shortColumnVector.asInts()) {
+            intColumnVector1.ensureOnHost();
+            intColumnVector2.ensureOnHost();
+            assertEquals(4, intColumnVector1.getInt(0));
+            assertEquals(3, intColumnVector1.getInt(1));
+            assertEquals(8, intColumnVector1.getInt(2));
+            assertEquals(100, intColumnVector2 .getInt(0));
         }
     }
 

@@ -87,18 +87,16 @@ public class FloatColumnVectorTest {
     @Test
     public void testCastToFloat() {
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
-            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100})){
-            try (ColumnVector floatColumnVector1 = doubleColumnVector.asFloats();
-                ColumnVector floatColumnVector2 = shortColumnVector.asFloats()){
-                floatColumnVector1.ensureOnHost();
-                floatColumnVector2.ensureOnHost();
-                assertEquals( 4.3, floatColumnVector1.getFloat(0), 0.001);
-                assertEquals( 3.8, floatColumnVector1.getFloat(1), 0.001);
-                assertEquals(8, floatColumnVector1.getFloat(2));
-                assertEquals( 100, floatColumnVector2.getFloat(0));
-            }
+             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
+             ColumnVector floatColumnVector1 = doubleColumnVector.asFloats();
+             ColumnVector floatColumnVector2 = shortColumnVector.asFloats()) {
+            floatColumnVector1.ensureOnHost();
+            floatColumnVector2.ensureOnHost();
+            assertEquals( 4.3, floatColumnVector1.getFloat(0), 0.001);
+            assertEquals( 3.8, floatColumnVector1.getFloat(1), 0.001);
+            assertEquals(8, floatColumnVector1.getFloat(2));
+            assertEquals( 100, floatColumnVector2.getFloat(0));
         }
-
     }
 
     @Test
