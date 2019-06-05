@@ -94,8 +94,6 @@ public class ColumnVectorTest {
     void testConcatTypeError() {
         try (ColumnVector v0 = ColumnVector.fromInts(1, 2, 3, 4);
              ColumnVector v1 = ColumnVector.fromFloats(5.0f, 6.0f)) {
-            v0.ensureOnDevice();
-            v1.ensureOnDevice();
             assertThrows(CudfException.class, () -> ColumnVector.concatenate(v0, v1));
         }
     }
@@ -105,9 +103,6 @@ public class ColumnVectorTest {
         try (ColumnVector v0 = ColumnVector.fromInts(1, 2, 3, 4);
              ColumnVector v1 = ColumnVector.fromInts(5, 6, 7);
              ColumnVector v2 = ColumnVector.fromInts(8, 9)) {
-            v0.ensureOnDevice();
-            v1.ensureOnDevice();
-            v2.ensureOnDevice();
             try (ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
                 v.ensureOnHost();
                 assertEquals(9, v.getRowCount());
@@ -125,9 +120,6 @@ public class ColumnVectorTest {
         try (ColumnVector v0 = ColumnVector.fromDoubles(1, 2, 3, 4);
              ColumnVector v1 = ColumnVector.fromDoubles(5, 6, 7);
              ColumnVector v2 = ColumnVector.fromBoxedDoubles(null, 9.0)) {
-            v0.ensureOnDevice();
-            v1.ensureOnDevice();
-            v2.ensureOnDevice();
             try (ColumnVector v = ColumnVector.concatenate(v0, v1, v2)) {
                 v.ensureOnHost();
                 assertEquals(9, v.getRowCount());

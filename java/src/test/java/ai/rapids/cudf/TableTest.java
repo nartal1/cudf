@@ -168,8 +168,6 @@ public class TableTest {
         assertThrows(IllegalStateException.class, () -> {
             try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
                  ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-                v1.ensureOnDevice();
-                v2.ensureOnDevice();
                 assertDoesNotThrow(() -> {
                     try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                         v1.close();
@@ -185,8 +183,6 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
              ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-            v1.ensureOnDevice();
-            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(5, t.getRowCount());
             }
@@ -204,8 +200,6 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector v1 = ColumnVector.build(DType.INT32, 4, Range.appendInts(4));
              ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-            v1.ensureOnDevice();
-            v2.ensureOnDevice();
             assertThrows(AssertionError.class, () -> {
                 try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 }
@@ -218,8 +212,6 @@ public class TableTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector v1 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5));
              ColumnVector v2 = ColumnVector.build(DType.INT32, 5, Range.appendInts(5))) {
-            v1.ensureOnDevice();
-            v2.ensureOnDevice();
             try (Table t = new Table(new ColumnVector[]{v1, v2})) {
                 assertEquals(2, t.getNumberOfColumns());
             }
@@ -604,8 +596,6 @@ public class TableTest {
             for (long i = 0; i < count; i++) {
                 expected.add(i);
             }
-            aIn.ensureOnDevice();
-            bIn.ensureOnDevice();
             try (Table input = new Table(new ColumnVector[]{aIn, bIn});
                  PartitionedTable output = input.onColumns(0).partition(5, HashFunction.MURMUR3)) {
                 int[] parts = output.getPartitions();

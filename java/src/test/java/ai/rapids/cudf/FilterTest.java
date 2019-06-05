@@ -41,8 +41,6 @@ class FilterTest {
       }
       try (ColumnVector mask = builder.build();
            ColumnVector input = ColumnVector.fromBoxedInts(1, null, 2, 3, null)) {
-        mask.ensureOnDevice();
-        input.ensureOnDevice();
         try (ColumnVector filtered = input.filter(mask)) {
           filtered.ensureOnHost();
           assertEquals(input.getType(), filtered.getType());
@@ -61,8 +59,6 @@ class FilterTest {
     byte[] maskVals = new byte[] { 0, 1, 0, 1, 1 };
     try (ColumnVector mask = ColumnVector.boolFromBytes(maskVals);
          ColumnVector input = ColumnVector.fromBoxedBytes((byte) 1, null, (byte) 2, (byte) 3, null)) {
-      mask.ensureOnDevice();
-      input.ensureOnDevice();
       try (ColumnVector filtered = input.filter(mask)) {
         filtered.ensureOnHost();
         assertEquals(input.getType(), filtered.getType());
@@ -81,8 +77,6 @@ class FilterTest {
     Arrays.fill(maskVals, false);
     try (ColumnVector mask = ColumnVector.fromBoxedBooleans(maskVals);
          ColumnVector input = ColumnVector.fromBoxedInts(1, null, 2, 3, null)) {
-      mask.ensureOnDevice();
-      input.ensureOnDevice();
       try (ColumnVector filtered = input.filter(mask)) {
         assertEquals(input.getType(), filtered.getType());
         assertEquals(0, filtered.getRowCount());
@@ -101,8 +95,6 @@ class FilterTest {
       }
       try (ColumnVector mask = builder.build();
            ColumnVector input = ColumnVector.fromBoxedInts(1, null, 2, 3, null)) {
-        mask.ensureOnDevice();
-        input.ensureOnDevice();
         try (ColumnVector filtered = input.filter(mask)) {
           assertEquals(input.getType(), filtered.getType());
           assertEquals(0, filtered.getRowCount());
@@ -118,8 +110,6 @@ class FilterTest {
     Arrays.fill(maskVals, true);
     try (ColumnVector mask = ColumnVector.fromBoxedBooleans(maskVals);
          ColumnVector input = ColumnVector.fromBoxedInts(1, null, 2, 3, null)) {
-      mask.ensureOnDevice();
-      input.ensureOnDevice();
       assertThrows(AssertionError.class, () -> input.filter(mask).close());
     }
   }

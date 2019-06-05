@@ -86,8 +86,6 @@ public class IntColumnVectorTest {
     public void testCastToInt() {
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100})){
-            doubleColumnVector.ensureOnDevice();
-            shortColumnVector.ensureOnDevice();
             try (ColumnVector intColumnVector1 = doubleColumnVector.asInts();
                 ColumnVector intColumnVector2 = shortColumnVector.asInts()){
                 intColumnVector1.ensureOnHost();
@@ -108,7 +106,7 @@ public class IntColumnVectorTest {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
                     try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT32, dstSize);
-                        ColumnVector src = ColumnVector.build(DType.INT32, srcSize, (b) -> {
+                        ColumnVector src = ColumnVector.buildOnHost(DType.INT32, srcSize, (b) -> {
                             for (int i = 0 ; i < srcSize ; i++) {
                                 if (random.nextBoolean()) {
                                     b.appendNull();
@@ -132,8 +130,8 @@ public class IntColumnVectorTest {
                         }
                         // append the src vector
                         dst.append(src);
-                        try (ColumnVector dstVector = dst.build();
-                             ColumnVector gt = gtBuilder.build()) {
+                        try (ColumnVector dstVector = dst.buildOnHost();
+                             ColumnVector gt = gtBuilder.buildOnHost()) {
                             for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                 assertEquals(gt.isNull(i), dstVector.isNull(i));
                                 if (!gt.isNull(i)) {

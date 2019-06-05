@@ -1390,6 +1390,31 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
 
     /**
+     * Create a new vector without sending data to the device.
+     * @param rows maximum number of rows that the vector can hold.
+     * @param init what will initialize the vector.
+     * @return the created vector.
+     */
+    public static ColumnVector buildOnHost(DType type, int rows, Consumer<Builder> init) {
+      return buildOnHost(type, TimeUnit.NONE, rows, init);
+    }
+
+    /**
+     * Create a new vector without sending data to the device.
+     * @param rows maximum number of rows that the vector can hold.
+     * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+     * @param init what will initialize the vector.
+     * @return the created vector.
+     */
+    public static ColumnVector buildOnHost(DType type, TimeUnit tsTimeUnit, int rows,
+        Consumer<Builder> init) {
+      try (Builder builder = builder(type, tsTimeUnit, rows)) {
+        init.accept(builder);
+        return builder.buildOnHost();
+      }
+    }
+
+    /**
      * Create a new vector from the given values.
      */
     public static ColumnVector boolFromBytes(byte ... values) {
@@ -1470,6 +1495,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
         HostMemoryBuffer data = null;
         HostMemoryBuffer offsets = null;
         HostMemoryBuffer valid = null;
+        ColumnVector ret = null;
         boolean needsCleanup = true;
         try {
             int rows = values.length;
@@ -1506,19 +1532,24 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
                 }
                 offsets.setInt((i + 1L) * 4, offset);
             }
-            ColumnVector ret = new ColumnVector(type, TimeUnit.NONE, rows, nullCount, data, valid, offsets);
+            ret = new ColumnVector(type, TimeUnit.NONE, rows, nullCount, data, valid, offsets);
+            ret.ensureOnDevice();
             needsCleanup = false;
             return ret;
         } finally {
             if (needsCleanup) {
-                if (data != null) {
-                    data.close();
-                }
-                if (offsets != null) {
-                    offsets.close();
-                }
-                if (valid != null) {
-                    valid.close();
+                if (ret != null) {
+                    ret.close();
+                } else {
+                    if (data != null) {
+                        data.close();
+                    }
+                    if (offsets != null) {
+                        offsets.close();
+                    }
+                    if (valid != null) {
+                        valid.close();
+                    }
                 }
             }
         }
@@ -1985,8 +2016,30 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
             if (built) {
                 throw new IllegalStateException("Cannot reuse a builder.");
             }
+            ColumnVector cv = new ColumnVector(type, tsTimeUnit,
+                currentIndex, nullCount, data, valid);
+            try {
+                cv.ensureOnDevice();
+                built = true;
+            } finally {
+                if (!built) {
+                    cv.close();
+                }
+            }
+            return cv;
+        }
+
+        /**
+         * Finish and create the immutable ColumnVector.
+         */
+        public final ColumnVector buildOnHost() {
+            if (built) {
+                throw new IllegalStateException("Cannot reuse a builder.");
+            }
+            ColumnVector cv= new ColumnVector(type, tsTimeUnit,
+                currentIndex, nullCount, data, valid);
             built = true;
-            return new ColumnVector(type, tsTimeUnit, currentIndex, nullCount, data, valid);
+            return cv;
         }
 
         /**

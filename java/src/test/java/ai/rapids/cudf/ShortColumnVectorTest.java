@@ -90,7 +90,7 @@ public class ShortColumnVectorTest {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
                     try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT16, dstSize);
-                         ColumnVector src = ColumnVector.build(DType.INT16, srcSize, (b) -> {
+                         ColumnVector src = ColumnVector.buildOnHost(DType.INT16, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -114,8 +114,8 @@ public class ShortColumnVectorTest {
                          }
                          // append the src vector
                          dst.append(src);
-                         try (ColumnVector dstVector = dst.build();
-                              ColumnVector gt = gtBuilder.build()) {
+                         try (ColumnVector dstVector = dst.buildOnHost();
+                              ColumnVector gt = gtBuilder.buildOnHost()) {
                              for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                  assertEquals(gt.isNull(i), dstVector.isNull(i));
                                  if (!gt.isNull(i)) {

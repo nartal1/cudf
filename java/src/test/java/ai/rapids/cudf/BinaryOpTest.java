@@ -47,16 +47,6 @@ public class BinaryOpTest {
              ColumnVector lcv2 = ColumnVector.fromBoxedLongs(LONGS_2);
              ColumnVector dcv1 = ColumnVector.fromBoxedDoubles(DOUBLES_1);
              ColumnVector dcv2 = ColumnVector.fromBoxedDoubles(DOUBLES_2)) {
-            icv1.ensureOnDevice();
-            icv2.ensureOnDevice();
-            bcv1.ensureOnDevice();
-            fcv1.ensureOnDevice();
-            fcv2.ensureOnDevice();
-            lcv1.ensureOnDevice();
-            lcv2.ensureOnDevice();
-            dcv1.ensureOnDevice();
-            dcv2.ensureOnDevice();
-
             try (ColumnVector add = icv1.add(icv2);
                  ColumnVector expected = ColumnVector.fromBoxedInts(11, 22, 33, 44, 55, null, 200)) {
                 assertColumnsAreEqual(expected, add, "int32");
@@ -122,16 +112,6 @@ public class BinaryOpTest {
              ColumnVector lcv2 = ColumnVector.fromBoxedLongs(LONGS_2);
              ColumnVector dcv1 = ColumnVector.fromBoxedDoubles(DOUBLES_1);
              ColumnVector dcv2 = ColumnVector.fromBoxedDoubles(DOUBLES_2)) {
-            icv1.ensureOnDevice();
-            icv2.ensureOnDevice();
-            bcv1.ensureOnDevice();
-            fcv1.ensureOnDevice();
-            fcv2.ensureOnDevice();
-            lcv1.ensureOnDevice();
-            lcv2.ensureOnDevice();
-            dcv1.ensureOnDevice();
-            dcv2.ensureOnDevice();
-
             try (ColumnVector sub = icv1.sub(icv2);
                  ColumnVector expected = ColumnVector.fromBoxedInts(-9, -18, -27, -36, -45, null, 0)) {
                 assertColumnsAreEqual(expected, sub, "int32");
@@ -193,9 +173,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.mul(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(1 * 1.0, 2 * 10.0, 3 * 100.0, 4 * 5.3, 5 * 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 * double");
@@ -218,9 +195,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.div(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(1 / 1.0, 2 / 10.0, 3 / 100.0, 4 / 5.3, 5 / 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 / double");
@@ -243,9 +217,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.trueDiv(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(1 / 1.0, 2 / 10.0, 3 / 100.0, 4 / 5.3, 5 / 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 / double");
@@ -268,9 +239,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.floorDiv(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(Math.floor(1 / 1.0), Math.floor(2 / 10.0), Math.floor(3 / 100.0),
                          Math.floor(4 / 5.3), Math.floor(5 / 50.0), null, null)) {
@@ -296,9 +264,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.mod(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(1 % 1.0, 2 % 10.0, 3 % 100.0, 4 % 5.3, 5 % 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 % double");
@@ -321,9 +286,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.pow(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedDoubles(Math.pow(1, 1.0), Math.pow(2, 10.0), Math.pow(3, 100.0),
                          Math.pow(4, 5.3), Math.pow(5, 50.0), null, null)) {
@@ -351,9 +313,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.equal(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 == 1.0, 2 == 10.0, 3 == 100.0, 4 == 5.3, 5 == 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 == double");
@@ -377,10 +336,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.equal(s);
@@ -405,9 +360,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.notEqual(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 != 1.0, 2 != 10.0, 3 != 100.0, 4 != 5.3,
                          5 != 50.0, null, null)) {
@@ -434,10 +386,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.notEqual(s);
@@ -462,9 +410,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.less(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 < 1.0, 2 < 10.0, 3 < 100.0, 4 < 5.3, 5 < 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 < double");
@@ -489,10 +434,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.less(s);
@@ -517,9 +458,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.greater(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 > 1.0, 2 > 10.0, 3 > 100.0, 4 > 5.3, 5 > 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 > double");
@@ -543,10 +481,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.greater(s);
@@ -571,9 +505,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.lessOrEqual(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 <= 1.0, 2 <= 10.0, 3 <= 100.0, 4 <= 5.3, 5 <= 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 <= double");
@@ -597,10 +528,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.lessOrEqual(s);
@@ -625,9 +552,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector dcv = ColumnVector.fromBoxedDoubles(DOUBLES_1)) {
-            icv.ensureOnDevice();
-            dcv.ensureOnDevice();
-
             try (ColumnVector answer = icv.greaterOrEqual(dcv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(1 >= 1.0, 2 >= 10.0, 3 >= 100.0, 4 >= 5.3, 5 >= 50.0, null, null)) {
                 assertColumnsAreEqual(expected, answer, "int32 >= double");
@@ -651,10 +575,6 @@ public class BinaryOpTest {
         try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
              ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
              ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
-            a.ensureOnDevice();
-            b.ensureOnDevice();
-            c.ensureOnDevice();
-
             Scalar s = Scalar.fromString("b");
 
             try (ColumnVector answer = a.greaterOrEqual(s);
@@ -680,9 +600,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv1 = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector icv2 = ColumnVector.fromBoxedInts(INTS_2)) {
-            icv1.ensureOnDevice();
-            icv2.ensureOnDevice();
-
             try (ColumnVector answer = icv1.bitAnd(icv2);
                  ColumnVector expected = ColumnVector.fromBoxedInts(1 & 10, 2 & 20, 3 & 30, 4 & 40, 5 & 50, null, 100 & 100)) {
                 assertColumnsAreEqual(expected, answer, "int32 & int32");
@@ -705,9 +622,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv1 = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector icv2 = ColumnVector.fromBoxedInts(INTS_2)) {
-            icv1.ensureOnDevice();
-            icv2.ensureOnDevice();
-
             try (ColumnVector answer = icv1.bitOr(icv2);
                  ColumnVector expected = ColumnVector.fromBoxedInts(1 | 10, 2 | 20, 3 | 30, 4 | 40, 5 | 50, null, 100 | 100)) {
                 assertColumnsAreEqual(expected, answer, "int32 | int32");
@@ -730,9 +644,6 @@ public class BinaryOpTest {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv1 = ColumnVector.fromBoxedInts(INTS_1);
              ColumnVector icv2 = ColumnVector.fromBoxedInts(INTS_2)) {
-            icv1.ensureOnDevice();
-            icv2.ensureOnDevice();
-
             try (ColumnVector answer = icv1.bitXor(icv2);
                  ColumnVector expected = ColumnVector.fromBoxedInts(1 ^ 10, 2 ^ 20, 3 ^ 30, 4 ^ 40, 5 ^ 50, null, 100 ^ 100)) {
                 assertColumnsAreEqual(expected, answer, "int32 ^ int32");

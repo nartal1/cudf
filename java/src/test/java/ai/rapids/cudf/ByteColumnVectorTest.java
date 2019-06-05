@@ -93,9 +93,6 @@ public class ByteColumnVectorTest {
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
             ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES)) {
-            doubleColumnVector.ensureOnDevice();
-            shortColumnVector.ensureOnDevice();
-            dateColumnVector.ensureOnDevice();
             try (ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
                 ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
                 ColumnVector byteColumnVector3 = dateColumnVector.asBytes()){
@@ -126,7 +123,7 @@ public class ByteColumnVectorTest {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
                     try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT8, dstSize);
-                         ColumnVector src = ColumnVector.build(DType.INT8, srcSize, (b) -> {
+                         ColumnVector src = ColumnVector.buildOnHost(DType.INT8, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -150,8 +147,8 @@ public class ByteColumnVectorTest {
                         }
                         // append the src vector
                         dst.append(src);
-                        try (ColumnVector dstVector = dst.build();
-                             ColumnVector gt = gtBuilder.build()) {
+                        try (ColumnVector dstVector = dst.buildOnHost();
+                             ColumnVector gt = gtBuilder.buildOnHost()) {
                             for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                 assertEquals(gt.isNull(i), dstVector.isNull(i));
                                 if (!gt.isNull(i)) {
