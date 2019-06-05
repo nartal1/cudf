@@ -11,6 +11,22 @@
     <name>cudfjni</name>
     <url>http://ai.rapids</url>
 
+    <repositories>
+        <repository>
+            <id>spark.sw.nvidia.com</id>
+            <name>sw-spark-maven</name>
+            <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>spark.sw.nvidia.com</id>
+            <name>gpuwa.nvidia.com-releases</name>
+            <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven-local</url>
+        </repository>
+    </distributionManagement>
+
     <dependencies>
         <!-- https://mvnrepository.com/artifact/commons-logging/commons-logging -->
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
