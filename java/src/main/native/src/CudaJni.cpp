@@ -22,20 +22,20 @@ JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cuda_memGetInfo(JNIEnv *env, jclas
   size_t free, total;
   JNI_CUDA_TRY(env, NULL, cudaMemGetInfo(&free, &total));
 
-  jclass infoClass = env->FindClass("Lai/rapids/cudf/CudaMemInfo;");
-  if (infoClass == NULL) {
+  jclass info_class = env->FindClass("Lai/rapids/cudf/CudaMemInfo;");
+  if (info_class == NULL) {
     return NULL;
   }
 
-  jmethodID ctorID = env->GetMethodID(infoClass, "<init>", "(JJ)V");
-  if (ctorID == NULL) {
+  jmethodID ctor_id = env->GetMethodID(info_class, "<init>", "(JJ)V");
+  if (ctor_id == NULL) {
     return NULL;
   }
 
-  jobject infoObj = env->NewObject(infoClass, ctorID, (jlong)free, (jlong)total);
+  jobject info_obj = env->NewObject(info_class, ctor_id, (jlong)free, (jlong)total);
   // No need to check for exceptions of null return value as we are just handing the object back to
   // the JVM. which will handle throwing any exceptions that happened in the constructor.
-  return infoObj;
+  return info_obj;
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Cuda_memcpy(JNIEnv *env, jclass, jlong dst, jlong src,

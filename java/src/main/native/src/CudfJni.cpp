@@ -28,18 +28,18 @@ namespace jni {
 static const jint MINIMUM_JNI_VERSION = JNI_VERSION_1_6;
 
 static jclass Scalar_jclass;
-static jmethodID Scalar_fromNull;
-static jmethodID Scalar_timestampFromNull;
-static jmethodID Scalar_fromBool;
-static jmethodID Scalar_fromByte;
-static jmethodID Scalar_fromShort;
-static jmethodID Scalar_fromInt;
-static jmethodID Scalar_dateFromInt;
-static jmethodID Scalar_fromLong;
-static jmethodID Scalar_dateFromLong;
-static jmethodID Scalar_timestampFromLong;
-static jmethodID Scalar_fromFloat;
-static jmethodID Scalar_fromDouble;
+static jmethodID Scalar_from_null;
+static jmethodID Scalar_timestamp_from_null;
+static jmethodID Scalar_from_bool;
+static jmethodID Scalar_from_byte;
+static jmethodID Scalar_from_short;
+static jmethodID Scalar_from_int;
+static jmethodID Scalar_date_from_int;
+static jmethodID Scalar_from_long;
+static jmethodID Scalar_date_from_long;
+static jmethodID Scalar_timestamp_from_long;
+static jmethodID Scalar_from_float;
+static jmethodID Scalar_from_double;
 
 #define SCALAR_CLASS "ai/rapids/cudf/Scalar"
 #define SCALAR_FACTORY_SIG(param_sig)  "(" param_sig ")L" SCALAR_CLASS ";"
@@ -54,52 +54,52 @@ static bool cache_scalar_jni(JNIEnv* env) {
     return false;
   }
 
-  Scalar_fromNull = env->GetStaticMethodID(cls, "fromNull", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_fromNull == nullptr) {
+  Scalar_from_null = env->GetStaticMethodID(cls, "from_null", SCALAR_FACTORY_SIG("I"));
+  if (Scalar_from_null == nullptr) {
     return false;
   }
-  Scalar_timestampFromNull = env->GetStaticMethodID(cls, "timestampFromNull", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_timestampFromNull == nullptr) {
+  Scalar_timestamp_from_null = env->GetStaticMethodID(cls, "timestamp_from_null", SCALAR_FACTORY_SIG("I"));
+  if (Scalar_timestamp_from_null == nullptr) {
     return false;
   }
-  Scalar_fromBool = env->GetStaticMethodID(cls, "fromBool", SCALAR_FACTORY_SIG("Z"));
-  if (Scalar_fromBool == nullptr) {
+  Scalar_from_bool = env->GetStaticMethodID(cls, "from_bool", SCALAR_FACTORY_SIG("Z"));
+  if (Scalar_from_bool == nullptr) {
     return false;
   }
-  Scalar_fromByte = env->GetStaticMethodID(cls, "fromByte", SCALAR_FACTORY_SIG("B"));
-  if (Scalar_fromByte == nullptr) {
+  Scalar_from_byte = env->GetStaticMethodID(cls, "from_byte", SCALAR_FACTORY_SIG("B"));
+  if (Scalar_from_byte == nullptr) {
     return false;
   }
-  Scalar_fromShort = env->GetStaticMethodID(cls, "fromShort", SCALAR_FACTORY_SIG("S"));
-  if (Scalar_fromShort == nullptr) {
+  Scalar_from_short = env->GetStaticMethodID(cls, "from_short", SCALAR_FACTORY_SIG("S"));
+  if (Scalar_from_short == nullptr) {
     return false;
   }
-  Scalar_fromInt = env->GetStaticMethodID(cls, "fromInt", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_fromInt == nullptr) {
+  Scalar_from_int = env->GetStaticMethodID(cls, "from_int", SCALAR_FACTORY_SIG("I"));
+  if (Scalar_from_int == nullptr) {
     return false;
   }
-  Scalar_dateFromInt = env->GetStaticMethodID(cls, "dateFromInt", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_dateFromInt == nullptr) {
+  Scalar_date_from_int = env->GetStaticMethodID(cls, "date_from_int", SCALAR_FACTORY_SIG("I"));
+  if (Scalar_date_from_int == nullptr) {
     return false;
   }
-  Scalar_fromLong = env->GetStaticMethodID(cls, "fromLong", SCALAR_FACTORY_SIG("J"));
-  if (Scalar_fromLong == nullptr) {
+  Scalar_from_long = env->GetStaticMethodID(cls, "from_long", SCALAR_FACTORY_SIG("J"));
+  if (Scalar_from_long == nullptr) {
     return false;
   }
-  Scalar_dateFromLong = env->GetStaticMethodID(cls, "dateFromLong", SCALAR_FACTORY_SIG("J"));
-  if (Scalar_dateFromLong == nullptr) {
+  Scalar_date_from_long = env->GetStaticMethodID(cls, "date_from_long", SCALAR_FACTORY_SIG("J"));
+  if (Scalar_date_from_long == nullptr) {
     return false;
   }
-  Scalar_timestampFromLong = env->GetStaticMethodID(cls, "timestampFromLong", SCALAR_FACTORY_SIG("JI"));
-  if (Scalar_timestampFromLong == nullptr) {
+  Scalar_timestamp_from_long = env->GetStaticMethodID(cls, "timestamp_from_long", SCALAR_FACTORY_SIG("JI"));
+  if (Scalar_timestamp_from_long == nullptr) {
     return false;
   }
-  Scalar_fromFloat = env->GetStaticMethodID(cls, "fromFloat", SCALAR_FACTORY_SIG("F"));
-  if (Scalar_fromFloat == nullptr) {
+  Scalar_from_float = env->GetStaticMethodID(cls, "from_float", SCALAR_FACTORY_SIG("F"));
+  if (Scalar_from_float == nullptr) {
     return false;
   }
-  Scalar_fromDouble = env->GetStaticMethodID(cls, "fromDouble", SCALAR_FACTORY_SIG("D"));
-  if (Scalar_fromDouble == nullptr) {
+  Scalar_from_double = env->GetStaticMethodID(cls, "from_double", SCALAR_FACTORY_SIG("D"));
+  if (Scalar_from_double == nullptr) {
     return false;
   }
 
@@ -125,84 +125,84 @@ static jobject jscalar_from_scalar(JNIEnv* env, const gdf_scalar& scalar,
   if (scalar.is_valid) {
     switch (scalar.dtype) {
     case GDF_INT8:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromByte, scalar.data.si08);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_byte, scalar.data.si08);
       break;
     case GDF_INT16:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromShort, scalar.data.si16);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_short, scalar.data.si16);
       break;
     case GDF_INT32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromInt, scalar.data.si32);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_int, scalar.data.si32);
       break;
     case GDF_INT64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromLong, scalar.data.si64);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_long, scalar.data.si64);
       break;
     case GDF_FLOAT32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromFloat, scalar.data.fp32);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_float, scalar.data.fp32);
       break;
     case GDF_FLOAT64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromDouble, scalar.data.fp64);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_double, scalar.data.fp64);
       break;
     case GDF_BOOL8:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromBool, scalar.data.b08);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_bool, scalar.data.b08);
       break;
     case GDF_DATE32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_dateFromInt, scalar.data.dt32);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_date_from_int, scalar.data.dt32);
       break;
     case GDF_DATE64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_dateFromLong, scalar.data.dt64);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_date_from_long, scalar.data.dt64);
       break;
     case GDF_TIMESTAMP:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestampFromLong,
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestamp_from_long,
           scalar.data.tmst, time_unit);
       break;
     default:
-      throwJavaException(env, "java/lang/UnsupportedOperationException",
+      throw_java_exception(env, "java/lang/UnsupportedOperationException",
           "Unsupported native scalar type");
       break;
     }
   } else {
     if (scalar.dtype == GDF_TIMESTAMP) {
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestampFromNull, time_unit);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestamp_from_null, time_unit);
     } else {
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_fromNull, scalar.dtype);
+      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_null, scalar.dtype);
     }
   }
   return obj;
 }
 
-static void gdf_scalar_init(gdf_scalar * scalar, jlong intValues, jfloat fValue, jdouble dValue, jboolean isValid, int dType) {
-    scalar->dtype = static_cast<gdf_dtype>(dType);
-    scalar->is_valid = isValid;
+static void gdf_scalar_init(gdf_scalar * scalar, jlong int_values, jfloat f_value, jdouble d_value, jboolean is_valid, int d_type) {
+    scalar->dtype = static_cast<gdf_dtype>(d_type);
+    scalar->is_valid = is_valid;
     switch(scalar->dtype) {
     case GDF_INT8:
-        scalar->data.si08 = static_cast<char>(intValues);
+        scalar->data.si08 = static_cast<char>(int_values);
         break;
     case GDF_INT16:
-        scalar->data.si16 = static_cast<short>(intValues);
+        scalar->data.si16 = static_cast<short>(int_values);
         break;
     case GDF_INT32:
-        scalar->data.si32 = static_cast<int>(intValues);
+        scalar->data.si32 = static_cast<int>(int_values);
         break;
     case GDF_INT64:
-        scalar->data.si64 = static_cast<long>(intValues);
+        scalar->data.si64 = static_cast<long>(int_values);
         break;
     case GDF_DATE32:
-        scalar->data.dt32 = static_cast<gdf_date32>(intValues);
+        scalar->data.dt32 = static_cast<gdf_date32>(int_values);
         break;
     case GDF_DATE64:
-        scalar->data.dt64 = static_cast<gdf_date64>(intValues);
+        scalar->data.dt64 = static_cast<gdf_date64>(int_values);
         break;
     case GDF_TIMESTAMP:
-        scalar->data.tmst = static_cast<gdf_timestamp>(intValues);
+        scalar->data.tmst = static_cast<gdf_timestamp>(int_values);
         break;
     case GDF_BOOL8:
-        scalar->data.b08 = static_cast<char>(intValues);
+        scalar->data.b08 = static_cast<char>(int_values);
         break;
     case GDF_FLOAT32:
-        scalar->data.fp32 = fValue;
+        scalar->data.fp32 = f_value;
         break;
     case GDF_FLOAT64:
-        scalar->data.fp64 = dValue;
+        scalar->data.fp64 = d_value;
         break;
     default:
         throw std::logic_error("Unsupported scalar type");
@@ -215,7 +215,7 @@ static jni_rmm_unique_ptr<gdf_valid_type> copy_validity(JNIEnv * env,
   if (null_count > 0) {
     gdf_size_type copy_size = ((size + 7)/8);
     gdf_size_type alloc_size = gdf_valid_allocation_size(size);
-    ret = jniRmmAlloc<gdf_valid_type>(env, alloc_size);
+    ret = jni_rmm_alloc<gdf_valid_type>(env, alloc_size);
     JNI_CUDA_TRY(env, 0,
       cudaMemcpy(ret.get(), valid, copy_size, cudaMemcpyDeviceToDevice));
   }
@@ -248,7 +248,7 @@ static jlong cast_string_to(JNIEnv * env, NVStrings * str,
         case GDF_STRING_CATEGORY:
             {
               unique_nvcat_ptr cat(NVCategory::create_from_strings(*str), &NVCategory::destroy);
-              auto cat_data = jniRmmAlloc<int>(env, sizeof(int) * size);
+              auto cat_data = jni_rmm_alloc<int>(env, sizeof(int) * size);
               if (size != cat->get_values(cat_data.get(), true)) {
                 JNI_THROW_NEW(env, "java/lang/IllegalStateException",
                         "Internal Error copying str cat data", 0);
@@ -270,7 +270,7 @@ static jlong cast_string_to(JNIEnv * env, NVStrings * str,
 
 extern "C" {
 
-JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
+JNIEXPORT jint JNI_On_load(JavaVM* vm, void*) {
   JNIEnv* env;
   if (vm->GetEnv(reinterpret_cast<void**>(&env), cudf::jni::MINIMUM_JNI_VERSION) != JNI_OK) {
     return JNI_ERR;
@@ -284,7 +284,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
   return cudf::jni::MINIMUM_JNI_VERSION;
 }
 
-JNIEXPORT void JNI_OnUnload(JavaVM* vm, void*) {
+JNIEXPORT void JNI_On_unload(JavaVM* vm, void*) {
   JNIEnv* env = nullptr;
   if (vm->GetEnv(reinterpret_cast<void**>(&env), cudf::jni::MINIMUM_JNI_VERSION) != JNI_OK) {
     return;
@@ -294,12 +294,12 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void*) {
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfUnaryMath
-        (JNIEnv *env, jclass, jlong inputPtr, jint intOp, jint outDtype) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv *env, jclass, jlong input_ptr, jint int_op, jint out_dtype) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-      gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
-      gdf_dtype out_type = static_cast<gdf_dtype>(outDtype);
-      gdf_unary_math_op op = static_cast<gdf_unary_math_op>(intOp);
+      gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
+      gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
+      gdf_unary_math_op op = static_cast<gdf_unary_math_op>(int_op);
       cudf::jni::gdf_column_wrapper ret(input->size, out_type, input->null_count > 0);
 
       JNI_GDF_TRY(env, 0,
@@ -309,14 +309,14 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfUnaryMath
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVV
-        (JNIEnv *env, jclass, jlong lhsPtr, jlong rhsPtr, jint intOp, jint outDtype) {
-    JNI_NULL_CHECK(env, lhsPtr, "lhs is null", 0);
-    JNI_NULL_CHECK(env, rhsPtr, "rhs is null", 0);
+        (JNIEnv *env, jclass, jlong lhs_ptr, jlong rhs_ptr, jint int_op, jint out_dtype) {
+    JNI_NULL_CHECK(env, lhs_ptr, "lhs is null", 0);
+    JNI_NULL_CHECK(env, rhs_ptr, "rhs is null", 0);
     try {
-      gdf_column* lhs = reinterpret_cast<gdf_column*>(lhsPtr);
-      gdf_column* rhs = reinterpret_cast<gdf_column*>(rhsPtr);
-      gdf_dtype out_type = static_cast<gdf_dtype>(outDtype);
-      gdf_binary_operator op = static_cast<gdf_binary_operator>(intOp);
+      gdf_column* lhs = reinterpret_cast<gdf_column*>(lhs_ptr);
+      gdf_column* rhs = reinterpret_cast<gdf_column*>(rhs_ptr);
+      gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
+      gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
       cudf::jni::gdf_column_wrapper ret(lhs->size, out_type, lhs->null_count > 0 || rhs->null_count > 0);
 
       JNI_GDF_TRY(env, 0,
@@ -327,15 +327,15 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVV
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpSV
         (JNIEnv *env, jclass, 
-         jlong lhsIntValues, jfloat lhsFValue, jdouble lhsDValue, jboolean lhsIsValid, int lhsDType, 
-         jlong rhsPtr, jint intOp, jint outDtype) {
-    JNI_NULL_CHECK(env, rhsPtr, "rhs is null", 0);
+         jlong lhs_int_values, jfloat lhs_fValue, jdouble lhs_dValue, jboolean lhs_is_valid, int lhs_dType, 
+         jlong rhs_ptr, jint int_op, jint out_dtype) {
+    JNI_NULL_CHECK(env, rhs_ptr, "rhs is null", 0);
     try {
       gdf_scalar lhs{};
-      cudf::jni::gdf_scalar_init(&lhs, lhsIntValues, lhsFValue, lhsDValue, lhsIsValid, lhsDType);
-      gdf_column* rhs = reinterpret_cast<gdf_column*>(rhsPtr);
-      gdf_dtype out_type = static_cast<gdf_dtype>(outDtype);
-      gdf_binary_operator op = static_cast<gdf_binary_operator>(intOp);
+      cudf::jni::gdf_scalar_init(&lhs, lhs_int_values, lhs_fValue, lhs_dValue, lhs_is_valid, lhs_dType);
+      gdf_column* rhs = reinterpret_cast<gdf_column*>(rhs_ptr);
+      gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
+      gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
       cudf::jni::gdf_column_wrapper ret(rhs->size, out_type, !lhs.is_valid || rhs->null_count > 0);
 
       JNI_GDF_TRY(env, 0,
@@ -346,16 +346,16 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpSV
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVS
         (JNIEnv *env, jclass, 
-         jlong lhsPtr,
-         jlong rhsIntValues, jfloat rhsFValue, jdouble rhsDValue, jboolean rhsIsValid, int rhsDType, 
-         jint intOp, jint outDtype) {
-    JNI_NULL_CHECK(env, lhsPtr, "lhs is null", 0);
+         jlong lhs_ptr,
+         jlong rhs_int_values, jfloat rhs_fValue, jdouble rhs_dValue, jboolean rhs_is_valid, int rhs_dType, 
+         jint int_op, jint out_dtype) {
+    JNI_NULL_CHECK(env, lhs_ptr, "lhs is null", 0);
     try {
-      gdf_column* lhs = reinterpret_cast<gdf_column*>(lhsPtr);
+      gdf_column* lhs = reinterpret_cast<gdf_column*>(lhs_ptr);
       gdf_scalar rhs{};
-      cudf::jni::gdf_scalar_init(&rhs, rhsIntValues, rhsFValue, rhsDValue, rhsIsValid, rhsDType);
-      gdf_dtype out_type = static_cast<gdf_dtype>(outDtype);
-      gdf_binary_operator op = static_cast<gdf_binary_operator>(intOp);
+      cudf::jni::gdf_scalar_init(&rhs, rhs_int_values, rhs_fValue, rhs_dValue, rhs_is_valid, rhs_dType);
+      gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
+      gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
       cudf::jni::gdf_column_wrapper ret(lhs->size, out_type, !rhs.is_valid || lhs->null_count > 0);
 
       JNI_GDF_TRY(env, 0,
@@ -365,10 +365,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVS
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeYear
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_year(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -376,10 +376,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeYear
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMonth
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_month(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -387,10 +387,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMonth
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeDay
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_day(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -398,10 +398,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeDay
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeHour
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_hour(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -409,10 +409,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeHour
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMinute
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_minute(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -420,10 +420,10 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeMinute
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
-        (JNIEnv * env, jclass, jlong inputPtr) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         cudf::jni::gdf_column_wrapper output(input->size, GDF_INT16, input->null_count != 0);
         JNI_GDF_TRY(env, 0, gdf_extract_datetime_second(input, output.get()));
         return reinterpret_cast<jlong>(output.release());
@@ -431,23 +431,23 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfExtractDatetimeSecond
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
-        (JNIEnv * env, jclass, jlong inputPtr, jint dtype, jint timeUnit) {
-    JNI_NULL_CHECK(env, inputPtr, "input is null", 0);
+        (JNIEnv * env, jclass, jlong input_ptr, jint dtype, jint time_unit) {
+    JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
-        gdf_column* input = reinterpret_cast<gdf_column*>(inputPtr);
-        gdf_dtype cDType = static_cast<gdf_dtype>(dtype);
-        gdf_time_unit time_unit = static_cast<gdf_time_unit>(timeUnit);
+        gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
+        gdf_dtype c_dType = static_cast<gdf_dtype>(dtype);
+        gdf_time_unit time_unit = static_cast<gdf_time_unit>(time_unit);
         size_t size = input->size;
         if (input->dtype == GDF_STRING) {
             NVStrings * str = static_cast<NVStrings *>(input->data);
-            return cudf::jni::cast_string_to(env, str, cDType, time_unit, size,
+            return cudf::jni::cast_string_to(env, str, c_dType, time_unit, size,
                     input->null_count, input->valid);
-        } else if (input->dtype == GDF_STRING_CATEGORY && cDType == GDF_STRING) {
+        } else if (input->dtype == GDF_STRING_CATEGORY && c_dType == GDF_STRING) {
             NVCategory * cat = static_cast<NVCategory *>(input->dtype_info.category);
-            return cudf::jni::cast_string_cat_to(env, cat, cDType, time_unit, size,
+            return cudf::jni::cast_string_cat_to(env, cat, c_dType, time_unit, size,
                     input->null_count, input->valid);
         } else {
-            cudf::jni::gdf_column_wrapper output(input->size, cDType, input->null_count != 0);
+            cudf::jni::gdf_column_wrapper output(input->size, c_dType, input->null_count != 0);
             output.get()->dtype_info.time_unit = time_unit;
             JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
             return reinterpret_cast<jlong>(output.release());
@@ -465,7 +465,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_filter(JNIEnv* env, jclass,
     std::unique_ptr<gdf_column, decltype(free)*> result(
         static_cast<gdf_column*>(malloc(sizeof(gdf_column))), free);
     if (result.get() == nullptr) {
-      cudf::jni::throwJavaException(env, "java/lang/OutOfMemoryError",
+      cudf::jni::throw_java_exception(env, "java/lang/OutOfMemoryError",
           "Could not allocate native memory");
     }
     *result.get() = cudf::apply_boolean_mask(*input, *mask);

@@ -45,14 +45,14 @@ static jlongArray put_strings_on_host(JNIEnv *env, NVStrings *nvstr) {
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_allocateCudfColumn(JNIEnv *env,
-                                                                            jobject object) {
+                                                                            j_object object) {
   try {
     return reinterpret_cast<jlong>(calloc(1, sizeof(gdf_column)));
   }
   CATCH_STD(env, 0);
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn(JNIEnv *env, jobject jObject,
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn(JNIEnv *env, j_object j_object,
                                                                        jlong handle,
                                                                        jboolean deep_clean) {
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
@@ -69,28 +69,28 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn(JNIEnv *e
   free(column);
 }
 
-JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_getDataPtr(JNIEnv *env, jobject jObject,
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_getDataPtr(JNIEnv *env, j_object j_object,
                                                                     jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
   return reinterpret_cast<jlong>(column->data);
 }
 
-JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_getValidPtr(JNIEnv *env, jobject jObject,
+JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_getValidPtr(JNIEnv *env, j_object j_object,
                                                                      jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
   return reinterpret_cast<jlong>(column->valid);
 }
 
-JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getRowCount(JNIEnv *env, jobject jObject,
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getRowCount(JNIEnv *env, j_object j_object,
                                                                     jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
   return static_cast<jint>(column->size);
 }
 
-JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getNullCount(JNIEnv *env, jobject jObject,
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getNullCount(JNIEnv *env, j_object j_object,
                                                                      jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
@@ -98,7 +98,7 @@ JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getNullCount(JNIEnv *env
 }
 
 JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getDTypeInternal(JNIEnv *env,
-                                                                         jobject jObject,
+                                                                         j_object j_object,
                                                                          jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
@@ -106,7 +106,7 @@ JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getDTypeInternal(JNIEnv 
 }
 
 JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getTimeUnitInternal(JNIEnv *env,
-                                                                            jobject jObject,
+                                                                            j_object j_object,
                                                                             jlong handle) {
   JNI_NULL_CHECK(env, handle, "native handle is null", 0);
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
@@ -114,33 +114,33 @@ JNIEXPORT jint JNICALL Java_ai_rapids_cudf_ColumnVector_getTimeUnitInternal(JNIE
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewAugmented(
-    JNIEnv *env, jobject, jlong handle, jlong dataPtr, jlong jValid, jint size, jint dtype,
-    jint null_count, jint timeUnit) {
+    JNIEnv *env, j_object, jlong handle, jlong data_ptr, jlong j_valid, jint size, jint dtype,
+    jint null_count, jint time_unit) {
   JNI_NULL_CHECK(env, handle, "column is null", );
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
-  void *data = reinterpret_cast<void *>(dataPtr);
-  gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(jValid);
-  gdf_dtype cDtype = static_cast<gdf_dtype>(dtype);
+  void *data = reinterpret_cast<void *>(data_ptr);
+  gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(j_valid);
+  gdf_dtype c_dtype = static_cast<gdf_dtype>(dtype);
   gdf_dtype_extra_info info{};
-  info.time_unit = static_cast<gdf_time_unit>(timeUnit);
+  info.time_unit = static_cast<gdf_time_unit>(time_unit);
   JNI_GDF_TRY(env, ,
-              gdf_column_view_augmented(column, data, valid, size, cDtype, null_count, info));
+              gdf_column_view_augmented(column, data, valid, size, c_dtype, null_count, info));
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewStrings(
-    JNIEnv *env, jobject, jlong handle, jlong hostDataPtr, jlong hostOffsetsPtr,
-    jlong deviceValidPtr, jlong deviceDataPtr, jint size, jint jdtype, jint null_count) {
+    JNIEnv *env, j_object, jlong handle, jlong host_data_ptr, jlong host_offsets_ptr,
+    jlong device_valid_ptr, jlong device_data_ptr, jint size, jint jdtype, jint null_count) {
   JNI_NULL_CHECK(env, handle, "column is null", );
-  JNI_NULL_CHECK(env, hostDataPtr, "host data is null", );
-  JNI_NULL_CHECK(env, hostOffsetsPtr, "host offsets is null", );
+  JNI_NULL_CHECK(env, host_data_ptr, "host data is null", );
+  JNI_NULL_CHECK(env, host_offsets_ptr, "host offsets is null", );
 
   try {
     gdf_column *column = reinterpret_cast<gdf_column *>(handle);
-    char *host_data = reinterpret_cast<char *>(hostDataPtr);
-    uint32_t *host_offsets = reinterpret_cast<uint32_t *>(hostOffsetsPtr);
+    char *host_data = reinterpret_cast<char *>(host_data_ptr);
+    uint32_t *host_offsets = reinterpret_cast<uint32_t *>(host_offsets_ptr);
     uint32_t host_data_size = host_offsets[size];
 
-    gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(deviceValidPtr);
+    gdf_valid_type *valid = reinterpret_cast<gdf_valid_type *>(device_valid_ptr);
     gdf_dtype dtype = static_cast<gdf_dtype>(jdtype);
     gdf_dtype_extra_info info{};
 
@@ -148,7 +148,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewStrings(
     // NVCategory::create_from_offsets or NVStrings::create_from_offsets, it's much faster to
     // use create_from_index, block-transferring the host string data to the device first.
 
-    auto device_data = cudf::jni::jniRmmAlloc<char>(env, host_data_size);
+    auto device_data = cudf::jni::jni_rmm_alloc<char>(env, host_data_size);
     JNI_CUDA_TRY(
         env, ,
         cudaMemcpyAsync(device_data.get(), host_data, host_data_size, cudaMemcpyHostToDevice));
@@ -168,8 +168,8 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewStrings(
           gdf_column_view_augmented(column, strings.get(), valid, size, dtype, null_count, info));
       strings.release();
     } else if (dtype == GDF_STRING_CATEGORY) {
-      JNI_NULL_CHECK(env, deviceDataPtr, "device data pointer is null", );
-      int *cat_data = reinterpret_cast<int *>(deviceDataPtr);
+      JNI_NULL_CHECK(env, device_data_ptr, "device data pointer is null", );
+      int *cat_data = reinterpret_cast<int *>(device_data_ptr);
       unique_nvcat_ptr cat(NVCategory::create_from_index(index.data(), size, false),
                            &NVCategory::destroy);
       info.category = cat.get();
@@ -188,7 +188,7 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_cudfColumnViewStrings(
 }
 
 JNIEXPORT jlongArray JNICALL
-Java_ai_rapids_cudf_ColumnVector_getStringDataAndOffsetsBack(JNIEnv *env, jobject, jlong handle) {
+Java_ai_rapids_cudf_ColumnVector_getStringDataAndOffsetsBack(JNIEnv *env, j_object, jlong handle) {
   JNI_NULL_CHECK(env, handle, "column is null", NULL);
 
   try {
@@ -209,10 +209,10 @@ Java_ai_rapids_cudf_ColumnVector_getStringDataAndOffsetsBack(JNIEnv *env, jobjec
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_concatenate(JNIEnv *env, jclass clazz,
-                                                                     jlongArray columnHandles) {
-  JNI_NULL_CHECK(env, columnHandles, "input columns are null", 0);
+                                                                     jlongArray column_handles) {
+  JNI_NULL_CHECK(env, column_handles, "input columns are null", 0);
   try {
-    cudf::jni::native_jpointerArray<gdf_column> columns(env, columnHandles);
+    cudf::jni::native_jpointerArray<gdf_column> columns(env, column_handles);
     size_t total_size = 0;
     bool need_validity = false;
     for (int i = 0; i < columns.size(); ++i) {
@@ -221,7 +221,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_concatenate(JNIEnv *env
       need_validity |= columns[i]->valid != nullptr;
     }
     if (total_size != static_cast<gdf_size_type>(total_size)) {
-      cudf::jni::throwJavaException(env, "java/lang/IllegalArgumentException",
+      cudf::jni::throw_java_exception(env, "java/lang/IllegalArgumentException",
                                     "resulting column is too large");
     }
     cudf::jni::gdf_column_wrapper outcol(total_size, columns[0]->dtype, need_validity);
