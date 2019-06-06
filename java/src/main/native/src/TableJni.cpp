@@ -325,7 +325,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(JNIEnv *env, 
   JNI_NULL_CHECK(env, right_col_join_indices, "right_col_join_indices is null", NULL);
 
   try {
-    cudf::table *n_lef_table = reinterpret_cast<cudf::table *>(left_table);
+    cudf::table *n_left_table = reinterpret_cast<cudf::table *>(left_table);
     cudf::table *n_right_table = reinterpret_cast<cudf::table *>(right_table);
     cudf::jni::native_jintArray left_join_cols_arr(env, left_col_join_indices);
     cudf::jni::native_jintArray right_join_cols_arr(env, right_col_join_indices);
@@ -338,7 +338,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(JNIEnv *env, 
     context.flag_sort_inplace = 0;
 
     int result_num_cols =
-        n_lef_table->num_columns() + n_right_table->num_columns() - left_join_cols_arr.size();
+        n_left_table->num_columns() + n_right_table->num_columns() - left_join_cols_arr.size();
 
     // gdf_left_join is allocating the memory for the results so
     // allocate the output column structures here when we get it back fill in
@@ -348,7 +348,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(JNIEnv *env, 
       output_columns.reset(i, new gdf_column());
     }
     JNI_GDF_TRY(env, NULL,
-                gdf_left_join(n_lef_table->begin(), n_lef_table->num_columns(), left_join_cols_arr.data(),
+                gdf_left_join(n_left_table->begin(), n_left_table->num_columns(), left_join_cols_arr.data(),
                               n_right_table->begin(), n_right_table->num_columns(),
                               right_join_cols_arr.data(), left_join_cols_arr.size(), result_num_cols,
                               const_cast<gdf_column **>(
@@ -370,7 +370,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(JNIEnv *env,
   JNI_NULL_CHECK(env, right_col_join_indices, "right_col_join_indices is null", NULL);
 
   try {
-    cudf::table *n_lef_table = reinterpret_cast<cudf::table *>(left_table);
+    cudf::table *n_left_table = reinterpret_cast<cudf::table *>(left_table);
     cudf::table *n_right_table = reinterpret_cast<cudf::table *>(right_table);
     cudf::jni::native_jintArray left_join_cols_arr(env, left_col_join_indices);
     cudf::jni::native_jintArray right_join_cols_arr(env, right_col_join_indices);
@@ -383,7 +383,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(JNIEnv *env,
     context.flag_sort_inplace = 0;
 
     int result_num_cols =
-        n_lef_table->num_columns() + n_right_table->num_columns() - left_join_cols_arr.size();
+        n_left_table->num_columns() + n_right_table->num_columns() - left_join_cols_arr.size();
 
     // gdf_inner_join is allocating the memory for the results so
     // allocate the output column structures here when we get it back fill in
@@ -395,7 +395,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(JNIEnv *env,
       output_handles[i] = reinterpret_cast<jlong>(output_columns[i].get());
     }
     JNI_GDF_TRY(env, NULL,
-                gdf_inner_join(n_lef_table->begin(), n_lef_table->num_columns(), left_join_cols_arr.data(),
+                gdf_inner_join(n_left_table->begin(), n_left_table->num_columns(), left_join_cols_arr.data(),
                                n_right_table->begin(), n_right_table->num_columns(),
                                right_join_cols_arr.data(), left_join_cols_arr.size(), result_num_cols,
                                reinterpret_cast<gdf_column **>(output_handles.data()), nullptr,
