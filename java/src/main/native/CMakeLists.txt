@@ -95,7 +95,8 @@ include(CheckLibraryExists)
 # - CUDF ------------------------------------------------------------------------------------------
 
 set(CUDF_INCLUDE "${PROJECT_SOURCE_DIR}/../../../../cpp/include"
-                 "${PROJECT_SOURCE_DIR}/../../../../cpp/src/")
+                 "${PROJECT_SOURCE_DIR}/../../../../cpp/src/"
+                 "${PROJECT_SOURCE_DIR}/../../../../cpp/thirdparty/cub")
 
 find_library(CUDF_LIBRARY "cudf"
     HINTS "$ENV{CUDF_ROOT}/lib"

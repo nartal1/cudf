@@ -24,6 +24,7 @@
 #include <nvstrings/NVStrings.h>
 
 #include "rmm/rmm.h"
+#include "utilities/column_utils.hpp"
 #include "utilities/error_utils.hpp"
 
 #include "cudf.h"
@@ -685,7 +686,7 @@ public:
     gdf_column_view(col, nullptr, nullptr, size, dtype);
 
     if (size > 0) {
-      RMM_TRY(RMM_ALLOC(&col->data, size * gdf_dtype_size(col->dtype), 0));
+      RMM_TRY(RMM_ALLOC(&col->data, size * cudf::size_of(col->dtype), 0));
       if (has_validity_buffer) {
         RMM_TRY(RMM_ALLOC(&col->valid, gdf_valid_allocation_size(size), 0));
       }
