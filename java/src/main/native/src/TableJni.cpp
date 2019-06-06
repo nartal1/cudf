@@ -189,6 +189,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
     read_arg.num_names = n_col_names.size();
     read_arg.names = n_col_names.as_c_array();
     read_arg.num_dtype = n_data_types.size();
+    read_arg.dtype = n_data_types.as_c_array();
 
     // leave blank
     // read_arg.index_col
