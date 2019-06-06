@@ -27,19 +27,19 @@ namespace jni {
 
 static const jint MINIMUM_JNI_VERSION = JNI_VERSION_1_6;
 
-static jclass Scalar_jclass;
-static jmethodID Scalar_from_null;
-static jmethodID Scalar_timestamp_from_null;
-static jmethodID Scalar_from_bool;
-static jmethodID Scalar_from_byte;
-static jmethodID Scalar_from_short;
-static jmethodID Scalar_from_int;
-static jmethodID Scalar_date_from_int;
-static jmethodID Scalar_from_long;
-static jmethodID Scalar_date_from_long;
-static jmethodID Scalar_timestamp_from_long;
-static jmethodID Scalar_from_float;
-static jmethodID Scalar_from_double;
+static jclass scalar_jclass;
+static jmethodID scalar_from_null;
+static jmethodID scalar_timestamp_from_null;
+static jmethodID scalar_from_bool;
+static jmethodID scalar_from_byte;
+static jmethodID scalar_from_short;
+static jmethodID scalar_from_int;
+static jmethodID scalar_date_from_int;
+static jmethodID scalar_from_long;
+static jmethodID scalar_date_from_long;
+static jmethodID scalar_timestamp_from_long;
+static jmethodID scalar_from_float;
+static jmethodID scalar_from_double;
 
 #define SCALAR_CLASS "ai/rapids/cudf/Scalar"
 #define SCALAR_FACTORY_SIG(param_sig)  "(" param_sig ")L" SCALAR_CLASS ";"
@@ -54,58 +54,58 @@ static bool cache_scalar_jni(JNIEnv* env) {
     return false;
   }
 
-  Scalar_from_null = env->GetStaticMethodID(cls, "from_null", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_from_null == nullptr) {
+  scalar_from_null = env->GetStaticMethodID(cls, "fromNull", SCALAR_FACTORY_SIG("I"));
+  if (scalar_from_null == nullptr) {
     return false;
   }
-  Scalar_timestamp_from_null = env->GetStaticMethodID(cls, "timestamp_from_null", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_timestamp_from_null == nullptr) {
+  scalar_timestamp_from_null = env->GetStaticMethodID(cls, "timestampFromNull", SCALAR_FACTORY_SIG("I"));
+  if (scalar_timestamp_from_null == nullptr) {
     return false;
   }
-  Scalar_from_bool = env->GetStaticMethodID(cls, "from_bool", SCALAR_FACTORY_SIG("Z"));
-  if (Scalar_from_bool == nullptr) {
+  scalar_from_bool = env->GetStaticMethodID(cls, "fromBool", SCALAR_FACTORY_SIG("Z"));
+  if (scalar_from_bool == nullptr) {
     return false;
   }
-  Scalar_from_byte = env->GetStaticMethodID(cls, "from_byte", SCALAR_FACTORY_SIG("B"));
-  if (Scalar_from_byte == nullptr) {
+  scalar_from_byte = env->GetStaticMethodID(cls, "fromByte", SCALAR_FACTORY_SIG("B"));
+  if (scalar_from_byte == nullptr) {
     return false;
   }
-  Scalar_from_short = env->GetStaticMethodID(cls, "from_short", SCALAR_FACTORY_SIG("S"));
-  if (Scalar_from_short == nullptr) {
+  scalar_from_short = env->GetStaticMethodID(cls, "fromShort", SCALAR_FACTORY_SIG("S"));
+  if (scalar_from_short == nullptr) {
     return false;
   }
-  Scalar_from_int = env->GetStaticMethodID(cls, "from_int", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_from_int == nullptr) {
+  scalar_from_int = env->GetStaticMethodID(cls, "fromInt", SCALAR_FACTORY_SIG("I"));
+  if (scalar_from_int == nullptr) {
     return false;
   }
-  Scalar_date_from_int = env->GetStaticMethodID(cls, "date_from_int", SCALAR_FACTORY_SIG("I"));
-  if (Scalar_date_from_int == nullptr) {
+  scalar_date_from_int = env->GetStaticMethodID(cls, "dateFromInt", SCALAR_FACTORY_SIG("I"));
+  if (scalar_date_from_int == nullptr) {
     return false;
   }
-  Scalar_from_long = env->GetStaticMethodID(cls, "from_long", SCALAR_FACTORY_SIG("J"));
-  if (Scalar_from_long == nullptr) {
+  scalar_from_long = env->GetStaticMethodID(cls, "fromLong", SCALAR_FACTORY_SIG("J"));
+  if (scalar_from_long == nullptr) {
     return false;
   }
-  Scalar_date_from_long = env->GetStaticMethodID(cls, "date_from_long", SCALAR_FACTORY_SIG("J"));
-  if (Scalar_date_from_long == nullptr) {
+  scalar_date_from_long = env->GetStaticMethodID(cls, "dateFromLong", SCALAR_FACTORY_SIG("J"));
+  if (scalar_date_from_long == nullptr) {
     return false;
   }
-  Scalar_timestamp_from_long = env->GetStaticMethodID(cls, "timestamp_from_long", SCALAR_FACTORY_SIG("JI"));
-  if (Scalar_timestamp_from_long == nullptr) {
+  scalar_timestamp_from_long = env->GetStaticMethodID(cls, "timestampFromLong", SCALAR_FACTORY_SIG("JI"));
+  if (scalar_timestamp_from_long == nullptr) {
     return false;
   }
-  Scalar_from_float = env->GetStaticMethodID(cls, "from_float", SCALAR_FACTORY_SIG("F"));
-  if (Scalar_from_float == nullptr) {
+  scalar_from_float = env->GetStaticMethodID(cls, "fromFloat", SCALAR_FACTORY_SIG("F"));
+  if (scalar_from_float == nullptr) {
     return false;
   }
-  Scalar_from_double = env->GetStaticMethodID(cls, "from_double", SCALAR_FACTORY_SIG("D"));
-  if (Scalar_from_double == nullptr) {
+  scalar_from_double = env->GetStaticMethodID(cls, "fromDouble", SCALAR_FACTORY_SIG("D"));
+  if (scalar_from_double == nullptr) {
     return false;
   }
 
   // Convert local reference to global so it cannot be garbage collected.
-  Scalar_jclass = static_cast<jclass>(env->NewGlobalRef(cls));
-  if (Scalar_jclass == nullptr) {
+  scalar_jclass = static_cast<jclass>(env->NewGlobalRef(cls));
+  if (scalar_jclass == nullptr) {
     return false;
   }
 
@@ -113,9 +113,9 @@ static bool cache_scalar_jni(JNIEnv* env) {
 }
 
 static void release_scalar_jni(JNIEnv* env) {
-  if (Scalar_jclass != nullptr) {
-    env->DeleteGlobalRef(Scalar_jclass);
-    Scalar_jclass = nullptr;
+  if (scalar_jclass != nullptr) {
+    env->DeleteGlobalRef(scalar_jclass);
+    scalar_jclass = nullptr;
   }
 }
 
@@ -125,34 +125,34 @@ static jobject jscalar_from_scalar(JNIEnv* env, const gdf_scalar& scalar,
   if (scalar.is_valid) {
     switch (scalar.dtype) {
     case GDF_INT8:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_byte, scalar.data.si08);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_byte, scalar.data.si08);
       break;
     case GDF_INT16:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_short, scalar.data.si16);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_short, scalar.data.si16);
       break;
     case GDF_INT32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_int, scalar.data.si32);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_int, scalar.data.si32);
       break;
     case GDF_INT64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_long, scalar.data.si64);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_long, scalar.data.si64);
       break;
     case GDF_FLOAT32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_float, scalar.data.fp32);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_float, scalar.data.fp32);
       break;
     case GDF_FLOAT64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_double, scalar.data.fp64);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_double, scalar.data.fp64);
       break;
     case GDF_BOOL8:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_bool, scalar.data.b08);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_bool, scalar.data.b08);
       break;
     case GDF_DATE32:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_date_from_int, scalar.data.dt32);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_date_from_int, scalar.data.dt32);
       break;
     case GDF_DATE64:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_date_from_long, scalar.data.dt64);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_date_from_long, scalar.data.dt64);
       break;
     case GDF_TIMESTAMP:
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestamp_from_long,
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_timestamp_from_long,
           scalar.data.tmst, time_unit);
       break;
     default:
@@ -162,9 +162,9 @@ static jobject jscalar_from_scalar(JNIEnv* env, const gdf_scalar& scalar,
     }
   } else {
     if (scalar.dtype == GDF_TIMESTAMP) {
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_timestamp_from_null, time_unit);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_timestamp_from_null, time_unit);
     } else {
-      obj = env->CallStaticObjectMethod(Scalar_jclass, Scalar_from_null, scalar.dtype);
+      obj = env->CallStaticObjectMethod(scalar_jclass, scalar_from_null, scalar.dtype);
     }
   }
   return obj;
