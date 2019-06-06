@@ -21,27 +21,27 @@
 extern "C" {
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Rmm_initialize(JNIEnv *env, jclass clazz,
-                                                          jint allocationMode,
-                                                          jboolean enableLogging, jlong poolSize) {
+                                                          jint allocation_mode,
+                                                          jboolean enable_logging, jlong pool_size) {
   rmmOptions_t opts;
-  opts.allocation_mode = static_cast<rmmAllocationMode_t>(allocationMode);
-  opts.enable_logging = enableLogging == JNI_TRUE;
-  opts.initial_pool_size = poolSize;
+  opts.allocation_mode = static_cast<rmmAllocationMode_t>(allocation_mode);
+  opts.enable_logging = enable_logging == JNI_TRUE;
+  opts.initial_pool_size = pool_size;
   JNI_RMM_TRY(env, , rmmInitialize(&opts));
 }
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Rmm_alloc(JNIEnv *env, jclass clazz, jlong size,
                                                       jlong stream) {
   void *ret = 0;
-  cudaStream_t cStream = reinterpret_cast<cudaStream_t>(stream);
-  JNI_RMM_TRY(env, 0, RMM_ALLOC(&ret, size, cStream));
+  cudaStream_t c_stream = reinterpret_cast<cudaStream_t>(stream);
+  JNI_RMM_TRY(env, 0, RMM_ALLOC(&ret, size, c_stream));
   return (jlong)ret;
 }
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Rmm_free(JNIEnv *env, jclass clazz, jlong ptr,
                                                     jlong stream) {
   void *cptr = reinterpret_cast<void *>(ptr);
-  cudaStream_t cStream = reinterpret_cast<cudaStream_t>(stream);
-  JNI_RMM_TRY(env, , RMM_FREE(cptr, cStream));
+  cudaStream_t c_stream = reinterpret_cast<cudaStream_t>(stream);
+  JNI_RMM_TRY(env, , RMM_FREE(cptr, c_stream));
 }
 }
