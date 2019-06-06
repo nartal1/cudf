@@ -907,7 +907,7 @@ public:
         if (orig != NULL) {
           jclass clz = env->GetObjectClass(jt);
           if (clz != NULL) {
-            jmethodID id = env->GetMethodID(clz, "add_suppressed", "(Ljava/lang/Throwable;)V");
+            jmethodID id = env->GetMethodID(clz, "addSuppressed", "(Ljava/lang/Throwable;)V");
             if (id != NULL) {
               env->CallVoidMethod(jt, id, orig);
             }

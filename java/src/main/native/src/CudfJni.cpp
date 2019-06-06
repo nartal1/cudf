@@ -170,8 +170,8 @@ static jobject jscalar_from_scalar(JNIEnv* env, const gdf_scalar& scalar,
   return obj;
 }
 
-static void gdf_scalar_init(gdf_scalar * scalar, jlong int_values, jfloat f_value, jdouble d_value, jboolean is_valid, int d_type) {
-    scalar->dtype = static_cast<gdf_dtype>(d_type);
+static void gdf_scalar_init(gdf_scalar * scalar, jlong int_values, jfloat f_value, jdouble d_value, jboolean is_valid, int dtype) {
+    scalar->dtype = static_cast<gdf_dtype>(dtype);
     scalar->is_valid = is_valid;
     switch(scalar->dtype) {
     case GDF_INT8:
@@ -270,7 +270,7 @@ static jlong cast_string_to(JNIEnv * env, NVStrings * str,
 
 extern "C" {
 
-JNIEXPORT jint JNI_On_load(JavaVM* vm, void*) {
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
   JNIEnv* env;
   if (vm->GetEnv(reinterpret_cast<void**>(&env), cudf::jni::MINIMUM_JNI_VERSION) != JNI_OK) {
     return JNI_ERR;
@@ -284,7 +284,7 @@ JNIEXPORT jint JNI_On_load(JavaVM* vm, void*) {
   return cudf::jni::MINIMUM_JNI_VERSION;
 }
 
-JNIEXPORT void JNI_On_unload(JavaVM* vm, void*) {
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void*) {
   JNIEnv* env = nullptr;
   if (vm->GetEnv(reinterpret_cast<void**>(&env), cudf::jni::MINIMUM_JNI_VERSION) != JNI_OK) {
     return;
@@ -327,12 +327,12 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVV
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpSV
         (JNIEnv *env, jclass, 
-         jlong lhs_int_values, jfloat lhs_fValue, jdouble lhs_dValue, jboolean lhs_is_valid, int lhs_dType, 
+         jlong lhs_int_values, jfloat lhs_f_value, jdouble lhs_d_value, jboolean lhs_is_valid, int lhs_dtype, 
          jlong rhs_ptr, jint int_op, jint out_dtype) {
     JNI_NULL_CHECK(env, rhs_ptr, "rhs is null", 0);
     try {
       gdf_scalar lhs{};
-      cudf::jni::gdf_scalar_init(&lhs, lhs_int_values, lhs_fValue, lhs_dValue, lhs_is_valid, lhs_dType);
+      cudf::jni::gdf_scalar_init(&lhs, lhs_int_values, lhs_f_value, lhs_d_value, lhs_is_valid, lhs_dtype);
       gdf_column* rhs = reinterpret_cast<gdf_column*>(rhs_ptr);
       gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
       gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
@@ -347,13 +347,13 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpSV
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVS
         (JNIEnv *env, jclass, 
          jlong lhs_ptr,
-         jlong rhs_int_values, jfloat rhs_fValue, jdouble rhs_dValue, jboolean rhs_is_valid, int rhs_dType, 
+         jlong rhs_int_values, jfloat rhs_f_value, jdouble rhs_d_value, jboolean rhs_is_valid, int rhs_dtype, 
          jint int_op, jint out_dtype) {
     JNI_NULL_CHECK(env, lhs_ptr, "lhs is null", 0);
     try {
       gdf_column* lhs = reinterpret_cast<gdf_column*>(lhs_ptr);
       gdf_scalar rhs{};
-      cudf::jni::gdf_scalar_init(&rhs, rhs_int_values, rhs_fValue, rhs_dValue, rhs_is_valid, rhs_dType);
+      cudf::jni::gdf_scalar_init(&rhs, rhs_int_values, rhs_f_value, rhs_d_value, rhs_is_valid, rhs_dtype);
       gdf_dtype out_type = static_cast<gdf_dtype>(out_dtype);
       gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
       cudf::jni::gdf_column_wrapper ret(lhs->size, out_type, !rhs.is_valid || lhs->null_count > 0);
@@ -435,19 +435,19 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
     JNI_NULL_CHECK(env, input_ptr, "input is null", 0);
     try {
         gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
-        gdf_dtype c_dType = static_cast<gdf_dtype>(dtype);
+        gdf_dtype c_dtype = static_cast<gdf_dtype>(dtype);
         gdf_time_unit time_unit = static_cast<gdf_time_unit>(time_unit);
         size_t size = input->size;
         if (input->dtype == GDF_STRING) {
             NVStrings * str = static_cast<NVStrings *>(input->data);
-            return cudf::jni::cast_string_to(env, str, c_dType, time_unit, size,
+            return cudf::jni::cast_string_to(env, str, c_dtype, time_unit, size,
                     input->null_count, input->valid);
-        } else if (input->dtype == GDF_STRING_CATEGORY && c_dType == GDF_STRING) {
+        } else if (input->dtype == GDF_STRING_CATEGORY && c_dtype == GDF_STRING) {
             NVCategory * cat = static_cast<NVCategory *>(input->dtype_info.category);
-            return cudf::jni::cast_string_cat_to(env, cat, c_dType, time_unit, size,
+            return cudf::jni::cast_string_cat_to(env, cat, c_dtype, time_unit, size,
                     input->null_count, input->valid);
         } else {
-            cudf::jni::gdf_column_wrapper output(input->size, c_dType, input->null_count != 0);
+            cudf::jni::gdf_column_wrapper output(input->size, c_dtype, input->null_count != 0);
             output.get()->dtype_info.time_unit = time_unit;
             JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
             return reinterpret_cast<jlong>(output.release());
