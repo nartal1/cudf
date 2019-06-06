@@ -52,7 +52,8 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_allocateCudfColumn(JNIE
   CATCH_STD(env, 0);
 }
 
-JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn(JNIEnv *env, jobject j_object,
+JNIEXPORT void JNICALL Java_ai_rapids_cudf_ColumnVector_freeCudfColumn(JNIEnv *env,
+                                                                       jobject j_object,
                                                                        jlong handle,
                                                                        jboolean deep_clean) {
   gdf_column *column = reinterpret_cast<gdf_column *>(handle);
@@ -222,7 +223,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_ColumnVector_concatenate(JNIEnv *env
     }
     if (total_size != static_cast<gdf_size_type>(total_size)) {
       cudf::jni::throw_java_exception(env, "java/lang/IllegalArgumentException",
-                                    "resulting column is too large");
+                                      "resulting column is too large");
     }
     cudf::jni::gdf_column_wrapper outcol(total_size, columns[0]->dtype, need_validity);
     JNI_GDF_TRY(env, 0, gdf_column_concat(outcol.get(), columns.data(), columns.size()));

@@ -66,11 +66,9 @@ JNIEXPORT void JNICALL Java_ai_rapids_cudf_Table_freeCudfTable(JNIEnv *env, jcla
   delete table;
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env, jclass j_class_object,
-                                                                  jlong j_input_table,
-                                                                  jlongArray j_sort_keys_gdfcolumns,
-                                                                  jbooleanArray j_is_descending,
-                                                                  jboolean j_are_nulls_smallest) {
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(
+    JNIEnv *env, jclass j_class_object, jlong j_input_table, jlongArray j_sort_keys_gdfcolumns,
+    jbooleanArray j_is_descending, jboolean j_are_nulls_smallest) {
 
   // input validations & verifications
   JNI_NULL_CHECK(env, j_input_table, "input table is null", NULL);
@@ -95,14 +93,14 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env, j
 
     bool are_nulls_smallest = static_cast<bool>(j_are_nulls_smallest);
 
-    auto col_data =
-        cudf::jni::jni_rmm_alloc<int32_t>(env, n_sort_keys_gdfcolumns[0]->size * sizeof(int32_t), 0);
+    auto col_data = cudf::jni::jni_rmm_alloc<int32_t>(
+        env, n_sort_keys_gdfcolumns[0]->size * sizeof(int32_t), 0);
 
     gdf_column intermediate_output;
     // construct column view
-    cudf::jni::jni_cudf_check(env,
-                            gdf_column_view(&intermediate_output, col_data.get(), nullptr,
-                                            n_sort_keys_gdfcolumns[0]->size, gdf_dtype::GDF_INT32));
+    cudf::jni::jni_cudf_check(env, gdf_column_view(&intermediate_output, col_data.get(), nullptr,
+                                                   n_sort_keys_gdfcolumns[0]->size,
+                                                   gdf_dtype::GDF_INT32));
 
     gdf_context context{};
     // Most of these are probably ignored, but just to be safe
@@ -117,8 +115,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(JNIEnv *env, j
         j_are_nulls_smallest ? GDF_NULL_AS_SMALLEST : GDF_NULL_AS_LARGEST;
 
     cudf::jni::jni_cudf_check(env, gdf_order_by(n_sort_keys_gdfcolumns.data(), is_descending.get(),
-                                              static_cast<size_t>(num_columns), &intermediate_output,
-                                              &context));
+                                                static_cast<size_t>(num_columns),
+                                                &intermediate_output, &context));
 
     cudf::table *cudf_table = output.get_cudf_table();
 
@@ -236,7 +234,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
     JNI_GDF_TRY(env, NULL, gdf_status);
 
     cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(read_arg.data),
-                                               read_arg.num_cols_out);
+                                                read_arg.num_cols_out);
     return native_handles.get_jlongArray();
   }
   CATCH_STD(env, NULL);
@@ -291,17 +289,15 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadParquet(
     JNI_GDF_TRY(env, NULL, gdf_status);
 
     cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(read_arg.data),
-                                               read_arg.num_cols_out);
+                                                read_arg.num_cols_out);
     return native_handles.get_jlongArray();
   }
   CATCH_STD(env, NULL);
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(JNIEnv *env, jclass clazz,
-                                                                   jlong left_table,
-                                                                   jintArray left_col_join_indices,
-                                                                   jlong right_table,
-                                                                   jintArray right_col_join_indices) {
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(
+    JNIEnv *env, jclass clazz, jlong left_table, jintArray left_col_join_indices, jlong right_table,
+    jintArray right_col_join_indices) {
   JNI_NULL_CHECK(env, left_table, "left_table is null", NULL);
   JNI_NULL_CHECK(env, left_col_join_indices, "left_col_join_indices is null", NULL);
   JNI_NULL_CHECK(env, right_table, "right_table is null", NULL);
@@ -330,23 +326,22 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfLeftJoin(JNIEnv *env, 
     for (int i = 0; i < result_num_cols; i++) {
       output_columns.reset(i, new gdf_column());
     }
-    JNI_GDF_TRY(env, NULL,
-                gdf_left_join(n_left_table->begin(), n_left_table->num_columns(), left_join_cols_arr.data(),
-                              n_right_table->begin(), n_right_table->num_columns(),
-                              right_join_cols_arr.data(), left_join_cols_arr.size(), result_num_cols,
-                              const_cast<gdf_column **>(
-                                  output_columns.get()), // API does not respect const values
-                              nullptr, nullptr, &context));
+    JNI_GDF_TRY(
+        env, NULL,
+        gdf_left_join(
+            n_left_table->begin(), n_left_table->num_columns(), left_join_cols_arr.data(),
+            n_right_table->begin(), n_right_table->num_columns(), right_join_cols_arr.data(),
+            left_join_cols_arr.size(), result_num_cols,
+            const_cast<gdf_column **>(output_columns.get()), // API does not respect const values
+            nullptr, nullptr, &context));
     return output_columns.release();
   }
   CATCH_STD(env, NULL);
 }
 
-JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(JNIEnv *env, jclass clazz,
-                                                                    jlong left_table,
-                                                                    jintArray left_col_join_indices,
-                                                                    jlong right_table,
-                                                                    jintArray right_col_join_indices) {
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(
+    JNIEnv *env, jclass clazz, jlong left_table, jintArray left_col_join_indices, jlong right_table,
+    jintArray right_col_join_indices) {
   JNI_NULL_CHECK(env, left_table, "left_table is null", NULL);
   JNI_NULL_CHECK(env, left_col_join_indices, "left_col_join_indices is null", NULL);
   JNI_NULL_CHECK(env, right_table, "right_table is null", NULL);
@@ -378,9 +373,10 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfInnerJoin(JNIEnv *env,
       output_handles[i] = reinterpret_cast<jlong>(output_columns[i].get());
     }
     JNI_GDF_TRY(env, NULL,
-                gdf_inner_join(n_left_table->begin(), n_left_table->num_columns(), left_join_cols_arr.data(),
-                               n_right_table->begin(), n_right_table->num_columns(),
-                               right_join_cols_arr.data(), left_join_cols_arr.size(), result_num_cols,
+                gdf_inner_join(n_left_table->begin(), n_left_table->num_columns(),
+                               left_join_cols_arr.data(), n_right_table->begin(),
+                               n_right_table->num_columns(), right_join_cols_arr.data(),
+                               left_join_cols_arr.size(), result_num_cols,
                                reinterpret_cast<gdf_column **>(output_handles.data()), nullptr,
                                nullptr, &context));
     for (int i = 0; i < result_num_cols; i++) {
@@ -415,7 +411,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_concatenate(JNIEnv *env, 
     // check for overflow
     if (total_size != static_cast<gdf_size_type>(total_size)) {
       cudf::jni::throw_java_exception(env, "java/lang/IllegalArgumentException",
-                                    "resulting column is too large");
+                                      "resulting column is too large");
     }
 
     std::vector<cudf::jni::gdf_column_wrapper> outcols;

@@ -929,7 +929,7 @@ template <typename T> using jni_rmm_unique_ptr = std::unique_ptr<T, rmm_deleter<
  */
 template <typename T>
 inline jni_rmm_unique_ptr<T> jni_rmm_alloc(JNIEnv *const env, const size_t size,
-                                         const cudaStream_t stream = 0) {
+                                           const cudaStream_t stream = 0) {
   T *ptr;
   rmmError_t rmmStatus = RMM_ALLOC(&ptr, size, stream);
   if (RMM_SUCCESS != rmmStatus) {

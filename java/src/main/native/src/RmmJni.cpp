@@ -22,7 +22,8 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_ai_rapids_cudf_Rmm_initialize(JNIEnv *env, jclass clazz,
                                                           jint allocation_mode,
-                                                          jboolean enable_logging, jlong pool_size) {
+                                                          jboolean enable_logging,
+                                                          jlong pool_size) {
   rmmOptions_t opts;
   opts.allocation_mode = static_cast<rmmAllocationMode_t>(allocation_mode);
   opts.enable_logging = enable_logging == JNI_TRUE;
