@@ -962,7 +962,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
      * @param unit the unit of time, really only applicable for TIMESTAMP.
      * @return A new vector allocated on the GPU
      */
-    ColumnVector castTo(DType type, TimeUnit unit) {
+    public ColumnVector castTo(DType type, TimeUnit unit) {
         if (this.type == type && this.tsTimeUnit == unit) {
             // Optimization
             return incRefCount();
