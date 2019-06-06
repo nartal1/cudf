@@ -436,19 +436,19 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast
     try {
         gdf_column* input = reinterpret_cast<gdf_column*>(input_ptr);
         gdf_dtype c_dtype = static_cast<gdf_dtype>(dtype);
-        gdf_time_unit time_unit = static_cast<gdf_time_unit>(time_unit);
+        gdf_time_unit c_time_unit = static_cast<gdf_time_unit>(time_unit);
         size_t size = input->size;
         if (input->dtype == GDF_STRING) {
             NVStrings * str = static_cast<NVStrings *>(input->data);
-            return cudf::jni::cast_string_to(env, str, c_dtype, time_unit, size,
+            return cudf::jni::cast_string_to(env, str, c_dtype, c_time_unit, size,
                     input->null_count, input->valid);
         } else if (input->dtype == GDF_STRING_CATEGORY && c_dtype == GDF_STRING) {
             NVCategory * cat = static_cast<NVCategory *>(input->dtype_info.category);
-            return cudf::jni::cast_string_cat_to(env, cat, c_dtype, time_unit, size,
+            return cudf::jni::cast_string_cat_to(env, cat, c_dtype, c_time_unit, size,
                     input->null_count, input->valid);
         } else {
             cudf::jni::gdf_column_wrapper output(input->size, c_dtype, input->null_count != 0);
-            output.get()->dtype_info.time_unit = time_unit;
+            output.get()->dtype_info.time_unit = c_time_unit;
             JNI_GDF_TRY(env, 0, gdf_cast(input, output.get()));
             return reinterpret_cast<jlong>(output.release());
         }
