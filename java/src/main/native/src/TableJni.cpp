@@ -148,27 +148,9 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
                   NULL);
   }
 
-  // This is the length of colNames and also the length of dataTypes.  If both are set
-  // the lengths must be equal, but either or both of them can be NULL.  The csv reader
-  // will infer the colNames if it is NULL and dataTypes if it is NULL. If both are NULL
-  // nColumns needs to be 0.
-  int nColumns = 0;
   try {
     cudf::jni::native_jstringArray nColNames(env, colNames);
     cudf::jni::native_jstringArray nDataTypes(env, dataTypes);
-
-    if (!nDataTypes.isNull() && !nColNames.isNull()) {
-      if (nDataTypes.size() != nColNames.size()) {
-        JNI_THROW_NEW(env, "java/lang/IllegalArgumentException",
-                      "dataTypes and colNames should be the same size", NULL);
-      }
-    }
-
-    if (!nColNames.isNull()) {
-      nColumns = nColNames.size();
-    } else if (!nDataTypes.isNull()) {
-      nColumns = nDataTypes.size();
-    }
 
     cudf::jni::native_jstring filename(env, inputfilepath);
     if (!read_buffer && filename.is_empty()) {
@@ -203,9 +185,10 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
     read_arg.skipinitialspace = 0;
     read_arg.nrows = -1;
     read_arg.header = headerRow;
-    read_arg.num_cols = nColumns;
 
+    read_arg.num_names = nColNames.size();
     read_arg.names = nColNames.as_c_array();
+    read_arg.num_dtype = nDataTypes.size();
     read_arg.dtype = nDataTypes.as_c_array();
 
     // leave blank
