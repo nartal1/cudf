@@ -45,10 +45,10 @@ public:
 /**
  * @brief throw a java exception and a C++ one for flow control.
  */
-inline void throwJavaException(JNIEnv *const env, const char *clazz_name, const char *message) {
-  jclass exClass = env->FindClass(clazz_name);
-  if (exClass != NULL) {
-    env->ThrowNew(exClass, message);
+inline void throw_java_exception(JNIEnv *const env, const char *clazz_name, const char *message) {
+  jclass ex_class = env->FindClass(clazz_name);
+  if (ex_class != NULL) {
+    env->ThrowNew(ex_class, message);
   }
   throw jni_exception(message);
 }
@@ -109,26 +109,26 @@ public:
     checkJavaException(env);
   }
 
-  bool isNull() const noexcept { return orig == NULL; }
+  bool is_null() const noexcept { return orig == NULL; }
 
   int size() const noexcept { return len; }
 
   jlong operator[](int index) const {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
 
   jlong &operator[](int index) {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
@@ -188,7 +188,7 @@ public:
 
   native_jpointerArray(JNIEnv *const env, T *arr, int len) : wrapped(env, arr, len) {}
 
-  bool isNull() const noexcept { return wrapped.isNull(); }
+  bool is_null() const noexcept { return wrapped.is_null(); }
 
   int size() const noexcept { return wrapped.size(); }
 
@@ -247,7 +247,7 @@ public:
   unique_jpointerArray(JNIEnv *const env, T *arr, int len, const D &del)
       : wrapped(new native_jpointerArray<T>(env, arr, len)), del(del) {}
 
-  bool isNull() const noexcept { return wrapped == NULL || wrapped->isNull(); }
+  bool is_null() const noexcept { return wrapped == NULL || wrapped->is_null(); }
 
   int size() const noexcept { return wrapped == NULL ? 0 : wrapped->size(); }
 
@@ -327,26 +327,26 @@ public:
     }
   }
 
-  bool isNull() const noexcept { return orig == NULL; }
+  bool is_null() const noexcept { return orig == NULL; }
 
   int size() const noexcept { return len; }
 
   jint operator[](int index) const {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
 
   jint &operator[](int index) {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
@@ -414,26 +414,26 @@ public:
     }
   }
 
-  bool isNull() const noexcept { return orig == NULL; }
+  bool is_null() const noexcept { return orig == NULL; }
 
   int size() const noexcept { return len; }
 
   jboolean operator[](int index) const {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
 
   jboolean &operator[](int index) {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
     }
     if (index < 0 || index >= len) {
-      throwJavaException(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
+      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
     }
     return data()[index];
   }
@@ -510,7 +510,7 @@ public:
     other.cstr = NULL;
   }
 
-  bool isNull() const noexcept { return orig == NULL; }
+  bool is_null() const noexcept { return orig == NULL; }
 
   const char *get() const {
     init_cstr();
@@ -559,7 +559,7 @@ public:
     }
   }
 
-  bool isNull() const noexcept { return orig == NULL; }
+  bool is_null() const noexcept { return orig == NULL; }
 
   int size() const noexcept { return len; }
 
@@ -567,7 +567,7 @@ public:
 
   T get(int index) const {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
     }
     T ret = static_cast<T>(env->GetObjectArrayElement(orig, index));
     checkJavaException(env);
@@ -576,7 +576,7 @@ public:
 
   void set(int index, const T &val) {
     if (orig == NULL) {
-      throwJavaException(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
     }
     env->SetObjectArrayElement(orig, index, val);
     checkJavaException(env);
@@ -595,7 +595,7 @@ private:
   mutable std::vector<const char *> c_cache;
 
   void init_cache() const {
-    if (!arr.isNull() && cache.empty()) {
+    if (!arr.is_null() && cache.empty()) {
       int size = this->size();
       cache.reserve(size);
       for (int i = 0; i < size; i++) {
@@ -605,7 +605,7 @@ private:
   }
 
   void init_c_cache() const {
-    if (!arr.isNull() && c_cache.empty()) {
+    if (!arr.is_null() && c_cache.empty()) {
       init_cache();
       int size = this->size();
       c_cache.reserve(size);
@@ -630,15 +630,15 @@ private:
 public:
   native_jstringArray(JNIEnv *const env, jobjectArray orig) : env(env), arr(env, orig) {}
 
-  bool isNull() const noexcept { return arr.isNull(); }
+  bool is_null() const noexcept { return arr.is_null(); }
 
   int size() const noexcept { return arr.size(); }
 
   native_jstring &operator[](int index) const { return get(index); }
 
   native_jstring &get(int index) const {
-    if (arr.isNull()) {
-      throwJavaException(env, "java/lang/NullPointerException", "jstringArray pointer is NULL");
+    if (arr.is_null()) {
+      throw_java_exception(env, "java/lang/NullPointerException", "jstringArray pointer is NULL");
     }
     init_cache();
     return cache[index];
@@ -804,14 +804,14 @@ public:
 /**
  * @brief create a cuda exception from a given cudaError_t
  */
-inline jthrowable cudaException(JNIEnv *const env, cudaError_t status, jthrowable cause = NULL) {
-  jclass exClass = env->FindClass("ai/rapids/cudf/CudaException");
-  if (exClass == NULL) {
+inline jthrowable cuda_exception(JNIEnv *const env, cudaError_t status, jthrowable cause = NULL) {
+  jclass ex_class = env->FindClass("ai/rapids/cudf/CudaException");
+  if (ex_class == NULL) {
     return NULL;
   }
-  jmethodID ctorID =
-      env->GetMethodID(exClass, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
-  if (ctorID == NULL) {
+  jmethodID ctor_id =
+      env->GetMethodID(ex_class, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
+  if (ctor_id == NULL) {
     return NULL;
   }
 
@@ -820,21 +820,21 @@ inline jthrowable cudaException(JNIEnv *const env, cudaError_t status, jthrowabl
     return NULL;
   }
 
-  jobject ret = env->NewObject(exClass, ctorID, msg, cause);
+  jobject ret = env->NewObject(ex_class, ctor_id, msg, cause);
   return (jthrowable)ret;
 }
 
 /**
  * @brief create a cudf exception from a given gdf_error
  */
-inline jthrowable cudfException(JNIEnv *const env, gdf_error status, jthrowable cause = NULL) {
-  jclass exClass = env->FindClass("ai/rapids/cudf/CudfException");
-  if (exClass == NULL) {
+inline jthrowable cudf_exception(JNIEnv *const env, gdf_error status, jthrowable cause = NULL) {
+  jclass ex_class = env->FindClass("ai/rapids/cudf/CudfException");
+  if (ex_class == NULL) {
     return NULL;
   }
-  jmethodID ctorID =
-      env->GetMethodID(exClass, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
-  if (ctorID == NULL) {
+  jmethodID ctor_id =
+      env->GetMethodID(ex_class, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
+  if (ctor_id == NULL) {
     return NULL;
   }
 
@@ -843,7 +843,7 @@ inline jthrowable cudfException(JNIEnv *const env, gdf_error status, jthrowable 
     return NULL;
   }
 
-  jobject ret = env->NewObject(exClass, ctorID, msg, cause);
+  jobject ret = env->NewObject(ex_class, ctor_id, msg, cause);
   return (jthrowable)ret;
 }
 
@@ -851,13 +851,13 @@ inline jthrowable cudfException(JNIEnv *const env, gdf_error status, jthrowable 
  * @brief create a rmm exception from a given rmmError_t
  */
 inline jthrowable rmmException(JNIEnv *const env, rmmError_t status, jthrowable cause = NULL) {
-  jclass exClass = env->FindClass("ai/rapids/cudf/RmmException");
-  if (exClass == NULL) {
+  jclass ex_class = env->FindClass("ai/rapids/cudf/RmmException");
+  if (ex_class == NULL) {
     return NULL;
   }
-  jmethodID ctorID =
-      env->GetMethodID(exClass, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
-  if (ctorID == NULL) {
+  jmethodID ctor_id =
+      env->GetMethodID(ex_class, "<init>", "(Ljava/lang/String;Ljava/lang/Throwable;)V");
+  if (ctor_id == NULL) {
     return NULL;
   }
 
@@ -866,7 +866,7 @@ inline jthrowable rmmException(JNIEnv *const env, rmmError_t status, jthrowable 
     return NULL;
   }
 
-  jobject ret = env->NewObject(exClass, ctorID, msg, cause);
+  jobject ret = env->NewObject(ex_class, ctor_id, msg, cause);
   return (jthrowable)ret;
 }
 
@@ -895,19 +895,19 @@ public:
   inline void operator()(T *ptr) {
     rmmError_t rmmStatus = RMM_FREE(ptr, stream);
     if (RMM_SUCCESS != rmmStatus) {
-      jthrowable cudaE = NULL;
+      jthrowable cuda_e = NULL;
       // a NULL env should never happen for something that is going to
       // actually delete things...
       if (RMM_ERROR_CUDA_ERROR == rmmStatus) {
-        cudaE = cudaException(env, cudaGetLastError());
+        cuda_e = cuda_exception(env, cudaGetLastError());
       }
-      jthrowable jt = rmmException(env, rmmStatus, cudaE);
+      jthrowable jt = rmmException(env, rmmStatus, cuda_e);
       if (jt != NULL) {
         jthrowable orig = env->ExceptionOccurred();
         if (orig != NULL) {
           jclass clz = env->GetObjectClass(jt);
           if (clz != NULL) {
-            jmethodID id = env->GetMethodID(clz, "addSuppressed", "(Ljava/lang/Throwable;)V");
+            jmethodID id = env->GetMethodID(clz, "add_suppressed", "(Ljava/lang/Throwable;)V");
             if (id != NULL) {
               env->CallVoidMethod(jt, id, orig);
             }
@@ -927,16 +927,16 @@ template <typename T> using jni_rmm_unique_ptr = std::unique_ptr<T, rmm_deleter<
  * exceptions on errors.
  */
 template <typename T>
-inline jni_rmm_unique_ptr<T> jniRmmAlloc(JNIEnv *const env, const size_t size,
+inline jni_rmm_unique_ptr<T> jni_rmm_alloc(JNIEnv *const env, const size_t size,
                                          const cudaStream_t stream = 0) {
   T *ptr;
   rmmError_t rmmStatus = RMM_ALLOC(&ptr, size, stream);
   if (RMM_SUCCESS != rmmStatus) {
-    jthrowable cudaE = NULL;
+    jthrowable cuda_e = NULL;
     if (RMM_ERROR_CUDA_ERROR == rmmStatus) {
-      cudaE = cudaException(env, cudaGetLastError());
+      cuda_e = cuda_exception(env, cudaGetLastError());
     }
-    jthrowable jt = rmmException(env, rmmStatus, cudaE);
+    jthrowable jt = rmmException(env, rmmStatus, cuda_e);
     if (jt != NULL) {
       env->Throw(jt);
       throw jni_exception("RMM Error...");
@@ -945,11 +945,11 @@ inline jni_rmm_unique_ptr<T> jniRmmAlloc(JNIEnv *const env, const size_t size,
   return jni_rmm_unique_ptr<T>(ptr, rmm_deleter<T>(env, stream));
 }
 
-inline void jniCudaCheck(JNIEnv *const env, cudaError_t cudaStatus) {
-  if (cudaSuccess != cudaStatus) {
+inline void jni_cuda_check(JNIEnv *const env, cudaError_t cuda_status) {
+  if (cudaSuccess != cuda_status) {
     // Clear the last error so it does not propagate.
     cudaGetLastError();
-    jthrowable jt = cudaException(env, cudaStatus);
+    jthrowable jt = cuda_exception(env, cuda_status);
     if (jt != NULL) {
       env->Throw(jt);
       throw jni_exception("CUDA ERROR");
@@ -957,13 +957,13 @@ inline void jniCudaCheck(JNIEnv *const env, cudaError_t cudaStatus) {
   }
 }
 
-inline void jniCudfCheck(JNIEnv *const env, gdf_error gdfStatus) {
-  if (GDF_SUCCESS != gdfStatus) {
-    jthrowable cudaE = NULL;
-    if (GDF_CUDA_ERROR == gdfStatus) {
-      cudaE = cudaException(env, cudaGetLastError());
+inline void jni_cudf_check(JNIEnv *const env, gdf_error gdf_status) {
+  if (GDF_SUCCESS != gdf_status) {
+    jthrowable cuda_e = NULL;
+    if (GDF_CUDA_ERROR == gdf_status) {
+      cuda_e = cuda_exception(env, cudaGetLastError());
     }
-    jthrowable jt = cudfException(env, gdfStatus, cudaE);
+    jthrowable jt = cudf_exception(env, gdf_status, cuda_e);
     if (jt != NULL) {
       env->Throw(jt);
       throw jni_exception("CUDF ERROR");
@@ -975,21 +975,21 @@ inline void jniCudfCheck(JNIEnv *const env, gdf_error gdfStatus) {
 
 #define JNI_THROW_NEW(env, clazz_name, message, ret_val)                                           \
   {                                                                                                \
-    jclass exClass = env->FindClass(clazz_name);                                                   \
-    if (exClass == NULL) {                                                                         \
+    jclass ex_class = env->FindClass(clazz_name);                                                  \
+    if (ex_class == NULL) {                                                                        \
       return ret_val;                                                                              \
     }                                                                                              \
-    env->ThrowNew(exClass, message);                                                               \
+    env->ThrowNew(ex_class, message);                                                              \
     return ret_val;                                                                                \
   }
 
 #define JNI_CUDA_TRY(env, ret_val, call)                                                           \
   {                                                                                                \
-    cudaError_t internal_cudaStatus = (call);                                                      \
-    if (cudaSuccess != internal_cudaStatus) {                                                      \
+    cudaError_t internal_cuda_status = (call);                                                     \
+    if (cudaSuccess != internal_cuda_status) {                                                     \
       /* Clear the last error so it does not propagate.*/                                          \
       cudaGetLastError();                                                                          \
-      jthrowable jt = cudf::jni::cudaException(env, internal_cudaStatus);                          \
+      jthrowable jt = cudf::jni::cuda_exception(env, internal_cuda_status);                        \
       if (jt != NULL) {                                                                            \
         env->Throw(jt);                                                                            \
       }                                                                                            \
@@ -1001,11 +1001,11 @@ inline void jniCudfCheck(JNIEnv *const env, gdf_error gdfStatus) {
   {                                                                                                \
     rmmError_t internal_rmmStatus = (call);                                                        \
     if (RMM_SUCCESS != internal_rmmStatus) {                                                       \
-      jthrowable cudaE = NULL;                                                                     \
+      jthrowable cuda_e = NULL;                                                                    \
       if (RMM_ERROR_CUDA_ERROR == internal_rmmStatus) {                                            \
-        cudaE = cudf::jni::cudaException(env, cudaGetLastError());                                 \
+        cuda_e = cudf::jni::cuda_exception(env, cudaGetLastError());                               \
       }                                                                                            \
-      jthrowable jt = cudf::jni::rmmException(env, internal_rmmStatus, cudaE);                     \
+      jthrowable jt = cudf::jni::rmmException(env, internal_rmmStatus, cuda_e);                    \
       if (jt != NULL) {                                                                            \
         env->Throw(jt);                                                                            \
       }                                                                                            \
@@ -1015,13 +1015,13 @@ inline void jniCudfCheck(JNIEnv *const env, gdf_error gdfStatus) {
 
 #define JNI_GDF_TRY(env, ret_val, call)                                                            \
   {                                                                                                \
-    gdf_error internal_gdfStatus = (call);                                                         \
-    if (GDF_SUCCESS != internal_gdfStatus) {                                                       \
-      jthrowable cudaE = NULL;                                                                     \
-      if (GDF_CUDA_ERROR == internal_gdfStatus) {                                                  \
-        cudaE = cudf::jni::cudaException(env, cudaGetLastError());                                 \
+    gdf_error internal_gdf_status = (call);                                                        \
+    if (GDF_SUCCESS != internal_gdf_status) {                                                      \
+      jthrowable cuda_e = NULL;                                                                    \
+      if (GDF_CUDA_ERROR == internal_gdf_status) {                                                 \
+        cuda_e = cudf::jni::cuda_exception(env, cudaGetLastError());                               \
       }                                                                                            \
-      jthrowable jt = cudf::jni::cudfException(env, internal_gdfStatus, cudaE);                    \
+      jthrowable jt = cudf::jni::cudf_exception(env, internal_gdf_status, cuda_e);                 \
       if (jt != NULL) {                                                                            \
         env->Throw(jt);                                                                            \
       }                                                                                            \
