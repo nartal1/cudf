@@ -487,4 +487,23 @@ JNIEXPORT jobject JNICALL Java_ai_rapids_cudf_Cudf_reduction(JNIEnv* env, jclass
   } CATCH_STD(env, 0);
 }
 
+JNIEXPORT jint JNICALL Java_ai_rapids_cudf_Cudf_getCategoryIndex(JNIEnv* env, jclass,
+    jlong jcol, jbyteArray jstr) {
+  JNI_NULL_CHECK(env, jcol, "input column is null", -1);
+  JNI_NULL_CHECK(env, jstr, "string data is null", -1);
+  try {
+    gdf_column* col = reinterpret_cast<gdf_column*>(jcol);
+    NVCategory* cat = static_cast<NVCategory*>(col->dtype_info.category);
+    JNI_NULL_CHECK(env, cat, "category is null", -1);
+
+    int len = env->GetArrayLength(jstr);
+    cudf::jni::checkJavaException(env);
+    std::unique_ptr<char[]> str(new char[len+1]);
+    env->GetByteArrayRegion(jstr, 0, len, reinterpret_cast<jbyte*>(str.get()));
+    cudf::jni::checkJavaException(env);
+    str[len] = '\0';  // NUL-terminate UTF-8 string
+
+    return cat->get_value(str.get());
+  } CATCH_STD(env, 0);
+}
 }  // extern "C"
