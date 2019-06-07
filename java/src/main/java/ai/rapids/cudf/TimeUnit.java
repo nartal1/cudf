@@ -22,31 +22,30 @@ package ai.rapids.cudf;
  * The types included are nanosecond, microsecond, millisecond, and second.
  */
 public enum TimeUnit {
-    NONE(0), // default (undefined)
-    SECONDS(1),    // seconds
-    MILLISECONDS(2),   // milliseconds
-    MICROSECONDS(3),   // microseconds
-    NANOSECONDS(4);   // nanoseconds
+  NONE(0), // default (undefined)
+  SECONDS(1),    // seconds
+  MILLISECONDS(2),   // milliseconds
+  MICROSECONDS(3),   // microseconds
+  NANOSECONDS(4);   // nanoseconds
 
-    private final int nativeId;
+  private static final TimeUnit[] TIME_UNITS = TimeUnit.values();
+  private final int nativeId;
 
-    TimeUnit(int nativeId) {
-        this.nativeId = nativeId;
+
+  TimeUnit(int nativeId) {
+    this.nativeId = nativeId;
+  }
+
+  static TimeUnit fromNative(int nativeId) {
+    for (TimeUnit type : TIME_UNITS) {
+      if (type.nativeId == nativeId) {
+        return type;
+      }
     }
+    throw new IllegalArgumentException("Could not translate " + nativeId + " into a TimeUnit");
+  }
 
-
-    private static final TimeUnit[] TIME_UNITS = TimeUnit.values();
-
-    static TimeUnit fromNative(int nativeId) {
-        for (TimeUnit type: TIME_UNITS) {
-            if (type.nativeId == nativeId) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Could not translate " + nativeId + " into a TimeUnit");
-    }
-
-    int getNativeId() {
-        return nativeId;
-    }
+  int getNativeId() {
+    return nativeId;
+  }
 }

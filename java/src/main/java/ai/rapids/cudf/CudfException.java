@@ -19,11 +19,11 @@ package ai.rapids.cudf;
  * Exception thrown by cudf itself.
  */
 public class CudfException extends RuntimeException {
-    CudfException(String message) {
-        super(message);
-    }
+  CudfException(String message) {
+    super(message);
+  }
 
-    CudfException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  CudfException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

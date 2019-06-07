@@ -19,12 +19,12 @@
 package ai.rapids.cudf;
 
 public enum HashFunction {
-    MURMUR3(0),
-    IDENTITY(1);
+  MURMUR3(0),
+  IDENTITY(1);
 
-    final int nativeId;
+  final int nativeId;
 
-    HashFunction(int nativeId) {
-        this.nativeId = nativeId;
-    }
+  HashFunction(int nativeId) {
+    this.nativeId = nativeId;
+  }
 }

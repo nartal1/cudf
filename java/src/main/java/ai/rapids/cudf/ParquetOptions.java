@@ -23,19 +23,19 @@ package ai.rapids.cudf;
  */
 public class ParquetOptions extends ColumnFilterOptions {
 
-    public static ParquetOptions DEFAULT = new ParquetOptions(new Builder());
+  public static ParquetOptions DEFAULT = new ParquetOptions(new Builder());
 
-    private ParquetOptions(Builder builder) {
-        super(builder);
-    }
+  private ParquetOptions(Builder builder) {
+    super(builder);
+  }
 
-    public static Builder builder() {
-        return new Builder();
-    }
+  public static Builder builder() {
+    return new Builder();
+  }
 
-    public static class Builder extends ColumnFilterOptions.Builder<Builder> {
-        public ParquetOptions build() {
-            return new ParquetOptions(this);
-        }
+  public static class Builder extends ColumnFilterOptions.Builder<Builder> {
+    public ParquetOptions build() {
+      return new ParquetOptions(this);
     }
+  }
 }

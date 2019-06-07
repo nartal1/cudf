@@ -21,42 +21,40 @@ import java.util.EnumSet;
  * Mathematical unary operations.
  */
 public enum BinaryOp {
-    ADD(0),
-    SUB(1),
-    MUL(2),
-    DIV(3), // divide using common type of lhs and rhs
-    TRUE_DIV(4), // divide after promoting to FLOAT64 point
-    FLOOR_DIV(5), // divide after promoting to FLOAT64 and flooring the result
-    MOD(6),
-    POW(7),
-    EQUAL(8),
-    NOT_EQUAL(9),
-    LESS(10),
-    GREATER(11),
-    LESS_EQUAL(12), // <=
-    GREATER_EQUAL(13), // >=
-    BITWISE_AND(14),
-    BITWISE_OR(15),
-    BITWISE_XOR(16);
-    //NOT IMPLEMENTED YET COALESCE(17); // x == null ? y : x
+  ADD(0),
+  SUB(1),
+  MUL(2),
+  DIV(3), // divide using common type of lhs and rhs
+  TRUE_DIV(4), // divide after promoting to FLOAT64 point
+  FLOOR_DIV(5), // divide after promoting to FLOAT64 and flooring the result
+  MOD(6),
+  POW(7),
+  EQUAL(8),
+  NOT_EQUAL(9),
+  LESS(10),
+  GREATER(11),
+  LESS_EQUAL(12), // <=
+  GREATER_EQUAL(13), // >=
+  BITWISE_AND(14),
+  BITWISE_OR(15),
+  BITWISE_XOR(16);
+  //NOT IMPLEMENTED YET COALESCE(17); // x == null ? y : x
 
-    static final EnumSet<BinaryOp> COMPARISON = EnumSet.of(
-        EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL);
+  static final EnumSet<BinaryOp> COMPARISON = EnumSet.of(
+      EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL);
+  private static final BinaryOp[] OPS = BinaryOp.values();
+  final int nativeId;
 
-    final int nativeId;
+  BinaryOp(int nativeId) {
+    this.nativeId = nativeId;
+  }
 
-    BinaryOp(int nativeId) {
-        this.nativeId = nativeId;
+  static BinaryOp fromNative(int nativeId) {
+    for (BinaryOp type : OPS) {
+      if (type.nativeId == nativeId) {
+        return type;
+      }
     }
-
-    private static final BinaryOp[] OPS = BinaryOp.values();
-
-    static BinaryOp fromNative(int nativeId) {
-        for (BinaryOp type: OPS) {
-            if (type.nativeId == nativeId) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Could not translate " + nativeId + " into a BinaryOp");
-    }
+    throw new IllegalArgumentException("Could not translate " + nativeId + " into a BinaryOp");
+  }
 }

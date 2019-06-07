@@ -30,62 +30,62 @@ import java.net.URL;
  * This class will load the native dependencies.
  */
 public class NativeDepsLoader {
-    private static final Logger log = LoggerFactory.getLogger(NativeDepsLoader.class);
-    private static ClassLoader loader = NativeDepsLoader.class.getClassLoader();
-    private static final String [] loadOrder = new String[] {
-            "rmm",
-            "NVStrings",
-            "NVCategory",
-            "cudf",
-            "cudfjni"
-    };
+  private static final Logger log = LoggerFactory.getLogger(NativeDepsLoader.class);
+  private static final String[] loadOrder = new String[]{
+      "rmm",
+      "NVStrings",
+      "NVCategory",
+      "cudf",
+      "cudfjni"
+  };
+  private static ClassLoader loader = NativeDepsLoader.class.getClassLoader();
+  private static boolean loaded = false;
 
-    private static boolean loaded = false;
-    static synchronized void loadNativeDeps() {
-        if (!loaded) {
-            String os = System.getProperty("os.name");
-            String arch = System.getProperty("os.arch");
-            try {
-                for (String toLoad : loadOrder) {
-                    loadDep(os, arch, toLoad);
-                }
-                loaded = true;
-            } catch (Throwable t) {
-                log.error("Could not load cudf jni library...", t);
-            }
+  static synchronized void loadNativeDeps() {
+    if (!loaded) {
+      String os = System.getProperty("os.name");
+      String arch = System.getProperty("os.arch");
+      try {
+        for (String toLoad : loadOrder) {
+          loadDep(os, arch, toLoad);
         }
+        loaded = true;
+      } catch (Throwable t) {
+        log.error("Could not load cudf jni library...", t);
+      }
     }
+  }
 
-    private static void loadDep(String os, String arch, String baseName) throws IOException {
-        String path = arch + "/" + os + "/" + System.mapLibraryName(baseName);
-        File loc;
-        URL resource = loader.getResource(path);
-        if (resource == null) {
-            // It looks like we are not running from the jar, or there are issues with the jar
-            File f = new File("./target/native-deps/" + path);
-            if (!f.exists()) {
-                throw new FileNotFoundException("Could not locate native dependency " + path);
-            }
-            resource = f.toURL();
-        }
-        try (InputStream in = resource.openStream()) {
-            loc = File.createTempFile(baseName, ".so");
-            try (OutputStream out = new FileOutputStream(loc)) {
-                byte [] buffer = new byte[1024 * 16];
-                int read = 0;
-                while ((read = in.read(buffer)) >= 0) {
-                    out.write(buffer, 0, read);
-                }
-            }
-        }
-        loc.deleteOnExit();
-        System.load(loc.getAbsolutePath());
+  private static void loadDep(String os, String arch, String baseName) throws IOException {
+    String path = arch + "/" + os + "/" + System.mapLibraryName(baseName);
+    File loc;
+    URL resource = loader.getResource(path);
+    if (resource == null) {
+      // It looks like we are not running from the jar, or there are issues with the jar
+      File f = new File("./target/native-deps/" + path);
+      if (!f.exists()) {
+        throw new FileNotFoundException("Could not locate native dependency " + path);
+      }
+      resource = f.toURL();
     }
+    try (InputStream in = resource.openStream()) {
+      loc = File.createTempFile(baseName, ".so");
+      try (OutputStream out = new FileOutputStream(loc)) {
+        byte[] buffer = new byte[1024 * 16];
+        int read = 0;
+        while ((read = in.read(buffer)) >= 0) {
+          out.write(buffer, 0, read);
+        }
+      }
+    }
+    loc.deleteOnExit();
+    System.load(loc.getAbsolutePath());
+  }
 
-    public static boolean libraryLoaded() {
-        if (!loaded) {
-            loadNativeDeps();
-        }
-        return loaded;
+  public static boolean libraryLoaded() {
+    if (!loaded) {
+      loadNativeDeps();
     }
+    return loaded;
+  }
 }

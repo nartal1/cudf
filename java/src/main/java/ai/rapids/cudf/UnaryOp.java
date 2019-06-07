@@ -19,34 +19,33 @@ package ai.rapids.cudf;
  * Mathematical unary operations.
  */
 public enum UnaryOp {
-    SIN(0),
-    COS(1),
-    TAN(2),
-    ARCSIN(3),
-    ARCCOS(4),
-    ARCTAN(5),
-    EXP(6),
-    LOG(7),
-    SQRT(8),
-    CEIL(9),
-    FLOOR(10),
-    ABS(11),
-    BIT_INVERT(12);
+  SIN(0),
+  COS(1),
+  TAN(2),
+  ARCSIN(3),
+  ARCCOS(4),
+  ARCTAN(5),
+  EXP(6),
+  LOG(7),
+  SQRT(8),
+  CEIL(9),
+  FLOOR(10),
+  ABS(11),
+  BIT_INVERT(12);
 
-    final int nativeId;
+  private static final UnaryOp[] OPS = UnaryOp.values();
+  final int nativeId;
 
-    UnaryOp(int nativeId) {
-        this.nativeId = nativeId;
+  UnaryOp(int nativeId) {
+    this.nativeId = nativeId;
+  }
+
+  static UnaryOp fromNative(int nativeId) {
+    for (UnaryOp type : OPS) {
+      if (type.nativeId == nativeId) {
+        return type;
+      }
     }
-
-    private static final UnaryOp[] OPS = UnaryOp.values();
-
-    static UnaryOp fromNative(int nativeId) {
-        for (UnaryOp type: OPS) {
-            if (type.nativeId == nativeId) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Could not translate " + nativeId + " into a UnaryOp");
-    }
+    throw new IllegalArgumentException("Could not translate " + nativeId + " into a UnaryOp");
+  }
 }

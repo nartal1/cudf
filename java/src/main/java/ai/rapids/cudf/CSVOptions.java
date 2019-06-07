@@ -26,158 +26,157 @@ import java.util.Set;
  */
 public class CSVOptions extends ColumnFilterOptions {
 
-    public static CSVOptions DEFAULT = new CSVOptions(new Builder());
+  public static CSVOptions DEFAULT = new CSVOptions(new Builder());
 
-    private final int headerRow;
-    private final byte delim;
-    private final byte quote;
-    private final byte comment;
-    private final String[] nullValues;
-    private final String[] trueValues;
-    private final String[] falseValues;
+  private final int headerRow;
+  private final byte delim;
+  private final byte quote;
+  private final byte comment;
+  private final String[] nullValues;
+  private final String[] trueValues;
+  private final String[] falseValues;
 
-    private CSVOptions(Builder builder) {
-        super(builder);
-        headerRow = builder.headerRow;
-        delim = builder.delim;
-        quote = builder.quote;
-        comment = builder.comment;
-        nullValues = builder.nullValues.toArray(
-                new String[builder.nullValues.size()]);
-        trueValues = builder.trueValues.toArray(
-                new String[builder.trueValues.size()]);
-        falseValues = builder.falseValues.toArray(
-                new String[builder.falseValues.size()]);
+  private CSVOptions(Builder builder) {
+    super(builder);
+    headerRow = builder.headerRow;
+    delim = builder.delim;
+    quote = builder.quote;
+    comment = builder.comment;
+    nullValues = builder.nullValues.toArray(
+        new String[builder.nullValues.size()]);
+    trueValues = builder.trueValues.toArray(
+        new String[builder.trueValues.size()]);
+    falseValues = builder.falseValues.toArray(
+        new String[builder.falseValues.size()]);
+  }
+
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  String[] getNullValues() {
+    return nullValues;
+  }
+
+  String[] getTrueValues() {
+    return trueValues;
+  }
+
+  String[] getFalseValues() {
+    return falseValues;
+  }
+
+  int getHeaderRow() {
+    return headerRow;
+  }
+
+  byte getDelim() {
+    return delim;
+  }
+
+  byte getQuote() {
+    return quote;
+  }
+
+  byte getComment() {
+    return comment;
+  }
+
+  public static class Builder extends ColumnFilterOptions.Builder<Builder> {
+    private static final int NO_HEADER_ROW = -1;
+    private final Set<String> nullValues = new HashSet<>();
+    private final Set<String> trueValues = new HashSet<>();
+    private final Set<String> falseValues = new HashSet<>();
+    private byte comment = 0;
+    private int headerRow = NO_HEADER_ROW;
+    private byte delim = ',';
+    private byte quote = '"';
+
+    /**
+     * Row of the header data (0 based counting).  Negative is no header.
+     */
+    public Builder withHeaderAtRow(int index) {
+      headerRow = index;
+      return this;
     }
 
-    String[] getNullValues() {
-        return nullValues;
+    /**
+     * Set the row of the header to 0, the first line, if hasHeader is true else disables the
+     * header.
+     */
+    public Builder hasHeader(boolean hasHeader) {
+      return withHeaderAtRow(hasHeader ? 0 : NO_HEADER_ROW);
     }
 
-    String[] getTrueValues() {
-        return trueValues;
+    /**
+     * Set the row of the header to 0, the first line.
+     */
+    public Builder hasHeader() {
+      return withHeaderAtRow(0);
     }
 
-    String[] getFalseValues() {
-        return falseValues;
+    /**
+     * Set the entry deliminator.  Only ASCII chars are currently supported.
+     */
+    public Builder withDelim(char delim) {
+      if (Character.getNumericValue(delim) > 127) {
+        throw new IllegalArgumentException("Only ASCII characters are currently supported");
+      }
+      this.delim = (byte) delim;
+      return this;
     }
 
-    int getHeaderRow() {
-        return headerRow;
+    /**
+     * Set the quote character.  Only ASCII chars are currently supported.
+     */
+    public Builder withQuote(char quote) {
+      if (Character.getNumericValue(quote) > 127) {
+        throw new IllegalArgumentException("Only ASCII characters are currently supported");
+      }
+      this.quote = (byte) quote;
+      return this;
     }
 
-    byte getDelim() {
-        return delim;
+    /**
+     * Set the character that starts the beginning of a comment line. setting to
+     * 0 or '\0' will disable comments. The default is to have no comments.
+     */
+    public Builder withComment(char comment) {
+      if (Character.getNumericValue(quote) > 127) {
+        throw new IllegalArgumentException("Only ASCII characters are currently supported");
+      }
+      this.comment = (byte) comment;
+      return this;
     }
 
-    byte getQuote() {
-        return quote;
+    public Builder withoutComments() {
+      this.comment = 0;
+      return this;
     }
 
-    byte getComment() {
-        return comment;
+    public Builder withNullValue(String... nvs) {
+      for (String nv : nvs) {
+        nullValues.add(nv);
+      }
+      return this;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    public Builder withTrueValue(String... tvs) {
+      for (String tv : tvs) {
+        trueValues.add(tv);
+      }
+      return this;
     }
 
-    public static class Builder extends ColumnFilterOptions.Builder<Builder> {
-        private static final int NO_HEADER_ROW = -1;
-
-        private byte comment = 0;
-        private int headerRow = NO_HEADER_ROW;
-        private byte delim = ',';
-        private byte quote = '"';
-        private final Set<String> nullValues = new HashSet<>();
-        private final Set<String> trueValues = new HashSet<>();
-        private final Set<String> falseValues = new HashSet<>();
-
-
-        /**
-         * Row of the header data (0 based counting).  Negative is no header.
-         */
-        public Builder withHeaderAtRow(int index) {
-            headerRow = index;
-            return this;
-        }
-
-        /**
-         * Set the row of the header to 0, the first line, if hasHeader is true else disables the header.
-         */
-        public Builder hasHeader(boolean hasHeader) {
-            return withHeaderAtRow(hasHeader ? 0 : NO_HEADER_ROW);
-        }
-
-        /**
-         * Set the row of the header to 0, the first line.
-         */
-        public Builder hasHeader() {
-            return withHeaderAtRow(0);
-        }
-
-        /**
-         * Set the entry deliminator.  Only ASCII chars are currently supported.
-         */
-        public Builder withDelim(char delim) {
-            if (Character.getNumericValue(delim) > 127) {
-                throw new IllegalArgumentException("Only ASCII characters are currently supported");
-            }
-            this.delim = (byte)delim;
-            return this;
-        }
-
-        /**
-         * Set the quote character.  Only ASCII chars are currently supported.
-         */
-        public Builder withQuote(char quote) {
-            if (Character.getNumericValue(quote) > 127) {
-                throw new IllegalArgumentException("Only ASCII characters are currently supported");
-            }
-            this.quote = (byte)quote;
-            return this;
-        }
-
-        /**
-         * Set the character that starts the beginning of a comment line. setting to
-         * 0 or '\0' will disable comments. The default is to have no comments.
-         */
-        public Builder withComment(char comment) {
-            if (Character.getNumericValue(quote) > 127) {
-                throw new IllegalArgumentException("Only ASCII characters are currently supported");
-            }
-            this.comment = (byte)comment;
-            return this;
-        }
-
-        public Builder withoutComments() {
-            this.comment = 0;
-            return this;
-        }
-
-        public Builder withNullValue(String ... nvs) {
-            for (String nv : nvs) {
-                nullValues.add(nv);
-            }
-            return this;
-        }
-
-        public Builder withTrueValue(String ... tvs) {
-            for (String tv : tvs) {
-                trueValues.add(tv);
-            }
-            return this;
-        }
-
-        public Builder withFalseValue(String ... fvs) {
-            for (String fv : fvs) {
-                falseValues.add(fv);
-            }
-            return this;
-        }
-
-        public CSVOptions build() {
-            return new CSVOptions(this);
-        }
+    public Builder withFalseValue(String... fvs) {
+      for (String fv : fvs) {
+        falseValues.add(fv);
+      }
+      return this;
     }
+
+    public CSVOptions build() {
+      return new CSVOptions(this);
+    }
+  }
 }
