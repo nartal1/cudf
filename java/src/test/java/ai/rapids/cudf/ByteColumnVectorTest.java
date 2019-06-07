@@ -91,23 +91,19 @@ public class ByteColumnVectorTest {
         final int [] DATES = {17897}; //Jan 01, 2019
 
         try (ColumnVector doubleColumnVector = ColumnVector.fromDoubles(new double[] {4.3,3.8,8});
-            ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
-            ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES)) {
-            doubleColumnVector.ensureOnDevice();
-            shortColumnVector.ensureOnDevice();
-            dateColumnVector.ensureOnDevice();
-            try (ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
-                ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
-                ColumnVector byteColumnVector3 = dateColumnVector.asBytes()){
-                byteColumnVector1.ensureOnHost();
-                byteColumnVector2.ensureOnHost();
-                byteColumnVector3.ensureOnHost();
-                assertEquals(byteColumnVector1.getByte(0), 4);
-                assertEquals(byteColumnVector1.getByte(1), 3);
-                assertEquals(byteColumnVector1.getByte(2), 8);
-                assertEquals(byteColumnVector2.getByte(0), 100);
-                assertEquals(byteColumnVector3.getByte(0), -23);
-            }
+             ColumnVector shortColumnVector = ColumnVector.fromShorts(new short[] {100});
+             ColumnVector dateColumnVector = ColumnVector.datesFromInts(DATES);
+             ColumnVector byteColumnVector1 = doubleColumnVector.asBytes();
+             ColumnVector byteColumnVector2 = shortColumnVector.asBytes();
+             ColumnVector byteColumnVector3 = dateColumnVector.asBytes()) {
+            byteColumnVector1.ensureOnHost();
+            byteColumnVector2.ensureOnHost();
+            byteColumnVector3.ensureOnHost();
+            assertEquals(byteColumnVector1.getByte(0), 4);
+            assertEquals(byteColumnVector1.getByte(1), 3);
+            assertEquals(byteColumnVector1.getByte(2), 8);
+            assertEquals(byteColumnVector2.getByte(0), 100);
+            assertEquals(byteColumnVector3.getByte(0), -23);
         }
     }
 
@@ -126,7 +122,7 @@ public class ByteColumnVectorTest {
                 final int srcSize = dstSize - dstPrefilledSize;
                 for (int  sizeOfDataNotToAdd = 0 ; sizeOfDataNotToAdd <= dstPrefilledSize ; sizeOfDataNotToAdd++) {
                     try (ColumnVector.Builder dst = ColumnVector.builder(DType.INT8, dstSize);
-                         ColumnVector src = ColumnVector.build(DType.INT8, srcSize, (b) -> {
+                         ColumnVector src = ColumnVector.buildOnHost(DType.INT8, srcSize, (b) -> {
                              for (int i = 0 ; i < srcSize ; i++) {
                                  if (random.nextBoolean()) {
                                      b.appendNull();
@@ -150,8 +146,8 @@ public class ByteColumnVectorTest {
                         }
                         // append the src vector
                         dst.append(src);
-                        try (ColumnVector dstVector = dst.build();
-                             ColumnVector gt = gtBuilder.build()) {
+                        try (ColumnVector dstVector = dst.buildOnHost();
+                             ColumnVector gt = gtBuilder.buildOnHost()) {
                             for (int i = 0; i < dstPrefilledSize - sizeOfDataNotToAdd ; i++) {
                                 assertEquals(gt.isNull(i), dstVector.isNull(i));
                                 if (!gt.isNull(i)) {

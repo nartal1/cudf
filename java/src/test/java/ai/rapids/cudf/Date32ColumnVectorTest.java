@@ -38,14 +38,12 @@ public class Date32ColumnVectorTest {
     @Test
     public void getYear() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES)) {
-            date32ColumnVector.ensureOnDevice();
-            try (ColumnVector result= date32ColumnVector.year()) {
-                result.ensureOnHost();
-                int expected = 2019;
-                for (int i = 0; i < DATES.length; i++) {
-                    assertEquals(expected - i, result.getShort(i)); //2019 to 2015
-                }
+        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES);
+             ColumnVector result= date32ColumnVector.year()) {
+            result.ensureOnHost();
+            int expected = 2019;
+            for (int i = 0; i < DATES.length; i++) {
+                assertEquals(expected - i, result.getShort(i)); //2019 to 2015
             }
         }
     }
@@ -53,13 +51,11 @@ public class Date32ColumnVectorTest {
     @Test
     public void getMonth() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES)) {
-            date32ColumnVector.ensureOnDevice();
-            try (ColumnVector result = date32ColumnVector.month()) {
-                result.ensureOnHost();
-                for (int i = 0; i < DATES.length; i++) {
-                    assertEquals(1, result.getShort(i)); //Jan of every year
-                }
+        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES);
+             ColumnVector result = date32ColumnVector.month()) {
+            result.ensureOnHost();
+            for (int i = 0; i < DATES.length; i++) {
+                assertEquals(1, result.getShort(i)); //Jan of every year
             }
         }
     }
@@ -67,13 +63,11 @@ public class Date32ColumnVectorTest {
     @Test
     public void getDay() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES_2)) {
-            date32ColumnVector.ensureOnDevice();
-            try (ColumnVector result= date32ColumnVector.day()) {
-                result.ensureOnHost();
-                for (int i = 0; i < DATES_2.length; i++) {
-                    assertEquals(i + 1, result.getShort(i)); //1 to 5
-                }
+        try (ColumnVector date32ColumnVector = ColumnVector.datesFromInts(DATES_2);
+             ColumnVector result= date32ColumnVector.day()) {
+            result.ensureOnHost();
+            for (int i = 0; i < DATES_2.length; i++) {
+                assertEquals(i + 1, result.getShort(i)); //1 to 5
             }
         }
     }
@@ -81,16 +75,14 @@ public class Date32ColumnVectorTest {
     @Test
     public void castToDate32() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try (ColumnVector intColumnVector = ColumnVector.fromInts(DATES)){
-            intColumnVector.ensureOnDevice();
-            try (ColumnVector date32ColumnVector = intColumnVector.asDate32()){
-                date32ColumnVector.ensureOnHost();
-                assertEquals(17897, date32ColumnVector.getInt(0));
-                assertEquals(17532, date32ColumnVector.getInt(1));
-                assertEquals(17167, date32ColumnVector.getInt(2));
-                assertEquals(16802, date32ColumnVector.getInt(3));
-                assertEquals(16437, date32ColumnVector.getInt(4));
-            }
+        try (ColumnVector intColumnVector = ColumnVector.fromInts(DATES);
+             ColumnVector date32ColumnVector = intColumnVector.asDate32()) {
+            date32ColumnVector.ensureOnHost();
+            assertEquals(17897, date32ColumnVector.getInt(0));
+            assertEquals(17532, date32ColumnVector.getInt(1));
+            assertEquals(17167, date32ColumnVector.getInt(2));
+            assertEquals(16802, date32ColumnVector.getInt(3));
+            assertEquals(16437, date32ColumnVector.getInt(4));
         }
     }
 }
