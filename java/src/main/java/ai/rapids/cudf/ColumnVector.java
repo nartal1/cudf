@@ -76,8 +76,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     long validPtr = getValidPtr(nativePointer);
     if (validPtr != 0) {
       // We are not using the BitVectorHelper.getValidityAllocationSizeInBytes() because
-        // cudfColumn was
-      // initialized by cudf and not by cudfjni
+      // cudfColumn was initialized by cudf and not by cudfjni
       valid = new DeviceMemoryBuffer(validPtr, BitVectorHelper.getValidityLengthInBytes(rows));
     }
     this.offHeap.deviceData = new BufferEncapsulator<>(data, valid, null);
@@ -1396,9 +1395,8 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   /**
    * Generic method to cast ColumnVector
    * When casting from a Date, Timestamp, or Boolean to a numerical type the underlying numerical
-   * representation
-   * of the data will be used for the cast. In the cast of Timestamp this means the TimeUnit is
-   * ignored and lost.
+   * representationof the data will be used for the cast. In the cast of Timestamp this means the
+   * TimeUnit is ignored and lost.
    * When casting between Date32, Date64, and Timestamp the units of time are used.
    * @param type type of the resulting ColumnVector
    * @param unit the unit of time, really only applicable for TIMESTAMP.
@@ -1416,8 +1414,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Byte - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to byte
    * When casting from a Date, Timestamp, or Boolean to a byte type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representation of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asBytes() {
@@ -1428,8 +1425,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Short - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to short
    * When casting from a Date, Timestamp, or Boolean to a short type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representation of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asShorts() {
@@ -1440,8 +1436,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Int - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to int
    * When casting from a Date, Timestamp, or Boolean to a int type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representation of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asInts() {
@@ -1452,8 +1447,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Long - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to long
    * When casting from a Date, Timestamp, or Boolean to a long type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representation of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asLongs() {
@@ -1464,8 +1458,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Float - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to float
    * When casting from a Date, Timestamp, or Boolean to a float type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representatio of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asFloats() {
@@ -1476,8 +1469,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Cast to Double - ColumnVector
    * This method takes the value provided by the ColumnVector and casts to double
    * When casting from a Date, Timestamp, or Boolean to a double type the underlying numerical
-   * representation
-   * of the data will be used for the cast.
+   * representation of the data will be used for the cast.
    * @return A new vector allocated on the GPU
    */
   public ColumnVector asDoubles() {
