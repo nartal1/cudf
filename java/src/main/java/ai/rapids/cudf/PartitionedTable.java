@@ -29,9 +29,9 @@ public final class PartitionedTable implements AutoCloseable {
    * The package-private constructor is only called by the partition method in Table
    * .TableOperation.partition
    * @param table            - {@link Table} which contains the partitioned data
-   * @param partitionOffsets - This param is used to populate the offsets into the returned
-   *                         table where
-   *                         partitionOffsets[i] indicates the starting position of partition 'i'
+   * @param partitionOffsets - This param is used to populate the offsets into the returned table
+   *                         where partitionOffsets[i] indicates the starting position of
+   *                         partition 'i'
    */
   PartitionedTable(Table table, int[] partitionOffsets) {
     this.table = table;
