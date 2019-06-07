@@ -57,9 +57,8 @@ public final class PartitionedTable implements AutoCloseable {
 
   /**
    * This method returns the partitions on this table. partitionOffsets[i] indicates the
-   * starting position of
-   * partition 'i' in the partitioned table. Size of the partitions can be calculated by the
-   * next offset
+   * starting position of partition 'i' in the partitioned table. Size of the partitions can
+   * be calculated by the next offset
    * Ex:
    * partitionOffsets[0, 12, 12, 49] indicates 4 partitions with the following sizes
    * partition[0] - 12

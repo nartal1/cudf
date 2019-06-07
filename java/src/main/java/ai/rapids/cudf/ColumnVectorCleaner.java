@@ -30,30 +30,22 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * ColumnVectors may store data off heap, and because of complicated processing the life time of
- * an individual
- * vector can vary a lot.  Typically a java finalizer could be used for this but they can cause a
- * number of
- * performance issues related to gc, and in some cases may effectively leak resources if the heap
- * is large and
- * GC's end up being delayed.
+ * an individual vector can vary a lot.  Typically a java finalizer could be used for this but
+ * they can cause a number of performance issues related to gc, and in some cases may effectively
+ * leak resources if the heap is large and GC's end up being delayed.
  * <p>
  * To address these issues the primary way to releasing the resources of a ColumnVector that is
- * stored off of the java
- * heap should be through reference counting. Because memory leaks are really bad for long lived
- * daemons this is
- * intended to be a backup.
+ * stored off of the java heap should be through reference counting. Because memory leaks are
+ * really bad for long lived daemons this is intended to be a backup.
  * <p>
  * When a ColumnVector first allocates off heap resources it should register itself with this
- * along with a Cleaner
- * instance. The Cleaner instance should have no direct links to the ColumnVector that would
- * prevent the ColumnVector
- * from being garbage collected. This will use WeakReferences internally to know when the
- * resources have been leaked.
+ * along with a Cleaner instance. The Cleaner instance should have no direct links to the
+ * ColumnVector that would prevent the ColumnVector from being garbage collected. This will
+ * use WeakReferences internally to know when the resources have been leaked.
  * A ColumnVector may keep a reference to the Cleaner instance and either update it as new
- * resources are allocated or
- * use it to release the resources it is holding.  Once the ColumnVector's reference count
- * reaches 0 and the resources
- * are released. At some point later the Cleaner itself will be released.
+ * resources are allocated or use it to release the resources it is holding.  Once the
+ * ColumnVector's reference count reaches 0 and the resources are released. At some point
+ * later the Cleaner itself will be released.
  */
 class ColumnVectorCleaner {
   static final AtomicLong leakCount = new AtomicLong();
