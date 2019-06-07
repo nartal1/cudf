@@ -193,10 +193,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
                                                      int size, int dtype, int null_count,
                                                      int timeUnit) throws CudfException;
 
-  /////////////////////////////////////////////////////////////////////////////
-  // METADATA ACCESS
-  /////////////////////////////////////////////////////////////////////////////
-
   /**
    * Translate the host side string representation of strings into the device side representation
    * and populate the cudfColumn with it.
@@ -240,10 +236,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return DType.fromNative(getDTypeInternal(cudfColumnHandle));
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  // DATA MOVEMENT
-  /////////////////////////////////////////////////////////////////////////////
-
   private static native int getDTypeInternal(long cudfColumnHandle) throws CudfException;
 
   private static TimeUnit getTimeUnit(long cudfColumnHandle) throws CudfException {
@@ -254,11 +246,11 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
   private static native int getNullCount(long cudfColumnHandle) throws CudfException;
 
-  /////////////////////////////////////////////////////////////////////////////
-  // DATA ACCESS
-  /////////////////////////////////////////////////////////////////////////////
-
   private static native long concatenate(long[] columnHandles) throws CudfException;
+
+  /////////////////////////////////////////////////////////////////////////////
+  // BUILDER
+  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
@@ -359,10 +351,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return build(DType.INT16, values.length, (b) -> b.appendArray(values));
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  // DATE/TIME
-  /////////////////////////////////////////////////////////////////////////////
-
   /**
    * Create a new vector from the given values.
    */
@@ -404,11 +392,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   public static ColumnVector datesFromLongs(long... values) {
     return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
   }
-
-
-  /////////////////////////////////////////////////////////////////////////////
-  // ARITHMETIC
-  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Create a new vector from the given values.
@@ -648,6 +631,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
         '}';
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // METADATA ACCESS
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Increment the reference count for this column.  You need to call close on this
    * to decrement the reference count again.
@@ -709,6 +696,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   public TimeUnit getTimeUnit() {
     return tsTimeUnit;
   }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // DATA MOVEMENT
+  /////////////////////////////////////////////////////////////////////////////
 
   private void checkHasDeviceData() {
     if (offHeap.deviceData == null && rows != 0) {
@@ -830,6 +821,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // DATA ACCESS
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Check if the value at index is null or not.
    */
@@ -937,6 +932,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return new String(rawData, StandardCharsets.UTF_8);
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // DATE/TIME
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Get year from DATE32, DATE64, or TIMESTAMP
    * <p>
@@ -948,10 +947,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     assert type == DType.DATE32 || type == DType.DATE64 || type == DType.TIMESTAMP;
     return new ColumnVector(Cudf.gdfExtractDatetimeYear(this));
   }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // TYPE CAST
-  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Get month from DATE32, DATE64, or TIMESTAMP
@@ -1013,6 +1008,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return new ColumnVector(Cudf.gdfExtractDatetimeSecond(this));
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // ARITHMETIC
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Multiple different unary operations.
    * @param op      the operation to perform
@@ -1068,10 +1067,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return tan(type);
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  // STRING CATEGORY METHODS
-  /////////////////////////////////////////////////////////////////////////////
-
   /**
    * Calculate the arcsin.
    * @param outType the type of output you want.
@@ -1079,10 +1074,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   public ColumnVector arcsin(DType outType) {
     return unaryOp(UnaryOp.ARCSIN, outType);
   }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // INTERNAL/NATIVE ACCESS
-  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Calculate the arcsin, output defaults to same type.
@@ -1196,10 +1187,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return floor(type);
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  // HELPER CLASSES
-  /////////////////////////////////////////////////////////////////////////////
-
   /**
    * Calculate the abs.
    * @param outType the type of output you want.
@@ -1222,11 +1209,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   public ColumnVector bitInvert(DType outType) {
     return unaryOp(UnaryOp.BIT_INVERT, outType);
   }
-
-
-  /////////////////////////////////////////////////////////////////////////////
-  // BUILDER
-  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * invert the bits, output defaults to same type.
@@ -1392,6 +1374,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return Cudf.reduction(this, op, outType);
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // TYPE CAST
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Generic method to cast ColumnVector
    * When casting from a Date, Timestamp, or Boolean to a numerical type the underlying numerical
@@ -1519,6 +1505,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return castTo(DType.STRING_CATEGORY, TimeUnit.NONE);
   }
 
+  /////////////////////////////////////////////////////////////////////////////
+  // STRING CATEGORY METHODS
+  /////////////////////////////////////////////////////////////////////////////
+
   /**
    * Returns the category index of the specified string scalar.
    * @param s a {@link Scalar} of type {@link DType#STRING} to lookup
@@ -1531,6 +1521,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
     return Scalar.fromInt(Cudf.getCategoryIndex(this, s));
   }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // INTERNAL/NATIVE ACCESS
+  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * USE WITH CAUTION: This method exposes the address of the native cudf_column.  This allows
@@ -1563,6 +1557,10 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
     return offHeap.nativeCudfColumnHandle;
   }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // HELPER CLASSES
+  /////////////////////////////////////////////////////////////////////////////
 
   /**
    * Encapsulator class to hold the two buffers as a cohesive object
