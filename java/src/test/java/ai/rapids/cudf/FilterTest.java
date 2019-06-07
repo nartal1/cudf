@@ -55,7 +55,7 @@ class FilterTest {
   @Test
   void testMaskDataOnly() {
     assumeTrue(Cuda.isEnvCompatibleForTesting());
-    byte[] maskVals = new byte[] { 0, 1, 0, 1, 1 };
+    byte[] maskVals = new byte[]{0, 1, 0, 1, 1};
     try (ColumnVector mask = ColumnVector.boolFromBytes(maskVals);
          ColumnVector input = ColumnVector.fromBoxedBytes((byte) 1, null, (byte) 2, (byte) 3, null);
          ColumnVector filtered = input.filter(mask)) {

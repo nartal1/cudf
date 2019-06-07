@@ -16,16 +16,16 @@
 package ai.rapids.cudf;
 
 public class RmmAllocationMode {
-    /**
-     * Use cudaMalloc for allocation
-     */
-    public static final int CUDA_DEFAULT = 0x00000000;
-    /**
-     * Use pool suballocation strategy
-     */
-    public static final int POOL = 0x00000001;
-    /**
-     * Use cudaMallocManaged rather than cudaMalloc
-     */
-    public static final int CUDA_MANAGED_MEMORY = 0x00000002;
+  /**
+   * Use cudaMalloc for allocation
+   */
+  public static final int CUDA_DEFAULT = 0x00000000;
+  /**
+   * Use pool suballocation strategy
+   */
+  public static final int POOL = 0x00000001;
+  /**
+   * Use cudaMallocManaged rather than cudaMalloc
+   */
+  public static final int CUDA_MANAGED_MEMORY = 0x00000002;
 }

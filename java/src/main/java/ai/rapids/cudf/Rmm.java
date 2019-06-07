@@ -19,46 +19,43 @@ package ai.rapids.cudf;
  * This is the binding class for rmm lib.
  */
 public class Rmm {
-    static {
-        NativeDepsLoader.loadNativeDeps();
-    }
+  static {
+    NativeDepsLoader.loadNativeDeps();
+  }
 
-    /**
-     * ---------------------------------------------------------------------------*
-     * Initialize memory manager state and storage.
-     *
-     * @param allocationMode Allocation strategy to use. Bit set using
-     *                       {@link RmmAllocationMode#CUDA_DEFAULT},
-     *                       {@link RmmAllocationMode#POOL} and
-     *                       {@link RmmAllocationMode#CUDA_MANAGED_MEMORY}
-     * @param enableLogging  Enable logging memory manager events
-     * @param poolSize       The initial pool size in bytes
-     */
-    public static native void initialize(int allocationMode, boolean enableLogging, long poolSize)
-            throws RmmException;
-
-
-    /**
-     * ---------------------------------------------------------------------------*
-     * Allocate memory and return a pointer to device memory.
-     * <p>
-     * Mapping: RMM_ALLOC in rmm.h.
-     *
-     * @param size   The size in bytes of the allocated memory region
-     * @param stream The stream in which to synchronize this command
-     * @return Returned pointer to the allocated memory
-     */
-    static native long alloc(long size, long stream) throws RmmException;
+  /**
+   * ---------------------------------------------------------------------------*
+   * Initialize memory manager state and storage.
+   * @param allocationMode Allocation strategy to use. Bit set using
+   *                       {@link RmmAllocationMode#CUDA_DEFAULT},
+   *                       {@link RmmAllocationMode#POOL} and
+   *                       {@link RmmAllocationMode#CUDA_MANAGED_MEMORY}
+   * @param enableLogging  Enable logging memory manager events
+   * @param poolSize       The initial pool size in bytes
+   */
+  public static native void initialize(int allocationMode, boolean enableLogging, long poolSize)
+      throws RmmException;
 
 
-    /**
-     * ---------------------------------------------------------------------------*
-     * <p> Mapping: RMM_FREE in rmm.h
-     *
-     * @param ptr    the pointer to memory location to be relinquished
-     * @param stream the stream in which to synchronize this command
-     * @throws RmmException
-     */
-    static native void free(long ptr, long stream) throws RmmException;
+  /**
+   * ---------------------------------------------------------------------------*
+   * Allocate memory and return a pointer to device memory.
+   * <p>
+   * Mapping: RMM_ALLOC in rmm.h.
+   * @param size   The size in bytes of the allocated memory region
+   * @param stream The stream in which to synchronize this command
+   * @return Returned pointer to the allocated memory
+   */
+  static native long alloc(long size, long stream) throws RmmException;
+
+
+  /**
+   * ---------------------------------------------------------------------------*
+   * <p> Mapping: RMM_FREE in rmm.h
+   * @param ptr    the pointer to memory location to be relinquished
+   * @param stream the stream in which to synchronize this command
+   * @throws RmmException
+   */
+  static native void free(long ptr, long stream) throws RmmException;
 
 }

@@ -23,35 +23,35 @@ package ai.rapids.cudf;
  */
 class DeviceMemoryBuffer extends MemoryBuffer {
 
-    DeviceMemoryBuffer(long address, long lengthInBytes) {
-        super(address, lengthInBytes);
-    }
+  DeviceMemoryBuffer(long address, long lengthInBytes) {
+    super(address, lengthInBytes);
+  }
 
-    /**
-     * Method to copy from a HostMemoryBuffer to a DeviceMemoryBuffer
-     * @param hostBuffer - Buffer to copy data from
-     */
-    public void copyFromHostBuffer(HostMemoryBuffer hostBuffer) {
-        addressOutOfBoundsCheck(address, hostBuffer.length, "copy range dest");
-        assert !hostBuffer.closed;
-        Cuda.memcpy(address, hostBuffer.address, hostBuffer.length, CudaMemcpyKind.HOST_TO_DEVICE);
-    }
+  /**
+   * Factory method to create this buffer
+   * @param bytes - size in bytes to allocate
+   * @return - return this newly created buffer
+   */
+  public static DeviceMemoryBuffer allocate(long bytes) {
+    return new DeviceMemoryBuffer(Rmm.alloc(bytes, 0), bytes);
+  }
 
-    /**
-     * Close this Buffer and free memory allocated
-     */
-    @Override
-    protected void doClose() {
-        Rmm.free(address, 0);
-    }
+  /**
+   * Method to copy from a HostMemoryBuffer to a DeviceMemoryBuffer
+   * @param hostBuffer - Buffer to copy data from
+   */
+  public void copyFromHostBuffer(HostMemoryBuffer hostBuffer) {
+    addressOutOfBoundsCheck(address, hostBuffer.length, "copy range dest");
+    assert !hostBuffer.closed;
+    Cuda.memcpy(address, hostBuffer.address, hostBuffer.length, CudaMemcpyKind.HOST_TO_DEVICE);
+  }
 
-    /**
-     * Factory method to create this buffer
-     * @param bytes - size in bytes to allocate
-     * @return - return this newly created buffer
-     */
-    public static DeviceMemoryBuffer allocate(long bytes) {
-        return new DeviceMemoryBuffer(Rmm.alloc(bytes, 0), bytes);
-    }
+  /**
+   * Close this Buffer and free memory allocated
+   */
+  @Override
+  protected void doClose() {
+    Rmm.free(address, 0);
+  }
 
 }

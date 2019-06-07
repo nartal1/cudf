@@ -21,15 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 public class TestExceptions {
-    @Test
-    public void testCudaCausedRmmException() {
-        assumeTrue(Cuda.isEnvCompatibleForTesting());
-        try {
-            Rmm.free(100, 0);
-            fail("An exception should have been thrown!!!");
-        } catch (RmmException rmme) {
-            Throwable cause = rmme.getCause();
-            assertTrue(cause instanceof CudaException);
-        }
+  @Test
+  public void testCudaCausedRmmException() {
+    assumeTrue(Cuda.isEnvCompatibleForTesting());
+    try {
+      Rmm.free(100, 0);
+      fail("An exception should have been thrown!!!");
+    } catch (RmmException rmme) {
+      Throwable cause = rmme.getCause();
+      assertTrue(cause instanceof CudaException);
     }
+  }
 }

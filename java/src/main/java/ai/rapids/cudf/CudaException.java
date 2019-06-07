@@ -16,22 +16,26 @@
 package ai.rapids.cudf;
 
 /**
- * Exception from the cuda language/library.  Be aware that because of how cuda does asynchronous processing
- * exceptions from cuda can be thrown by method calls that did not cause the exception to take place.  These
+ * Exception from the cuda language/library.  Be aware that because of how cuda does asynchronous
+ * processing
+ * exceptions from cuda can be thrown by method calls that did not cause the exception to take
+ * place.  These
  * will take place on the same thread that caused the error.
- *
- * Please See <a href="https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html">the cuda docs</a>
+ * <p>
+ * Please See
+ * <a href="https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__ERROR.html">the cuda docs</a>
  * for more details on how this works.
- *
- * In general you can recover from cuda errors even in async calls if you make sure that you don't switch between
+ * <p>
+ * In general you can recover from cuda errors even in async calls if you make sure that you
+ * don't switch between
  * threads for different parts of processing that can be retried as a chunk.
  */
 public class CudaException extends RuntimeException {
-    CudaException(String message) {
-        super(message);
-    }
+  CudaException(String message) {
+    super(message);
+  }
 
-    CudaException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  CudaException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }
