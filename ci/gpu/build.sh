@@ -86,4 +86,4 @@ py.test --cache-clear --junitxml=${WORKSPACE}/junit-cudf.xml -v --cov-config=.co
 
 logger "Build cudfjni"
 cd $WORKSPACE/java
-mvn clean test
+mvn -Dmaven.repo.local=$WORKSPACE/.m2 clean test
