@@ -45,8 +45,8 @@ final class BitVectorHelper {
                                                 long dstOffset, int shiftByBits, long length) {
     assert shiftByBits > 0 && shiftByBits < 8 : "shiftByBits out of range";
     int dstMask = 0xFF >> (8 - shiftByBits);
-    int srcLeftMask = dstMask << (8 - shiftByBits); // the mask to save the left side of the bits
-      // before we shift
+    // the mask to save the left side of the bits before we shift
+    int srcLeftMask = dstMask << (8 - shiftByBits);
     int valueFromTheLeftOfTheLastByte = dst.getByte(dstOffset) & dstMask;
     long i;
     long byteLength = getValidityLengthInBytes(length);
@@ -59,11 +59,11 @@ final class BitVectorHelper {
       valueFromTheLeftOfTheLastByte = fallingBitsOnTheLeft >>> (8 - shiftByBits);
     }
     if (((length % 8) + shiftByBits > 8) || length % 8 == 0) {
-            /*
-                Only if the last byte has data that has been shifted to spill over to the next
-                byte execute the
-                following statement.
-             */
+      /*
+          Only if the last byte has data that has been shifted to spill over to the next
+          byte execute the
+          following statement.
+       */
       dst.setByte(dstOffset + i, (byte) (valueFromTheLeftOfTheLastByte | ~dstMask));
     }
   }
