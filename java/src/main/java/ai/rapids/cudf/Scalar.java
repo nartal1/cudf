@@ -18,6 +18,8 @@
 
 package ai.rapids.cudf;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Objects;
 
@@ -40,10 +42,12 @@ public final class Scalar implements BinaryOperable {
      * possible integer types (INT8 - INT64, DATE, TIMESTAMP, etc) in intTypeStorage.
      * Because conversion between a float and a double is not as cheap as it is for integers, we
      * split out float and double into floatTypeStorage and doubleTypeStorage.
+     * String data is stored as UTF-8 bytes in stringTypeStorage.
      */
     final long intTypeStorage;
     final float floatTypeStorage;
     final double doubleTypeStorage;
+    final byte[] stringTypeStorage;
     final DType type;
     final boolean isValid;
     // TimeUnit is not currently used by scalar values.  There are no operations that need it
@@ -54,6 +58,7 @@ public final class Scalar implements BinaryOperable {
         intTypeStorage = value;
         floatTypeStorage = 0;
         doubleTypeStorage = 0;
+        stringTypeStorage = null;
         this.type = type;
         isValid = true;
         timeUnit = unit;
@@ -63,6 +68,7 @@ public final class Scalar implements BinaryOperable {
         intTypeStorage = 0;
         floatTypeStorage = value;
         doubleTypeStorage = 0;
+        stringTypeStorage = null;
         this.type = type;
         isValid = true;
         timeUnit = unit;
@@ -72,8 +78,19 @@ public final class Scalar implements BinaryOperable {
         intTypeStorage = 0;
         floatTypeStorage = 0;
         doubleTypeStorage = value;
+        stringTypeStorage = null;
         this.type = type;
         isValid = true;
+        timeUnit = unit;
+    }
+
+    private Scalar(byte[] value, DType type, TimeUnit unit) {
+        intTypeStorage = 0;
+        floatTypeStorage = 0;
+        doubleTypeStorage = 0;
+        stringTypeStorage = value;
+        this.type = type;
+        isValid = value != null;
         timeUnit = unit;
     }
 
@@ -81,6 +98,7 @@ public final class Scalar implements BinaryOperable {
         intTypeStorage = 0;
         floatTypeStorage = 0;
         doubleTypeStorage = 0;
+        stringTypeStorage = null;
         this.type = type;
         isValid = false;
         timeUnit = unit;
@@ -157,6 +175,10 @@ public final class Scalar implements BinaryOperable {
         return new Scalar(value, DType.FLOAT64, TimeUnit.NONE);
     }
 
+    public static Scalar fromString(String value) {
+        return new Scalar(value.getBytes(StandardCharsets.UTF_8), DType.STRING, TimeUnit.NONE);
+    }
+
     public boolean isValid() {
         return isValid;
     }
@@ -174,6 +196,8 @@ public final class Scalar implements BinaryOperable {
             return floatTypeStorage != 0f;
         } else if (type == DType.FLOAT64) {
             return doubleTypeStorage != 0.;
+        } else if (type == DType.STRING) {
+            return Boolean.parseBoolean(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -186,6 +210,8 @@ public final class Scalar implements BinaryOperable {
             return (byte) floatTypeStorage;
         } else if (type == DType.FLOAT64) {
             return (byte) doubleTypeStorage;
+        } else if (type == DType.STRING) {
+            return Byte.parseByte(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -198,6 +224,8 @@ public final class Scalar implements BinaryOperable {
             return (short) floatTypeStorage;
         } else if (type == DType.FLOAT64) {
             return (short) doubleTypeStorage;
+        } else if (type == DType.STRING) {
+            return Short.parseShort(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -210,6 +238,8 @@ public final class Scalar implements BinaryOperable {
             return (int) floatTypeStorage;
         } else if (type == DType.FLOAT64) {
             return (int) doubleTypeStorage;
+        } else if (type == DType.STRING) {
+            return Integer.parseInt(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -222,6 +252,8 @@ public final class Scalar implements BinaryOperable {
             return (long) floatTypeStorage;
         } else if (type == DType.FLOAT64) {
             return (long) doubleTypeStorage;
+        } else if (type == DType.STRING) {
+            return Long.parseLong(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -234,6 +266,8 @@ public final class Scalar implements BinaryOperable {
             return (float) doubleTypeStorage;
         } else if (INTEGRAL_TYPES.contains(type)) {
             return intTypeStorage;
+        } else if (type == DType.STRING) {
+            return Float.parseFloat(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -246,6 +280,8 @@ public final class Scalar implements BinaryOperable {
             return floatTypeStorage;
         } else if (INTEGRAL_TYPES.contains(type)) {
             return intTypeStorage;
+        } else if (type == DType.STRING) {
+            return Double.parseDouble(getJavaString());
         }
         throw new IllegalStateException("Unexpected scalar type: " + type);
     }
@@ -253,6 +289,28 @@ public final class Scalar implements BinaryOperable {
     /** Returns the time unit associated with this scalar. */
     public TimeUnit getTimeUnit() {
         return timeUnit;
+    }
+
+    /** Returns the scalar value as a Java string. */
+    public String getJavaString() {
+        if (type == DType.STRING) {
+            return new String(stringTypeStorage, StandardCharsets.UTF_8);
+        } else if (INTEGRAL_TYPES.contains(type)) {
+            return Long.toString(intTypeStorage);
+        } else if (type == DType.FLOAT32) {
+            return Float.toString(floatTypeStorage);
+        } else if (type == DType.FLOAT64) {
+            return Double.toString(doubleTypeStorage);
+        }
+        throw new IllegalStateException("Unexpected scalar type: " + type);
+    }
+
+    /** Returns the scalar value as UTF-8 data. */
+    public byte[] getUTF8() {
+        if (type == DType.STRING) {
+            return stringTypeStorage;
+        }
+        return getJavaString().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
@@ -275,12 +333,14 @@ public final class Scalar implements BinaryOperable {
             Double.compare(scalar.doubleTypeStorage, doubleTypeStorage) == 0 &&
             isValid == scalar.isValid &&
             type == scalar.type &&
-            timeUnit == scalar.timeUnit;
+            timeUnit == scalar.timeUnit &&
+            Arrays.equals(stringTypeStorage, scalar.stringTypeStorage);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(intTypeStorage, floatTypeStorage, doubleTypeStorage, type, isValid, timeUnit);
+        return Objects.hash(intTypeStorage, floatTypeStorage, doubleTypeStorage, stringTypeStorage,
+            type, isValid, timeUnit);
     }
 
     @Override
@@ -317,6 +377,11 @@ public final class Scalar implements BinaryOperable {
             sb.append(getLong());
             sb.append(" unit=");
             sb.append(getTimeUnit());
+            break;
+        case STRING:
+            sb.append('"');
+            sb.append(getJavaString());
+            sb.append('"');
             break;
         default:
             throw new IllegalArgumentException("Unknown scalar type: " + type);

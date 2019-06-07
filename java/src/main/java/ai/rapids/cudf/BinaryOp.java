@@ -15,6 +15,8 @@
  */
 package ai.rapids.cudf;
 
+import java.util.EnumSet;
+
 /**
  * Mathematical unary operations.
  */
@@ -37,6 +39,9 @@ public enum BinaryOp {
     BITWISE_OR(15),
     BITWISE_XOR(16);
     //NOT IMPLEMENTED YET COALESCE(17); // x == null ? y : x
+
+    static final EnumSet<BinaryOp> COMPARISON = EnumSet.of(
+        EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL);
 
     final int nativeId;
 

@@ -22,8 +22,6 @@ package ai.rapids.cudf;
 import org.junit.jupiter.api.Test;
 
 import static ai.rapids.cudf.TableTest.assertColumnsAreEqual;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class BinaryOpTest {
@@ -374,6 +372,35 @@ public class BinaryOpTest {
     }
 
     @Test
+    public void testStringCategoryEqualScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.equal(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, true, false, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.equal(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, true, true, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.equal(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, null, true, null)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+        }
+    }
+
+    @Test
     public void testNotEqual() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
@@ -397,6 +424,35 @@ public class BinaryOpTest {
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(100 != 1, 100 != 2, 100 != 3, 100 != 4,
                          100 != 5, null, 100 != 100)) {
                 assertColumnsAreEqual(expected, answer, "scalar short != int32");
+            }
+        }
+    }
+
+    @Test
+    public void testStringCategoryNotEqualScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.notEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, true, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.notEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, false, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.notEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, null, false, null)) {
+                assertColumnsAreEqual(expected, answer);
             }
         }
     }
@@ -428,6 +484,35 @@ public class BinaryOpTest {
 
 
     @Test
+    public void testStringCategoryLessScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.less(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, false, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.less(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, false, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.less(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, null, false, null)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+        }
+    }
+
+    @Test
     public void testGreater() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
@@ -448,6 +533,35 @@ public class BinaryOpTest {
             try (ColumnVector answer = Scalar.fromShort((short)100).greater(icv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(100 > 1, 100 > 2, 100 > 3, 100 > 4, 100 > 5, null, 100 > 100)) {
                 assertColumnsAreEqual(expected, answer, "scalar short > int32");
+            }
+        }
+    }
+
+    @Test
+    public void testStringCategoryGreaterScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.greater(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, false, true, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.greater(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, false, false, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.greater(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, null, false, null)) {
+                assertColumnsAreEqual(expected, answer);
             }
         }
     }
@@ -478,6 +592,35 @@ public class BinaryOpTest {
     }
 
     @Test
+    public void testStringCategoryLessOrEqualScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.lessOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, true, false, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.lessOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, true, true, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.lessOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(true, null, true, null)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+        }
+    }
+
+    @Test
     public void testGreaterOrEqual() {
         assumeTrue(Cuda.isEnvCompatibleForTesting());
         try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
@@ -498,6 +641,35 @@ public class BinaryOpTest {
             try (ColumnVector answer = Scalar.fromShort((short)100).greaterOrEqual(icv);
                  ColumnVector expected = ColumnVector.fromBoxedBooleans(100 >= 1, 100 >= 2, 100 >= 3, 100 >= 4, 100 >= 5, null, 100 >= 100)) {
                 assertColumnsAreEqual(expected, answer, "scalar short >= int32");
+            }
+        }
+    }
+
+    @Test
+    public void testStringCategoryGreaterOrEqualScalar() {
+        assumeTrue(Cuda.isEnvCompatibleForTesting());
+        try (ColumnVector a = ColumnVector.categoryFromStrings("a", "b", "c", "d");
+             ColumnVector b = ColumnVector.categoryFromStrings("a", "b", "b", "a");
+             ColumnVector c = ColumnVector.categoryFromStrings("a", null, "b", null)) {
+            a.ensureOnDevice();
+            b.ensureOnDevice();
+            c.ensureOnDevice();
+
+            Scalar s = Scalar.fromString("b");
+
+            try (ColumnVector answer = a.greaterOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, true, true, true)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = b.greaterOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, true, true, false)) {
+                assertColumnsAreEqual(expected, answer);
+            }
+
+            try (ColumnVector answer = c.greaterOrEqual(s);
+                 ColumnVector expected = ColumnVector.fromBoxedBooleans(false, null, true, null)) {
+                assertColumnsAreEqual(expected, answer);
             }
         }
     }
