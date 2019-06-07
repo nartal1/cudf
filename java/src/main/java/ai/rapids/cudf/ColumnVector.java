@@ -1367,6 +1367,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     /**
      * Create a new vector.
+     * @param type the type of vector to build.
      * @param rows maximum number of rows that the vector can hold.
      * @param init what will initialize the vector.
      * @return the created vector.
@@ -1377,8 +1378,9 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     /**
      * Create a new vector.
-     * @param rows maximum number of rows that the vector can hold.
+     * @param type the type of vector to build.
      * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+     * @param rows maximum number of rows that the vector can hold.
      * @param init what will initialize the vector.
      * @return the created vector.
      */
@@ -1391,6 +1393,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     /**
      * Create a new vector without sending data to the device.
+     * @param type the type of vector to build.
      * @param rows maximum number of rows that the vector can hold.
      * @param init what will initialize the vector.
      * @return the created vector.
@@ -1401,8 +1404,9 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
 
     /**
      * Create a new vector without sending data to the device.
-     * @param rows maximum number of rows that the vector can hold.
+     * @param type the type of vector to build.
      * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+     * @param rows maximum number of rows that the vector can hold.
      * @param init what will initialize the vector.
      * @return the created vector.
      */
@@ -2036,7 +2040,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
             if (built) {
                 throw new IllegalStateException("Cannot reuse a builder.");
             }
-            ColumnVector cv= new ColumnVector(type, tsTimeUnit,
+            ColumnVector cv = new ColumnVector(type, tsTimeUnit,
                 currentIndex, nullCount, data, valid);
             built = true;
             return cv;
