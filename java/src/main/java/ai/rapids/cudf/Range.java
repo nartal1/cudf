@@ -28,7 +28,9 @@ public final class Range {
    * @param end last entry exclusive.
    * @return the consumer.
    */
-  public static final Consumer<ColumnVector.Builder> appendBytes(byte end) { return appendBytes((byte) 0, end, (byte) 1); }
+  public static final Consumer<ColumnVector.Builder> appendBytes(byte end) {
+    return appendBytes((byte) 0, end, (byte) 1);
+  }
 
   /**
    * Append a range to the builder. start inclusive to end exclusive.
@@ -62,7 +64,9 @@ public final class Range {
    * @param end last entry exclusive.
    * @return the consumer.
    */
-  public static final Consumer<ColumnVector.Builder> appendShorts(short end) { return appendShorts((short) 0, end, (short) 1); }
+  public static final Consumer<ColumnVector.Builder> appendShorts(short end) {
+    return appendShorts((short) 0, end, (short) 1);
+  }
 
   /**
    * Append a range to the builder. start inclusive to end exclusive.
