@@ -39,6 +39,12 @@ class Cudf {
     private static native long gdfBinaryOpVV(long lhs, long rhs, int op, int dtype);
 
     static long gdfBinaryOp(Scalar lhs, ColumnVector rhs, BinaryOp op, DType outputType) {
+        if (rhs.getType() == DType.STRING_CATEGORY && lhs.getType() == DType.STRING
+            && BinaryOp.COMPARISON.contains(op)) {
+            // Currenty cudf cannot handle string scalars, so convert the string scalar to a
+            // category index and compare with that instead.
+            lhs = rhs.getCategoryIndex(lhs);
+        }
         return gdfBinaryOpSV(lhs.intTypeStorage, lhs.floatTypeStorage, lhs.doubleTypeStorage, lhs.isValid, lhs.type.nativeId,
                 rhs.getNativeCudfColumnAddress(), op.nativeId, outputType.nativeId);
     }
@@ -48,6 +54,12 @@ class Cudf {
                                              int op, int dtype);
 
     static long gdfBinaryOp(ColumnVector lhs, Scalar rhs, BinaryOp op, DType outputType) {
+        if (lhs.getType() == DType.STRING_CATEGORY && rhs.getType() == DType.STRING
+            && BinaryOp.COMPARISON.contains(op)) {
+            // Currenty cudf cannot handle string scalars, so convert the string scalar to a
+            // category index and compare with that instead.
+            rhs = lhs.getCategoryIndex(rhs);
+        }
         return gdfBinaryOpVS(lhs.getNativeCudfColumnAddress(),
                 rhs.intTypeStorage, rhs.floatTypeStorage, rhs.doubleTypeStorage, rhs.isValid, rhs.type.nativeId,
                 op.nativeId, outputType.nativeId);
@@ -114,4 +126,9 @@ class Cudf {
 
     private static native long gdfCast(long input, int dTypeNative, int timeUnitNative) throws CudfException;
 
+    static int getCategoryIndex(ColumnVector category, Scalar str) {
+        return getCategoryIndex(category.getNativeCudfColumnAddress(), str.stringTypeStorage);
+    }
+
+    private static native int getCategoryIndex(long cat, byte[] str);
 }

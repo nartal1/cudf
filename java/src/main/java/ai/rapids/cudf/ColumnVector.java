@@ -1080,6 +1080,24 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     }
 
     /////////////////////////////////////////////////////////////////////////////
+    // STRING CATEGORY METHODS
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Returns the category index of the specified string scalar.
+     *
+     * @param s a {@link Scalar} of type {@link DType#STRING} to lookup
+     * @return an integer {@link Scalar} containing the category index or -1
+     *         if the string was not found in the category.
+     */
+    public Scalar getCategoryIndex(Scalar s) {
+        if (s.getType() != DType.STRING) {
+            throw new IllegalArgumentException("scalar must be a string type");
+        }
+        return Scalar.fromInt(Cudf.getCategoryIndex(this, s));
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
     // INTERNAL/NATIVE ACCESS
     /////////////////////////////////////////////////////////////////////////////
 
