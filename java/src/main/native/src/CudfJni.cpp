@@ -17,8 +17,8 @@
 #include <memory>
 
 #include "jni_utils.hpp"
-#include "reduction.hpp"
-#include "stream_compaction.hpp"
+#include "cudf/reduction.hpp"
+#include "cudf/stream_compaction.hpp"
 
 using unique_nvcat_ptr = std::unique_ptr<NVCategory, decltype(&NVCategory::destroy)>;
 using unique_nvstr_ptr = std::unique_ptr<NVStrings, decltype(&NVStrings::destroy)>;

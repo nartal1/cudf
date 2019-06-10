@@ -27,8 +27,8 @@
 #include "utilities/column_utils.hpp"
 #include "utilities/error_utils.hpp"
 
-#include "cudf.h"
-#include "table.hpp"
+#include "cudf/cudf.h"
+#include "cudf/table.hpp"
 
 namespace cudf {
 namespace jni {

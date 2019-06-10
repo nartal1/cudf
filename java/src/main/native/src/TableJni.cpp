@@ -16,10 +16,10 @@
 
 #include <cstring>
 
-#include "copying.hpp"
+#include "cudf/copying.hpp"
+#include "cudf/table.hpp"
+#include "cudf/types.hpp"
 #include "jni_utils.hpp"
-#include "table.hpp"
-#include "types.hpp"
 
 namespace cudf {
 namespace jni {
