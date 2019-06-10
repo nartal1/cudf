@@ -43,11 +43,11 @@ public class CSVOptions extends ColumnFilterOptions {
     quote = builder.quote;
     comment = builder.comment;
     nullValues = builder.nullValues.toArray(
-        new String[builder.nullValues.size()]);
+      new String[builder.nullValues.size()]);
     trueValues = builder.trueValues.toArray(
-        new String[builder.trueValues.size()]);
+      new String[builder.trueValues.size()]);
     falseValues = builder.falseValues.toArray(
-        new String[builder.falseValues.size()]);
+      new String[builder.falseValues.size()]);
   }
 
   String[] getNullValues() {
@@ -78,7 +78,9 @@ public class CSVOptions extends ColumnFilterOptions {
     return comment;
   }
 
-  public static Builder builder() { return new Builder(); }
+  public static Builder builder() {
+    return new Builder();
+  }
 
   public static class Builder extends ColumnFilterOptions.Builder<Builder> {
     private static final int NO_HEADER_ROW = -1;

@@ -31,7 +31,6 @@ public enum TimeUnit {
   private static final TimeUnit[] TIME_UNITS = TimeUnit.values();
   private final int nativeId;
 
-
   TimeUnit(int nativeId) {
     this.nativeId = nativeId;
   }
