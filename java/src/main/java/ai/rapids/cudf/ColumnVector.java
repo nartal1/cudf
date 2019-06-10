@@ -491,6 +491,15 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   }
 
   /**
+   * Get the boolean value at index
+   */
+  public final boolean getBoolean(long index) {
+    assert type == DType.BOOL8;
+    assertsForGet(index);
+    return offHeap.hostData.data.getBoolean(index * type.sizeInBytes);
+  }
+
+  /**
    * Get the value at index.  This API is slow as it has to translate the
    * string representation.  Please use it with caution.
    */
@@ -838,6 +847,18 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    */
   public Scalar reduction(ReductionOp op, DType outType) {
     return Cudf.reduction(this, op, outType);
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // LOGICAL
+  /////////////////////////////////////////////////////////////////////////////
+ 
+  /**
+   * Returns a vector of the logical `not` of each value in the input 
+   * column (this)
+   */
+  public ColumnVector not() {
+    return unaryOp(UnaryOp.NOT);
   }
 
   /////////////////////////////////////////////////////////////////////////////

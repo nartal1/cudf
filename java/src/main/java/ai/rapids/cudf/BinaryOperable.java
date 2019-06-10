@@ -59,9 +59,11 @@ public interface BinaryOperable {
     if (a == DType.INT16 || b == DType.INT16) {
       return DType.INT16;
     }
-    if (a == DType.INT8 || b == DType.INT8 ||
-        a == DType.BOOL8 || b == DType.BOOL8) {
+    if (a == DType.INT8 || b == DType.INT8) {
       return DType.INT8;
+    }
+    if (a == DType.BOOL8 || b == DType.BOOL8) {
+      return DType.BOOL8;
     }
     throw new IllegalArgumentException("Unsupported types " + a + " and " + b);
   }
@@ -324,5 +326,33 @@ public interface BinaryOperable {
    */
   default ColumnVector bitXor(BinaryOperable rhs) {
     return bitXor(rhs, implicitConversion(this, rhs));
+  }
+
+  /**
+   * Logical and && with the given output type. this && rhs
+   */
+  default ColumnVector and(BinaryOperable rhs, DType outType) {
+    return binaryOp(BinaryOp.LOGICAL_AND, rhs, outType);
+  }
+
+  /**
+   * Logical and &&. this && rhs
+   */
+  default ColumnVector and(BinaryOperable rhs) {
+    return and(rhs, implicitConversion(this, rhs));
+  }
+
+  /**
+   * Logical or || with the given output type. this || rhs  
+   */
+  default ColumnVector or(BinaryOperable rhs, DType outType) {
+    return binaryOp(BinaryOp.LOGICAL_OR, rhs, outType);
+  }
+
+  /**
+   * Logical or ||. this || rhs
+   */
+  default ColumnVector or(BinaryOperable rhs) {
+    return or(rhs, implicitConversion(this, rhs));
   }
 }
