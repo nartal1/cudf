@@ -429,51 +429,6 @@ public final class Table implements AutoCloseable {
     private final List<TimeUnit> units = new ArrayList<>();
     private final List<Object> typeErasedData = new ArrayList<>();
 
-    private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
-      ColumnVector ret;
-      switch (type) {
-        case STRING:
-          ret = ColumnVector.fromStrings((String[]) dataArray);
-          break;
-        case STRING_CATEGORY:
-          ret = ColumnVector.categoryFromStrings((String[]) dataArray);
-          break;
-        case BOOL8:
-          ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
-          break;
-        case INT8:
-          ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
-          break;
-        case INT16:
-          ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
-          break;
-        case INT32:
-          ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
-          break;
-        case INT64:
-          ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
-          break;
-        case DATE32:
-          ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
-          break;
-        case DATE64:
-          ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
-          break;
-        case TIMESTAMP:
-          ret = ColumnVector.timestampsFromBoxedLongs(unit, (Long[]) dataArray);
-          break;
-        case FLOAT32:
-          ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
-          break;
-        case FLOAT64:
-          ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
-          break;
-        default:
-          throw new IllegalArgumentException(type + " is not supported yet");
-      }
-      return ret;
-    }
-
     public TestBuilder column(String... values) {
       types.add(DType.STRING);
       units.add(TimeUnit.NONE);
@@ -563,6 +518,51 @@ public final class Table implements AutoCloseable {
       units.add(unit);
       typeErasedData.add(values);
       return this;
+    }
+
+    private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
+      ColumnVector ret;
+      switch (type) {
+        case STRING:
+          ret = ColumnVector.fromStrings((String[]) dataArray);
+          break;
+        case STRING_CATEGORY:
+          ret = ColumnVector.categoryFromStrings((String[]) dataArray);
+          break;
+        case BOOL8:
+          ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
+          break;
+        case INT8:
+          ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
+          break;
+        case INT16:
+          ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
+          break;
+        case INT32:
+          ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
+          break;
+        case INT64:
+          ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
+          break;
+        case DATE32:
+          ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
+          break;
+        case DATE64:
+          ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
+          break;
+        case TIMESTAMP:
+          ret = ColumnVector.timestampsFromBoxedLongs(unit, (Long[]) dataArray);
+          break;
+        case FLOAT32:
+          ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
+          break;
+        case FLOAT64:
+          ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
+          break;
+        default:
+          throw new IllegalArgumentException(type + " is not supported yet");
+      }
+      return ret;
     }
 
     public Table build() {

@@ -48,9 +48,53 @@ import java.util.concurrent.atomic.AtomicLong;
  * later the Cleaner itself will be released.
  */
 class ColumnVectorCleaner {
+  private static Logger log = LoggerFactory.getLogger(ColumnVectorCleaner.class);
+
+  /**
+  * API that can be used to clean up the resources for a vector, even if there was a leak
+  */
+  public interface Cleaner {
+    /**
+     * Clean up any resources not previously released.
+     * @param logErrorIfNotClean if true and there are resources to clean up a leak has happened
+     *                           so log it.
+     * @return true if resources were cleaned up else false.
+     */
+    boolean clean(boolean logErrorIfNotClean);
+  }
+
   static final AtomicLong leakCount = new AtomicLong();
   private static final Set<CleanerWeakReference> all =
       Collections.newSetFromMap(new ConcurrentHashMap()); // We want to be thread safe
+
+  private static class CleanerWeakReference extends WeakReference<ColumnVector> {
+
+    private final Cleaner cleaner;
+
+    public CleanerWeakReference(ColumnVector columnVector, Cleaner cleaner) {
+      super(columnVector);
+      this.cleaner = cleaner;
+    }
+
+    public void clean() {
+      if (cleaner.clean(true)) {
+        leakCount.incrementAndGet();
+      }
+    }
+  }
+
+  private static synchronized void doCleanup() {
+    // Just to avoid the cleanup thread and this thread colliding...
+    Iterator<CleanerWeakReference> it = all.iterator();
+    while (it.hasNext()) {
+      CleanerWeakReference ref = it.next();
+      if (ref.get() == null) {
+        ref.clean();
+        it.remove();
+      }
+    }
+  }
+
   private static final Thread t = new Thread(() -> {
     try {
       while (true) {
@@ -61,7 +105,6 @@ class ColumnVectorCleaner {
       // Ignored just exit
     }
   }, "Cleaner Thread");
-  private static Logger log = LoggerFactory.getLogger(ColumnVectorCleaner.class);
 
   static {
     t.setDaemon(true);
@@ -81,49 +124,8 @@ class ColumnVectorCleaner {
     }
   }
 
-  private static synchronized void doCleanup() {
-    // Just to avoid the cleanup thread and this thread colliding...
-    Iterator<CleanerWeakReference> it = all.iterator();
-    while (it.hasNext()) {
-      CleanerWeakReference ref = it.next();
-      if (ref.get() == null) {
-        ref.clean();
-        it.remove();
-      }
-    }
-  }
-
   public static synchronized void register(ColumnVector vec, Cleaner cleaner) {
     // It is now registered...
     all.add(new CleanerWeakReference(vec, cleaner));
-  }
-
-  /**
-   * API that can be used to clean up the resources for a vector, even if there was a leak
-   */
-  public interface Cleaner {
-    /**
-     * Clean up any resources not previously released.
-     * @param logErrorIfNotClean if true and there are resources to clean up a leak has happened
-     *                           so log it.
-     * @return true if resources were cleaned up else false.
-     */
-    boolean clean(boolean logErrorIfNotClean);
-  }
-
-  private static class CleanerWeakReference extends WeakReference<ColumnVector> {
-
-    private final Cleaner cleaner;
-
-    public CleanerWeakReference(ColumnVector columnVector, Cleaner cleaner) {
-      super(columnVector);
-      this.cleaner = cleaner;
-    }
-
-    public void clean() {
-      if (cleaner.clean(true)) {
-        leakCount.incrementAndGet();
-      }
-    }
   }
 }

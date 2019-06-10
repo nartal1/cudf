@@ -50,10 +50,6 @@ public class CSVOptions extends ColumnFilterOptions {
         new String[builder.falseValues.size()]);
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
-
   String[] getNullValues() {
     return nullValues;
   }
@@ -81,6 +77,8 @@ public class CSVOptions extends ColumnFilterOptions {
   byte getComment() {
     return comment;
   }
+
+  public static Builder builder() { return new Builder(); }
 
   public static class Builder extends ColumnFilterOptions.Builder<Builder> {
     private static final int NO_HEADER_ROW = -1;

@@ -21,7 +21,7 @@ enum CudaMemcpyKind {
   DEVICE_TO_HOST(2),   /*< Device -> Host */
   DEVICE_TO_DEVICE(3), /*< Device -> Device */
   DEFAULT(4);   /*< Direction of the transfer is inferred from the pointer values. Requires
-  unified virtual addressing */
+                          unified virtual addressing */
 
   private final int value;
 

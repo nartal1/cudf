@@ -54,6 +54,17 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
   private int refCount;
 
   /**
+   * Convert elements in it to a String and join them together. Only use for debug messages
+   * where the code execution itself can be disabled as this is not fast.
+   */
+  private static <T> String stringJoin(String delim, Iterable<T> it) {
+    return String.join(delim,
+        StreamSupport.stream(it.spliterator(), false)
+            .map((i) -> i.toString())
+            .collect(Collectors.toList()));
+  }
+
+  /**
    * Wrap an existing on device gdf_column with the corresponding ColumnVector.
    */
   ColumnVector(long nativePointer) {
@@ -164,16 +175,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     incRefCount();
   }
 
-  /**
-   * Convert elements in it to a String and join them together. Only use for debug messages
-   * where the code execution itself can be disabled as this is not fast.
-   */
-  private static <T> String stringJoin(String delim, Iterable<T> it) {
-    return String.join(delim,
-        StreamSupport.stream(it.spliterator(), false)
-            .map((i) -> i.toString())
-            .collect(Collectors.toList()));
-  }
   /**
    * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
    */
