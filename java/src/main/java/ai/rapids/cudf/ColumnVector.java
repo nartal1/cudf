@@ -174,435 +174,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
             .map((i) -> i.toString())
             .collect(Collectors.toList()));
   }
-
-  private static native long allocateCudfColumn() throws CudfException;
-
-  /**
-   * Set a CuDF column given data and validity bitmask pointers, size, and datatype, and
-   * count of null (non-valid) elements
-   * @param cudfColumnHandle native handle of gdf_column.
-   * @param dataPtr          Pointer to data.
-   * @param valid            Pointer to validity bitmask for the data.
-   * @param size             Number of rows in the column.
-   * @param dtype            Data type of the column.
-   * @param null_count       The number of non-valid elements in the validity bitmask.
-   * @param timeUnit         {@link TimeUnit}
-   */
-  private static native void cudfColumnViewAugmented(long cudfColumnHandle, long dataPtr,
-                                                     long valid,
-                                                     int size, int dtype, int null_count,
-                                                     int timeUnit) throws CudfException;
-
-  /**
-   * Translate the host side string representation of strings into the device side representation
-   * and populate the cudfColumn with it.
-   * @param cudfColumnHandle native handle of gdf_column.
-   * @param hostDataPtr      Pointer to string data on the host.
-   * @param hostOffsetsPtr   Pointer to offsets data on the host.
-   * @param deviceValidPtr   Pointer to validity bitmask on the device.
-   * @param deviceDataPtr    Pointer to where the int category data will be stored for
-   *                         STRING_CATEGORY.
-   *                         Should be 0 for STRING
-   * @param size             Number of rows in the column.
-   * @param dtype            Data type of the column. In this case must be STRING or
-   *                         STRING_CATEGORY
-   * @param nullCount        The number of non-valid elements in the validity bitmask.
-   */
-  private static native void cudfColumnViewStrings(long cudfColumnHandle, long hostDataPtr,
-                                                   long hostOffsetsPtr, long deviceValidPtr,
-                                                   long deviceDataPtr,
-                                                   int size, int dtype, int nullCount);
-
-  /**
-   * Copy the string data to the host.  This is a little ugly because the addresses
-   * returned were allocated by native code but will be freed through java's Unsafe API.
-   * In practice this should work so long as we don't try to replace malloc, and java does not.
-   * If this does become a problem we can subclass HostMemoryBuffer and add in another JNI
-   * call to free using native code.
-   * @param cudfColumnHandle the device side cudf column.
-   * @return [data address, data length, offsets address, offsets length]
-   */
-  private static native long[] getStringDataAndOffsetsBack(long cudfColumnHandle);
-
-  static native void freeCudfColumn(long cudfColumnHandle, boolean isDeepClean) throws CudfException;
-
-  private static native long getDataPtr(long cudfColumnHandle) throws CudfException;
-
-  private static native long getValidPtr(long cudfColumnHandle) throws CudfException;
-
-  private static native int getRowCount(long cudfColumnHandle) throws CudfException;
-
-  private static DType getDType(long cudfColumnHandle) throws CudfException {
-    return DType.fromNative(getDTypeInternal(cudfColumnHandle));
-  }
-
-  private static native int getDTypeInternal(long cudfColumnHandle) throws CudfException;
-
-  private static TimeUnit getTimeUnit(long cudfColumnHandle) throws CudfException {
-    return TimeUnit.fromNative(getTimeUnitInternal(cudfColumnHandle));
-  }
-
-  private static native int getTimeUnitInternal(long cudfColumnHandle) throws CudfException;
-
-  private static native int getNullCount(long cudfColumnHandle) throws CudfException;
-
-  private static native long concatenate(long[] columnHandles) throws CudfException;
-
-  /////////////////////////////////////////////////////////////////////////////
-  // BUILDER
-  /////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
-   * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
-   * close the builder.
-   * @param type the type of vector to build.
-   * @param rows the number of rows this builder can hold
-   * @return the builder to use.
-   */
-  public static Builder builder(DType type, int rows) {
-    return new Builder(type, TimeUnit.NONE, rows);
-  }
-
-  /**
-   * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
-   * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
-   * close the builder.
-   * @param type the type of vector to build.
-   * @param rows the number of rows this builder can hold
-   * @return the builder to use.
-   */
-  public static Builder builder(DType type, TimeUnit tsTimeUnit, int rows) {
-    return new Builder(type, tsTimeUnit, rows);
-  }
-
-  /**
-   * Create a new vector.
-   * @param type the type of vector to build.
-   * @param rows maximum number of rows that the vector can hold.
-   * @param init what will initialize the vector.
-   * @return the created vector.
-   */
-  public static ColumnVector build(DType type, int rows, Consumer<Builder> init) {
-    return build(type, TimeUnit.NONE, rows, init);
-  }
-
-  /**
-   * Create a new vector.
-   * @param type       the type of vector to build.
-   * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
-   * @param rows       maximum number of rows that the vector can hold.
-   * @param init       what will initialize the vector.
-   * @return the created vector.
-   */
-  public static ColumnVector build(DType type, TimeUnit tsTimeUnit, int rows,
-                                   Consumer<Builder> init) {
-    try (Builder builder = builder(type, tsTimeUnit, rows)) {
-      init.accept(builder);
-      return builder.build();
-    }
-  }
-
-  /**
-   * Create a new vector without sending data to the device.
-   * @param type the type of vector to build.
-   * @param rows maximum number of rows that the vector can hold.
-   * @param init what will initialize the vector.
-   * @return the created vector.
-   */
-  public static ColumnVector buildOnHost(DType type, int rows, Consumer<Builder> init) {
-    return buildOnHost(type, TimeUnit.NONE, rows, init);
-  }
-
-  /**
-   * Create a new vector without sending data to the device.
-   * @param type       the type of vector to build.
-   * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
-   * @param rows       maximum number of rows that the vector can hold.
-   * @param init       what will initialize the vector.
-   * @return the created vector.
-   */
-  public static ColumnVector buildOnHost(DType type, TimeUnit tsTimeUnit, int rows,
-                                         Consumer<Builder> init) {
-    try (Builder builder = builder(type, tsTimeUnit, rows)) {
-      init.accept(builder);
-      return builder.buildOnHost();
-    }
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector boolFromBytes(byte... values) {
-    return build(DType.BOOL8, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromBytes(byte... values) {
-    return build(DType.INT8, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromShorts(short... values) {
-    return build(DType.INT16, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromInts(int... values) {
-    return build(DType.INT32, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromLongs(long... values) {
-    return build(DType.INT64, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromFloats(float... values) {
-    return build(DType.FLOAT32, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector fromDoubles(double... values) {
-    return build(DType.FLOAT64, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector datesFromInts(int... values) {
-    return build(DType.DATE32, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector datesFromLongs(long... values) {
-    return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector timestampsFromLongs(long... values) {
-    return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
-  }
-
-  /**
-   * Create a new vector from the given values.
-   */
-  public static ColumnVector timestampsFromLongs(TimeUnit tsTimeUnit, long... values) {
-    return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendArray(values));
-  }
-
-  private static ColumnVector fromStrings(DType type, String... values) {
-    HostMemoryBuffer data = null;
-    HostMemoryBuffer offsets = null;
-    HostMemoryBuffer valid = null;
-    ColumnVector ret = null;
-    boolean needsCleanup = true;
-    try {
-      int rows = values.length;
-      long nullCount = 0;
-      // How many bytes do we need to hold the data.  Sorry this is really expensive
-      long bufferSize = 0;
-      for (String s : values) {
-        if (s == null) {
-          nullCount++;
-        } else {
-          bufferSize += s.getBytes(StandardCharsets.UTF_8).length;
-        }
-      }
-      data = HostMemoryBuffer.allocate(bufferSize);
-      if (nullCount > 0) {
-        // copy and pasted from allocateBitmaskAndSetDefaultValues
-        long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
-        valid = HostMemoryBuffer.allocate(bitmaskSize);
-        valid.setMemory(0, bitmaskSize, (byte) 0xFF);
-      }
-
-      offsets = HostMemoryBuffer.allocate((rows + 1) * 4);
-      int offset = 0;
-      // The initial offset is always 0
-      offsets.setInt(0, offset);
-      for (int i = 0; i < values.length; i++) {
-        String s = values[i];
-        if (s == null) {
-          BitVectorHelper.setNullAt(valid, i);
-        } else {
-          byte[] utf8 = s.getBytes(StandardCharsets.UTF_8);
-          data.setBytes(offset, utf8, 0, utf8.length);
-          offset += utf8.length;
-        }
-        offsets.setInt((i + 1L) * 4, offset);
-      }
-      ret = new ColumnVector(type, TimeUnit.NONE, rows, nullCount, data, valid, offsets);
-      ret.ensureOnDevice();
-      needsCleanup = false;
-      return ret;
-    } finally {
-      if (needsCleanup) {
-        if (ret != null) {
-          ret.close();
-        } else {
-          if (data != null) {
-            data.close();
-          }
-          if (offsets != null) {
-            offsets.close();
-          }
-          if (valid != null) {
-            valid.close();
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Create a new category string vector from the given values.  This API
-   * supports inline nulls. This is really intended to be used only for testing as
-   * it is slow and memory intensive to translate between java strings and UTF8 strings.
-   */
-  public static ColumnVector categoryFromStrings(String... values) {
-    return fromStrings(DType.STRING_CATEGORY, values);
-  }
-
-  /**
-   * Create a new string vector from the given values.  This API
-   * supports inline nulls. This is really intended to be used only for testing as
-   * it is slow and memory intensive to translate between java strings and UTF8 strings.
-   */
-  public static ColumnVector fromStrings(String... values) {
-    return fromStrings(DType.STRING, values);
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedBooleans(Boolean... values) {
-    return build(DType.BOOL8, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedBytes(Byte... values) {
-    return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedShorts(Short... values) {
-    return build(DType.INT16, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedInts(Integer... values) {
-    return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedLongs(Long... values) {
-    return build(DType.INT64, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedFloats(Float... values) {
-    return build(DType.FLOAT32, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector fromBoxedDoubles(Double... values) {
-    return build(DType.FLOAT64, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector datesFromBoxedInts(Integer... values) {
-    return build(DType.DATE32, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector datesFromBoxedLongs(Long... values) {
-    return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector timestampsFromBoxedLongs(Long... values) {
-    return build(DType.TIMESTAMP, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector from the given values.  This API supports inline nulls,
-   * but is much slower than using a regular array and should really only be used
-   * for tests.
-   */
-  public static ColumnVector timestampsFromBoxedLongs(TimeUnit tsTimeUnit, Long... values) {
-    return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendBoxed(values));
-  }
-
-  /**
-   * Create a new vector by concatenating multiple columns together.
-   * Note that all columns must have the same type.
-   */
-  public static ColumnVector concatenate(ColumnVector... columns) {
-    if (columns.length < 2) {
-      throw new IllegalArgumentException("Concatenate requires 2 or more columns");
-    }
-    long[] columnHandles = new long[columns.length];
-    for (int i = 0; i < columns.length; ++i) {
-      columnHandles[i] = columns[i].getNativeCudfColumnAddress();
-    }
-    return new ColumnVector(concatenate(columnHandles));
-  }
-
   /**
    * Close this Vector and free memory allocated for HostMemoryBuffer and DeviceMemoryBuffer
    */
@@ -1347,7 +918,6 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
    * Computes the reduction of the values in all rows of a column.
    * Overflows in reductions are not detected. Specifying a higher precision
    * output type may prevent overflow. Only the MIN and MAX ops are
-   * supported for reduction of non-arithmetic types (DATE32, TIMESTAMP...)
    * The null values are skipped for the operation.
    * @param op The reduction operation to perform
    * @return The scalar result of the reduction operation. If the column is
@@ -1558,6 +1128,79 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
     return offHeap.nativeCudfColumnHandle;
   }
 
+  private static native long allocateCudfColumn() throws CudfException;
+
+  /**
+   * Set a CuDF column given data and validity bitmask pointers, size, and datatype, and
+   * count of null (non-valid) elements
+   * @param cudfColumnHandle native handle of gdf_column.
+   * @param dataPtr          Pointer to data.
+   * @param valid            Pointer to validity bitmask for the data.
+   * @param size             Number of rows in the column.
+   * @param dtype            Data type of the column.
+   * @param null_count       The number of non-valid elements in the validity bitmask.
+   * @param timeUnit         {@link TimeUnit}
+   */
+  private static native void cudfColumnViewAugmented(long cudfColumnHandle, long dataPtr,
+                                                     long valid,
+                                                     int size, int dtype, int null_count,
+                                                     int timeUnit) throws CudfException;
+
+  /**
+   * Translate the host side string representation of strings into the device side representation
+   * and populate the cudfColumn with it.
+   * @param cudfColumnHandle native handle of gdf_column.
+   * @param hostDataPtr      Pointer to string data on the host.
+   * @param hostOffsetsPtr   Pointer to offsets data on the host.
+   * @param deviceValidPtr   Pointer to validity bitmask on the device.
+   * @param deviceDataPtr    Pointer to where the int category data will be stored for
+   *                         STRING_CATEGORY.
+   *                         Should be 0 for STRING
+   * @param size             Number of rows in the column.
+   * @param dtype            Data type of the column. In this case must be STRING or
+   *                         STRING_CATEGORY
+   * @param nullCount        The number of non-valid elements in the validity bitmask.
+   */
+  private static native void cudfColumnViewStrings(long cudfColumnHandle, long hostDataPtr,
+                                                   long hostOffsetsPtr, long deviceValidPtr,
+                                                   long deviceDataPtr,
+                                                   int size, int dtype, int nullCount);
+
+  /**
+   * Copy the string data to the host.  This is a little ugly because the addresses
+   * returned were allocated by native code but will be freed through java's Unsafe API.
+   * In practice this should work so long as we don't try to replace malloc, and java does not.
+   * If this does become a problem we can subclass HostMemoryBuffer and add in another JNI
+   * call to free using native code.
+   * @param cudfColumnHandle the device side cudf column.
+   * @return [data address, data length, offsets address, offsets length]
+   */
+  private static native long[] getStringDataAndOffsetsBack(long cudfColumnHandle);
+
+  static native void freeCudfColumn(long cudfColumnHandle, boolean isDeepClean) throws CudfException;
+
+  private static native long getDataPtr(long cudfColumnHandle) throws CudfException;
+
+  private static native long getValidPtr(long cudfColumnHandle) throws CudfException;
+
+  private static native int getRowCount(long cudfColumnHandle) throws CudfException;
+
+  private static DType getDType(long cudfColumnHandle) throws CudfException {
+    return DType.fromNative(getDTypeInternal(cudfColumnHandle));
+  }
+
+  private static native int getDTypeInternal(long cudfColumnHandle) throws CudfException;
+
+  private static TimeUnit getTimeUnit(long cudfColumnHandle) throws CudfException {
+    return TimeUnit.fromNative(getTimeUnitInternal(cudfColumnHandle));
+  }
+
+  private static native int getTimeUnitInternal(long cudfColumnHandle) throws CudfException;
+
+  private static native int getNullCount(long cudfColumnHandle) throws CudfException;
+
+  private static native long concatenate(long[] columnHandles) throws CudfException;
+
   /////////////////////////////////////////////////////////////////////////////
   // HELPER CLASSES
   /////////////////////////////////////////////////////////////////////////////
@@ -1687,6 +1330,361 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
       }
       return neededCleanup;
     }
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // BUILDER
+  /////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
+   * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
+   * close the builder.
+   * @param type the type of vector to build.
+   * @param rows the number of rows this builder can hold
+   * @return the builder to use.
+   */
+  public static Builder builder(DType type, int rows) {
+    return new Builder(type, TimeUnit.NONE, rows);
+  }
+
+  /**
+   * Create a new Builder to hold the specified number of rows.  Be sure to close the builder when
+   * done with it. Please try to use {@see #build(int, Consumer)} instead to avoid needing to
+   * close the builder.
+   * @param type the type of vector to build.
+   * @param rows the number of rows this builder can hold
+   * @return the builder to use.
+   */
+  public static Builder builder(DType type, TimeUnit tsTimeUnit, int rows) {
+    return new Builder(type, tsTimeUnit, rows);
+  }
+
+  /**
+   * Create a new vector.
+   * @param type the type of vector to build.
+   * @param rows maximum number of rows that the vector can hold.
+   * @param init what will initialize the vector.
+   * @return the created vector.
+   */
+  public static ColumnVector build(DType type, int rows, Consumer<Builder> init) {
+    return build(type, TimeUnit.NONE, rows, init);
+  }
+
+  /**
+   * Create a new vector.
+   * @param type       the type of vector to build.
+   * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+   * @param rows       maximum number of rows that the vector can hold.
+   * @param init       what will initialize the vector.
+   * @return the created vector.
+   */
+  public static ColumnVector build(DType type, TimeUnit tsTimeUnit, int rows,
+                                   Consumer<Builder> init) {
+    try (Builder builder = builder(type, tsTimeUnit, rows)) {
+      init.accept(builder);
+      return builder.build();
+    }
+  }
+
+  /**
+   * Create a new vector without sending data to the device.
+   * @param type the type of vector to build.
+   * @param rows maximum number of rows that the vector can hold.
+   * @param init what will initialize the vector.
+   * @return the created vector.
+   */
+  public static ColumnVector buildOnHost(DType type, int rows, Consumer<Builder> init) {
+    return buildOnHost(type, TimeUnit.NONE, rows, init);
+  }
+
+  /**
+   * Create a new vector without sending data to the device.
+   * @param type       the type of vector to build.
+   * @param tsTimeUnit the unit of time, really only applicable for TIMESTAMP.
+   * @param rows       maximum number of rows that the vector can hold.
+   * @param init       what will initialize the vector.
+   * @return the created vector.
+   */
+  public static ColumnVector buildOnHost(DType type, TimeUnit tsTimeUnit, int rows,
+                                         Consumer<Builder> init) {
+    try (Builder builder = builder(type, tsTimeUnit, rows)) {
+      init.accept(builder);
+      return builder.buildOnHost();
+    }
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector boolFromBytes(byte... values) {
+    return build(DType.BOOL8, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromBytes(byte... values) {
+    return build(DType.INT8, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromShorts(short... values) {
+    return build(DType.INT16, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromInts(int... values) {
+    return build(DType.INT32, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromLongs(long... values) {
+    return build(DType.INT64, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromFloats(float... values) {
+    return build(DType.FLOAT32, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector fromDoubles(double... values) {
+    return build(DType.FLOAT64, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector datesFromInts(int... values) {
+    return build(DType.DATE32, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector datesFromLongs(long... values) {
+    return build(DType.DATE64, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector timestampsFromLongs(long... values) {
+    return build(DType.TIMESTAMP, values.length, (b) -> b.appendArray(values));
+  }
+
+  /**
+   * Create a new vector from the given values.
+   */
+  public static ColumnVector timestampsFromLongs(TimeUnit tsTimeUnit, long... values) {
+    return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendArray(values));
+  }
+
+  private static ColumnVector fromStrings(DType type, String... values) {
+    HostMemoryBuffer data = null;
+    HostMemoryBuffer offsets = null;
+    HostMemoryBuffer valid = null;
+    ColumnVector ret = null;
+    boolean needsCleanup = true;
+    try {
+      int rows = values.length;
+      long nullCount = 0;
+      // How many bytes do we need to hold the data.  Sorry this is really expensive
+      long bufferSize = 0;
+      for (String s : values) {
+        if (s == null) {
+          nullCount++;
+        } else {
+          bufferSize += s.getBytes(StandardCharsets.UTF_8).length;
+        }
+      }
+      data = HostMemoryBuffer.allocate(bufferSize);
+      if (nullCount > 0) {
+        // copy and pasted from allocateBitmaskAndSetDefaultValues
+        long bitmaskSize = BitVectorHelper.getValidityAllocationSizeInBytes(rows);
+        valid = HostMemoryBuffer.allocate(bitmaskSize);
+        valid.setMemory(0, bitmaskSize, (byte) 0xFF);
+      }
+
+      offsets = HostMemoryBuffer.allocate((rows + 1) * 4);
+      int offset = 0;
+      // The initial offset is always 0
+      offsets.setInt(0, offset);
+      for (int i = 0; i < values.length; i++) {
+        String s = values[i];
+        if (s == null) {
+          BitVectorHelper.setNullAt(valid, i);
+        } else {
+          byte[] utf8 = s.getBytes(StandardCharsets.UTF_8);
+          data.setBytes(offset, utf8, 0, utf8.length);
+          offset += utf8.length;
+        }
+        offsets.setInt((i + 1L) * 4, offset);
+      }
+      ret = new ColumnVector(type, TimeUnit.NONE, rows, nullCount, data, valid, offsets);
+      ret.ensureOnDevice();
+      needsCleanup = false;
+      return ret;
+    } finally {
+      if (needsCleanup) {
+        if (ret != null) {
+          ret.close();
+        } else {
+          if (data != null) {
+            data.close();
+          }
+          if (offsets != null) {
+            offsets.close();
+          }
+          if (valid != null) {
+            valid.close();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Create a new category string vector from the given values.  This API
+   * supports inline nulls. This is really intended to be used only for testing as
+   * it is slow and memory intensive to translate between java strings and UTF8 strings.
+   */
+  public static ColumnVector categoryFromStrings(String... values) {
+    return fromStrings(DType.STRING_CATEGORY, values);
+  }
+
+  /**
+   * Create a new string vector from the given values.  This API
+   * supports inline nulls. This is really intended to be used only for testing as
+   * it is slow and memory intensive to translate between java strings and UTF8 strings.
+   */
+  public static ColumnVector fromStrings(String... values) {
+    return fromStrings(DType.STRING, values);
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedBooleans(Boolean... values) {
+    return build(DType.BOOL8, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedBytes(Byte... values) {
+    return build(DType.INT8, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedShorts(Short... values) {
+    return build(DType.INT16, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedInts(Integer... values) {
+    return build(DType.INT32, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedLongs(Long... values) {
+    return build(DType.INT64, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedFloats(Float... values) {
+    return build(DType.FLOAT32, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector fromBoxedDoubles(Double... values) {
+    return build(DType.FLOAT64, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector datesFromBoxedInts(Integer... values) {
+    return build(DType.DATE32, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector datesFromBoxedLongs(Long... values) {
+    return build(DType.DATE64, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector timestampsFromBoxedLongs(Long... values) {
+    return build(DType.TIMESTAMP, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector from the given values.  This API supports inline nulls,
+   * but is much slower than using a regular array and should really only be used
+   * for tests.
+   */
+  public static ColumnVector timestampsFromBoxedLongs(TimeUnit tsTimeUnit, Long... values) {
+    return build(DType.TIMESTAMP, tsTimeUnit, values.length, (b) -> b.appendBoxed(values));
+  }
+
+  /**
+   * Create a new vector by concatenating multiple columns together.
+   * Note that all columns must have the same type.
+   */
+  public static ColumnVector concatenate(ColumnVector... columns) {
+    if (columns.length < 2) {
+      throw new IllegalArgumentException("Concatenate requires 2 or more columns");
+    }
+    long[] columnHandles = new long[columns.length];
+    for (int i = 0; i < columns.length; ++i) {
+      columnHandles[i] = columns[i].getNativeCudfColumnAddress();
+    }
+    return new ColumnVector(concatenate(columnHandles));
   }
 
   /**

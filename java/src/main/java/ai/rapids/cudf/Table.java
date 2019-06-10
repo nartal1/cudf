@@ -86,6 +86,52 @@ public final class Table implements AutoCloseable {
     }
   }
 
+  /**
+   * Return the {@link ColumnVector} at the specified index. If you want to keep a reference to
+   * the column around past the life time of the table, you will need to increment the reference
+   * count on the column yourself.
+   */
+  public ColumnVector getColumn(int index) {
+    assert index < columns.length;
+    return columns[index];
+  }
+
+  public final long getRowCount() {
+    return rows;
+  }
+
+  public final int getNumberOfColumns() {
+    return columns.length;
+  }
+
+  @Override
+  public void close() {
+    if (nativeHandle != 0) {
+      freeCudfTable(nativeHandle);
+      nativeHandle = 0;
+    }
+    if (columns != null) {
+      for (int i = 0; i < columns.length; i++) {
+        columns[i].close();
+        columns[i] = null;
+      }
+      columns = null;
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "Table{" +
+        "columns=" + Arrays.toString(columns) +
+        ", cudfTable=" + nativeHandle +
+        ", rows=" + rows +
+        '}';
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // NATIVE APIs
+  /////////////////////////////////////////////////////////////////////////////
+
   private static native long[] gdfPartition(long inputTable,
                                             int[] columnsToHash,
                                             int cudfHashFunction,
@@ -133,9 +179,6 @@ public final class Table implements AutoCloseable {
   private static native long[] gdfReadParquet(String[] filterColumnNames,
                                               String filePath, long address, long length) throws CudfException;
 
-  /////////////////////////////////////////////////////////////////////////////
-  // NATIVE APIs
-  /////////////////////////////////////////////////////////////////////////////
 
   private static native long[] gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending,
                                           boolean areNullsSmallest) throws CudfException;
@@ -147,6 +190,10 @@ public final class Table implements AutoCloseable {
                                             int[] rightJoinCols) throws CudfException;
 
   private static native long[] concatenate(long[] cudfTablePointers) throws CudfException;
+
+  /////////////////////////////////////////////////////////////////////////////
+  // TABLE CREATION APIs
+  /////////////////////////////////////////////////////////////////////////////
 
   public static Table readCSV(Schema schema, File path) {
     return readCSV(schema, CSVOptions.DEFAULT, path);
@@ -187,10 +234,6 @@ public final class Table implements AutoCloseable {
       return readCSV(schema, opts, newBuf, len);
     }
   }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // TABLE CREATION APIs
-  /////////////////////////////////////////////////////////////////////////////
 
   private static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
     assert len > 0;
@@ -259,59 +302,9 @@ public final class Table implements AutoCloseable {
     return new Table(concatenate(tableHandles));
   }
 
-  public static OrderByArg asc(final int index) {
-    return new OrderByArg(index, false);
-  }
-
-  public static OrderByArg desc(final int index) {
-    return new OrderByArg(index, true);
-  }
-
-  /**
-   * Return the {@link ColumnVector} at the specified index. If you want to keep a reference to
-   * the column around past the life time of the table, you will need to increment the reference
-   * count on the column yourself.
-   */
-  public ColumnVector getColumn(int index) {
-    assert index < columns.length;
-    return columns[index];
-  }
-
-  public final long getRowCount() {
-    return rows;
-  }
-
-  public final int getNumberOfColumns() {
-    return columns.length;
-  }
-
   /////////////////////////////////////////////////////////////////////////////
   // TABLE MANIPULATION APIs
   /////////////////////////////////////////////////////////////////////////////
-
-  @Override
-  public void close() {
-    if (nativeHandle != 0) {
-      freeCudfTable(nativeHandle);
-      nativeHandle = 0;
-    }
-    if (columns != null) {
-      for (int i = 0; i < columns.length; i++) {
-        columns[i].close();
-        columns[i] = null;
-      }
-      columns = null;
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "Table{" +
-        "columns=" + Arrays.toString(columns) +
-        ", cudfTable=" + nativeHandle +
-        ", rows=" + rows +
-        '}';
-  }
 
   /**
    * Orders the table using the sortkeys returning a new allocated table. The caller is
@@ -338,6 +331,14 @@ public final class Table implements AutoCloseable {
     return new Table(gdfOrderBy(nativeHandle, sortKeys, isDescending, areNullsSmallest));
   }
 
+  public static OrderByArg asc(final int index) {
+    return new OrderByArg(index, false);
+  }
+
+  public static OrderByArg desc(final int index) {
+    return new OrderByArg(index, true);
+  }
+
   public TableOperation onColumns(int... indices) {
     int[] operationIndicesArray = new int[indices.length];
     for (int i = 0; i < indices.length; i++) {
@@ -347,7 +348,6 @@ public final class Table implements AutoCloseable {
     }
     return new TableOperation(this, operationIndicesArray);
   }
-
   /////////////////////////////////////////////////////////////////////////////
   // HELPER CLASSES
   /////////////////////////////////////////////////////////////////////////////
