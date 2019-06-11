@@ -1732,6 +1732,14 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable {
       this.valid = testValid;
     }
 
+    public final Builder append(boolean value) {
+      assert type == DType.BOOL8;
+      assert currentIndex < rows;
+      data.setByte(currentIndex * type.sizeInBytes, value ? (byte)1 : (byte)0);
+      currentIndex++;
+      return this;
+    }
+
     public final Builder append(byte value) {
       assert type == DType.INT8 || type == DType.BOOL8;
       assert currentIndex < rows;
