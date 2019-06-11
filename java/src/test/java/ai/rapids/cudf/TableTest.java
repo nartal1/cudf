@@ -24,8 +24,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
+import static ai.rapids.cudf.Table.count;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -620,6 +623,61 @@ public class TableTest {
           assertEquals(fromA / 2, fromB);
         }
         assertTrue(expected.isEmpty());
+      }
+    }
+  }
+
+  @Test
+  void testGroupByCount() {
+    try (Table t1 = new Table.TestBuilder().column(  1,    1,    1,    1,    1,    1)
+                                          .column(   1,    3,    3,    5,    5,    0)
+                                          .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+                                          .build()) {
+      try (Table t2 = t1.groupBy(0, 1, 2).aggregate(count());
+           Table t3 = t1.groupBy(0, 1).aggregate(count())) {
+        // verify t2
+        assertEquals(5, t2.getRowCount());
+        ColumnVector aggOut = t2.getColumn(3);
+        aggOut.ensureOnHost();
+        Map<Integer, Integer> expectedAggOut = new HashMap() {
+          {
+            // value, count
+            put(1, 4);
+            put(2, 1);
+          }
+        };
+        for (int i = 0; i < 4; ++i) {
+          int key = aggOut.getInt(i);
+          assertTrue(expectedAggOut.containsKey(key));
+          Integer count = expectedAggOut.get(key);
+          if (count == 1) {
+            expectedAggOut.remove(key);
+          } else {
+            expectedAggOut.put(key, count - 1);
+          }
+        }
+
+        // verify t3
+        assertEquals(4, t3.getRowCount());
+        aggOut = t3.getColumn(2);
+        aggOut.ensureOnHost();
+        expectedAggOut = new HashMap() {
+          {
+            // value, count
+            put(1, 2);
+            put(2, 2);
+          }
+        };
+        for (int i = 0; i < 4; ++i) {
+          int key = aggOut.getInt(i);
+          assertTrue(expectedAggOut.containsKey(key));
+          Integer count = expectedAggOut.get(key);
+          if (count == 1) {
+            expectedAggOut.remove(key);
+          } else {
+            expectedAggOut.put(key, count - 1);
+          }
+        }
       }
     }
   }

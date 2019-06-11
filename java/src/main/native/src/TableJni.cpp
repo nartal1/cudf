@@ -448,4 +448,36 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfPartition(
   }
   CATCH_STD(env, NULL);
 }
+
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfGroupByCount(JNIEnv *env,
+        jclass clazz, jlong input_table, jlongArray j_group_by_columns) {
+    JNI_NULL_CHECK(env, input_table, "input table is null", NULL);
+
+    try {
+        cudf::table* n_input_table = reinterpret_cast<cudf::table*>(input_table);
+        cudf::jni::native_jlongArray n_group_by_columns(env, j_group_by_columns);
+        std::vector<gdf_column*> group_by_vector;
+        for (int i = 0 ; i < n_group_by_columns.size() ; i++) {
+            group_by_vector.push_back(n_input_table->get_column(n_group_by_columns[i]));
+        }
+
+        cudf::table n_group_by_table(group_by_vector);
+        cudf::jni::output_table n_output_table(env, &n_group_by_table);
+        // with count the agg_column doesn't mean much, grab the first column as agg_column
+        gdf_column* agg_column = n_input_table->get_column(0);
+        cudf::jni::gdf_column_wrapper output_agg_column(agg_column->size, GDF_INT32, false);
+        gdf_context ctxt{0, GDF_SORT, 0, 0};
+        std::vector<gdf_column*> cols = n_output_table.get_gdf_columns();
+        JNI_GDF_TRY(env, NULL,
+                gdf_group_by_count(n_group_by_table.num_columns(), n_group_by_table.begin(), agg_column,
+                        nullptr, cols.data(), output_agg_column.get(), &ctxt));
+
+        cols.push_back(output_agg_column.release());
+
+        cudf::jni::native_jlongArray native_handles(env,
+                reinterpret_cast<jlong*>(cols.data()), cols.size());
+        n_output_table.get_native_handles_and_release();
+        return native_handles.get_jlongArray();
+    } CATCH_STD(env, NULL);
+}
 } // extern "C"

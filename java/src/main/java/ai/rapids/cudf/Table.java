@@ -180,6 +180,8 @@ public final class Table implements AutoCloseable {
                                               String filePath, long address, long length) throws CudfException;
 
 
+  private static native long[] gdfGroupByCount(long inputTable, int[] indices) throws CudfException;
+
   private static native long[] gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending,
                                           boolean areNullsSmallest) throws CudfException;
 
@@ -339,6 +341,14 @@ public final class Table implements AutoCloseable {
     return new OrderByArg(index, true);
   }
 
+  public static Count count() {
+    return new Count();
+  }
+
+  public TableOperation groupBy(int... indices) {
+    return onColumns(indices);
+  }
+
   public TableOperation onColumns(int... indices) {
     int[] operationIndicesArray = new int[indices.length];
     for (int i = 0; i < indices.length; i++) {
@@ -413,6 +423,37 @@ public final class Table implements AutoCloseable {
           hashFunction.nativeId,
           partitionOffsets.length,
           partitionOffsets)), partitionOffsets);
+    }
+
+    /**
+     * Aggregates the group of columns represented by indices
+     * Usage:
+     *      aggregate(count(), max(2),...);
+     * @param aggregates
+     * @return
+     */
+    public Table aggregate(Aggregate... aggregates) {
+      assert aggregates != null && aggregates.length > 0;
+      long[][] aggregateTables = new long[aggregates.length][];
+      for (int i = 0 ; i < aggregates.length ; i++) {
+        if (aggregates[i] instanceof Count) {
+          aggregateTables[i] = gdfGroupByCount(table.nativeHandle, indices);
+        }
+      }
+
+      /**
+       * Currently Cudf calculates one aggregate at a time due to which we have multiple aggregate tables
+       * that we have to now merge into a single one
+       */
+      // copy the grouped columns to the new table
+      long[] finalAggregateTable = Arrays.copyOf(aggregateTables[0], indices.length + aggregates.length);
+      // now copy the aggregated columns from each one of the aggregated tables to the end of the final table that
+      // has all the grouped columns
+      for (int i = 0 ; i < aggregateTables.length ; i++) {
+        finalAggregateTable[i + indices.length] = aggregateTables[i][indices.length];
+      }
+
+      return new Table(finalAggregateTable);
     }
   }
 
