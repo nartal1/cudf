@@ -86,6 +86,52 @@ public final class Table implements AutoCloseable {
     }
   }
 
+  /**
+   * Return the {@link ColumnVector} at the specified index. If you want to keep a reference to
+   * the column around past the life time of the table, you will need to increment the reference
+   * count on the column yourself.
+   */
+  public ColumnVector getColumn(int index) {
+    assert index < columns.length;
+    return columns[index];
+  }
+
+  public final long getRowCount() {
+    return rows;
+  }
+
+  public final int getNumberOfColumns() {
+    return columns.length;
+  }
+
+  @Override
+  public void close() {
+    if (nativeHandle != 0) {
+      freeCudfTable(nativeHandle);
+      nativeHandle = 0;
+    }
+    if (columns != null) {
+      for (int i = 0; i < columns.length; i++) {
+        columns[i].close();
+        columns[i] = null;
+      }
+      columns = null;
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "Table{" +
+        "columns=" + Arrays.toString(columns) +
+        ", cudfTable=" + nativeHandle +
+        ", rows=" + rows +
+        '}';
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // NATIVE APIs
+  /////////////////////////////////////////////////////////////////////////////
+
   private static native long[] gdfPartition(long inputTable,
                                             int[] columnsToHash,
                                             int cudfHashFunction,
@@ -103,7 +149,7 @@ public final class Table implements AutoCloseable {
    * @param columnNames       names of all of the columns, even the ones filtered out
    * @param dTypes            types of all of the columns as strings.  Why strings? who knows.
    * @param filterColumnNames name of the columns to read, or an empty array if we want to read
-   *                         all of them
+   *                          all of them
    * @param filePath          the path of the file to read, or null if no path should be read.
    * @param address           the address of the buffer to read from or 0 if we should not.
    * @param length            the length of the buffer to read from.
@@ -125,7 +171,7 @@ public final class Table implements AutoCloseable {
   /**
    * Read in Parquet formatted data.
    * @param filterColumnNames name of the columns to read, or an empty array if we want to read
-   *                         all of them
+   *                          all of them
    * @param filePath          the path of the file to read, or null if no path should be read.
    * @param address           the address of the buffer to read from or 0 if we should not.
    * @param length            the length of the buffer to read from.
@@ -133,9 +179,6 @@ public final class Table implements AutoCloseable {
   private static native long[] gdfReadParquet(String[] filterColumnNames,
                                               String filePath, long address, long length) throws CudfException;
 
-  /////////////////////////////////////////////////////////////////////////////
-  // NATIVE APIs
-  /////////////////////////////////////////////////////////////////////////////
 
   private static native long[] gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending,
                                           boolean areNullsSmallest) throws CudfException;
@@ -147,6 +190,10 @@ public final class Table implements AutoCloseable {
                                             int[] rightJoinCols) throws CudfException;
 
   private static native long[] concatenate(long[] cudfTablePointers) throws CudfException;
+
+  /////////////////////////////////////////////////////////////////////////////
+  // TABLE CREATION APIs
+  /////////////////////////////////////////////////////////////////////////////
 
   public static Table readCSV(Schema schema, File path) {
     return readCSV(schema, CSVOptions.DEFAULT, path);
@@ -187,10 +234,6 @@ public final class Table implements AutoCloseable {
       return readCSV(schema, opts, newBuf, len);
     }
   }
-
-  /////////////////////////////////////////////////////////////////////////////
-  // TABLE CREATION APIs
-  /////////////////////////////////////////////////////////////////////////////
 
   private static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
     assert len > 0;
@@ -259,59 +302,9 @@ public final class Table implements AutoCloseable {
     return new Table(concatenate(tableHandles));
   }
 
-  public static OrderByArg asc(final int index) {
-    return new OrderByArg(index, false);
-  }
-
-  public static OrderByArg desc(final int index) {
-    return new OrderByArg(index, true);
-  }
-
-  /**
-   * Return the {@link ColumnVector} at the specified index. If you want to keep a reference to
-   * the column around past the life time of the table, you will need to increment the reference
-   * count on the column yourself.
-   */
-  public ColumnVector getColumn(int index) {
-    assert index < columns.length;
-    return columns[index];
-  }
-
-  public final long getRowCount() {
-    return rows;
-  }
-
-  public final int getNumberOfColumns() {
-    return columns.length;
-  }
-
   /////////////////////////////////////////////////////////////////////////////
   // TABLE MANIPULATION APIs
   /////////////////////////////////////////////////////////////////////////////
-
-  @Override
-  public void close() {
-    if (nativeHandle != 0) {
-      freeCudfTable(nativeHandle);
-      nativeHandle = 0;
-    }
-    if (columns != null) {
-      for (int i = 0; i < columns.length; i++) {
-        columns[i].close();
-        columns[i] = null;
-      }
-      columns = null;
-    }
-  }
-
-  @Override
-  public String toString() {
-    return "Table{" +
-        "columns=" + Arrays.toString(columns) +
-        ", cudfTable=" + nativeHandle +
-        ", rows=" + rows +
-        '}';
-  }
 
   /**
    * Orders the table using the sortkeys returning a new allocated table. The caller is
@@ -338,6 +331,14 @@ public final class Table implements AutoCloseable {
     return new Table(gdfOrderBy(nativeHandle, sortKeys, isDescending, areNullsSmallest));
   }
 
+  public static OrderByArg asc(final int index) {
+    return new OrderByArg(index, false);
+  }
+
+  public static OrderByArg desc(final int index) {
+    return new OrderByArg(index, true);
+  }
+
   public TableOperation onColumns(int... indices) {
     int[] operationIndicesArray = new int[indices.length];
     for (int i = 0; i < indices.length; i++) {
@@ -347,7 +348,6 @@ public final class Table implements AutoCloseable {
     }
     return new TableOperation(this, operationIndicesArray);
   }
-
   /////////////////////////////////////////////////////////////////////////////
   // HELPER CLASSES
   /////////////////////////////////////////////////////////////////////////////
@@ -428,51 +428,6 @@ public final class Table implements AutoCloseable {
     private final List<DType> types = new ArrayList<>();
     private final List<TimeUnit> units = new ArrayList<>();
     private final List<Object> typeErasedData = new ArrayList<>();
-
-    private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
-      ColumnVector ret;
-      switch (type) {
-        case STRING:
-          ret = ColumnVector.fromStrings((String[]) dataArray);
-          break;
-        case STRING_CATEGORY:
-          ret = ColumnVector.categoryFromStrings((String[]) dataArray);
-          break;
-        case BOOL8:
-          ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
-          break;
-        case INT8:
-          ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
-          break;
-        case INT16:
-          ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
-          break;
-        case INT32:
-          ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
-          break;
-        case INT64:
-          ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
-          break;
-        case DATE32:
-          ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
-          break;
-        case DATE64:
-          ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
-          break;
-        case TIMESTAMP:
-          ret = ColumnVector.timestampsFromBoxedLongs(unit, (Long[]) dataArray);
-          break;
-        case FLOAT32:
-          ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
-          break;
-        case FLOAT64:
-          ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
-          break;
-        default:
-          throw new IllegalArgumentException(type + " is not supported yet");
-      }
-      return ret;
-    }
 
     public TestBuilder column(String... values) {
       types.add(DType.STRING);
@@ -563,6 +518,51 @@ public final class Table implements AutoCloseable {
       units.add(unit);
       typeErasedData.add(values);
       return this;
+    }
+
+    private static ColumnVector from(DType type, TimeUnit unit, Object dataArray) {
+      ColumnVector ret;
+      switch (type) {
+        case STRING:
+          ret = ColumnVector.fromStrings((String[]) dataArray);
+          break;
+        case STRING_CATEGORY:
+          ret = ColumnVector.categoryFromStrings((String[]) dataArray);
+          break;
+        case BOOL8:
+          ret = ColumnVector.fromBoxedBooleans((Boolean[]) dataArray);
+          break;
+        case INT8:
+          ret = ColumnVector.fromBoxedBytes((Byte[]) dataArray);
+          break;
+        case INT16:
+          ret = ColumnVector.fromBoxedShorts((Short[]) dataArray);
+          break;
+        case INT32:
+          ret = ColumnVector.fromBoxedInts((Integer[]) dataArray);
+          break;
+        case INT64:
+          ret = ColumnVector.fromBoxedLongs((Long[]) dataArray);
+          break;
+        case DATE32:
+          ret = ColumnVector.datesFromBoxedInts((Integer[]) dataArray);
+          break;
+        case DATE64:
+          ret = ColumnVector.datesFromBoxedLongs((Long[]) dataArray);
+          break;
+        case TIMESTAMP:
+          ret = ColumnVector.timestampsFromBoxedLongs(unit, (Long[]) dataArray);
+          break;
+        case FLOAT32:
+          ret = ColumnVector.fromBoxedFloats((Float[]) dataArray);
+          break;
+        case FLOAT64:
+          ret = ColumnVector.fromBoxedDoubles((Double[]) dataArray);
+          break;
+        default:
+          throw new IllegalArgumentException(type + " is not supported yet");
+      }
+      return ret;
     }
 
     public Table build() {
