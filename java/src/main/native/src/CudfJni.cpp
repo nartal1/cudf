@@ -17,6 +17,7 @@
 #include <memory>
 
 #include "jni_utils.hpp"
+#include "cudf/binaryop.hpp"
 #include "cudf/reduction.hpp"
 #include "cudf/stream_compaction.hpp"
 
@@ -297,7 +298,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVV(JNIEnv *env, jcla
     cudf::jni::gdf_column_wrapper ret(lhs->size, out_type,
                                       lhs->null_count > 0 || rhs->null_count > 0);
 
-    JNI_GDF_TRY(env, 0, gdf_binary_operation_v_v(ret.get(), lhs, rhs, op));
+    cudf::binary_operation(ret.get(), lhs, rhs, op);
     return reinterpret_cast<jlong>(ret.release());
   }
   CATCH_STD(env, 0);
@@ -316,7 +317,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpSV(
     gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
     cudf::jni::gdf_column_wrapper ret(rhs->size, out_type, !lhs.is_valid || rhs->null_count > 0);
 
-    JNI_GDF_TRY(env, 0, gdf_binary_operation_s_v(ret.get(), &lhs, rhs, op));
+    cudf::binary_operation(ret.get(), &lhs, rhs, op);
     return reinterpret_cast<jlong>(ret.release());
   }
   CATCH_STD(env, 0);
@@ -335,7 +336,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfBinaryOpVS(
     gdf_binary_operator op = static_cast<gdf_binary_operator>(int_op);
     cudf::jni::gdf_column_wrapper ret(lhs->size, out_type, !rhs.is_valid || lhs->null_count > 0);
 
-    JNI_GDF_TRY(env, 0, gdf_binary_operation_v_s(ret.get(), lhs, &rhs, op));
+    cudf::binary_operation(ret.get(), lhs, &rhs, op);
     return reinterpret_cast<jlong>(ret.release());
   }
   CATCH_STD(env, 0);
