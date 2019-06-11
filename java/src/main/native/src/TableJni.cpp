@@ -472,11 +472,12 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfGroupByCount(JNIEnv *e
                 gdf_group_by_count(n_group_by_table.num_columns(), n_group_by_table.begin(), agg_column,
                         nullptr, cols.data(), output_agg_column.get(), &ctxt));
 
-        cols.push_back(output_agg_column.release());
+        cols.push_back(output_agg_column.get());
 
         cudf::jni::native_jlongArray native_handles(env,
                 reinterpret_cast<jlong*>(cols.data()), cols.size());
         n_output_table.get_native_handles_and_release();
+        output_agg_column.release();
         return native_handles.get_jlongArray();
     } CATCH_STD(env, NULL);
 }

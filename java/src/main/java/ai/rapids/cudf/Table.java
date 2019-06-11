@@ -438,6 +438,8 @@ public final class Table implements AutoCloseable {
       for (int i = 0 ; i < aggregates.length ; i++) {
         if (aggregates[i] instanceof Count) {
           aggregateTables[i] = gdfGroupByCount(table.nativeHandle, indices);
+        } else {
+          throw new UnsupportedOperationException("Invalid aggregate function");
         }
       }
 
@@ -449,7 +451,10 @@ public final class Table implements AutoCloseable {
       long[] finalAggregateTable = Arrays.copyOf(aggregateTables[0], indices.length + aggregates.length);
       // now copy the aggregated columns from each one of the aggregated tables to the end of the final table that
       // has all the grouped columns
-      for (int i = 0 ; i < aggregateTables.length ; i++) {
+      for (int i = 1 ; i < aggregateTables.length ; i++) {
+        for (int j = 0 ; j < indices.length ; j++) {
+          ColumnVector.freeCudfColumn(aggregateTables[i][j], true);
+        }
         finalAggregateTable[i + indices.length] = aggregateTables[i][indices.length];
       }
 
