@@ -193,87 +193,87 @@ public interface BinaryOperable {
   }
 
   /**
-   * rhs == lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs == rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector equal(BinaryOperable rhs, DType outType) {
+  default ColumnVector equalTo(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.EQUAL, rhs, outType);
   }
 
   /**
-   * rhs == lhs 1 is true 0 is false.  The output type is BOOL8.
+   * lhs == rhs 1 is true 0 is false.  The output type is BOOL8.
    */
-  default ColumnVector equal(BinaryOperable rhs) {
-    return equal(rhs, DType.BOOL8);
+  default ColumnVector equalTo(BinaryOperable rhs) {
+    return equalTo(rhs, DType.BOOL8);
   }
 
   /**
-   * rhs != lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs != rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector notEqual(BinaryOperable rhs, DType outType) {
+  default ColumnVector notEqualTo(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.NOT_EQUAL, rhs, outType);
   }
 
   /**
-   * rhs != lhs 1 is true 0 is false. The output type is BOOL8.
+   * lhs != rhs 1 is true 0 is false. The output type is BOOL8.
    */
-  default ColumnVector notEqual(BinaryOperable rhs) {
-    return notEqual(rhs, DType.BOOL8);
+  default ColumnVector notEqualTo(BinaryOperable rhs) {
+    return notEqualTo(rhs, DType.BOOL8);
   }
 
   /**
-   * rhs < lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs > rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector less(BinaryOperable rhs, DType outType) {
+  default ColumnVector greaterThan(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.LESS, rhs, outType);
   }
 
   /**
-   * rhs < lhs 1 is true 0 is false.  The output type is BOOL8.
+   * lhs > rhs 1 is true 0 is false.  The output type is BOOL8.
    */
-  default ColumnVector less(BinaryOperable rhs) {
-    return less(rhs, DType.BOOL8);
+  default ColumnVector greaterThan(BinaryOperable rhs) {
+    return greaterThan(rhs, DType.BOOL8);
   }
 
   /**
-   * rhs > lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs < rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector greater(BinaryOperable rhs, DType outType) {
+  default ColumnVector lessThan(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.GREATER, rhs, outType);
   }
 
   /**
-   * rhs > lhs 1 is true 0 is false.  The output type is BOOL8.
+   * lhs < rhs 1 is true 0 is false.  The output type is BOOL8.
    */
-  default ColumnVector greater(BinaryOperable rhs) {
-    return greater(rhs, DType.BOOL8);
+  default ColumnVector lessThan(BinaryOperable rhs) {
+    return lessThan(rhs, DType.BOOL8);
   }
 
   /**
-   * rhs <= lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs >= rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector lessOrEqual(BinaryOperable rhs, DType outType) {
+  default ColumnVector greaterOrEqualTo(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.LESS_EQUAL, rhs, outType);
   }
 
   /**
-   * rhs <= lhs 1 is true 0 is false.  The output type is BOOL8.
+   * lhs >= rhs 1 is true 0 is false.  The output type is BOOL8.
    */
-  default ColumnVector lessOrEqual(BinaryOperable rhs) {
-    return lessOrEqual(rhs, DType.BOOL8);
+  default ColumnVector greaterOrEqualTo(BinaryOperable rhs) {
+    return greaterOrEqualTo(rhs, DType.BOOL8);
   }
 
   /**
-   * rhs >= lhs 1 is true 0 is false with the output cast to the given type.
+   * lhs <= rhs 1 is true 0 is false with the output cast to the given type.
    */
-  default ColumnVector greaterOrEqual(BinaryOperable rhs, DType outType) {
+  default ColumnVector lessOrEqualTo(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.GREATER_EQUAL, rhs, outType);
   }
 
   /**
-   * rhs >= lhs 1 is true 0 is false.  The output type is BOOL8.
+   * lhs <= rhs 1 is true 0 is false.  The output type is BOOL8.
    */
-  default ColumnVector greaterOrEqual(BinaryOperable rhs) {
-    return greaterOrEqual(rhs, DType.BOOL8);
+  default ColumnVector lessOrEqualTo(BinaryOperable rhs) {
+    return lessOrEqualTo(rhs, DType.BOOL8);
   }
 
   /**
