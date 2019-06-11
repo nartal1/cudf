@@ -51,8 +51,8 @@ class ColumnVectorCleaner {
   private static Logger log = LoggerFactory.getLogger(ColumnVectorCleaner.class);
 
   /**
-  * API that can be used to clean up the resources for a vector, even if there was a leak
-  */
+   * API that can be used to clean up the resources for a vector, even if there was a leak
+   */
   public interface Cleaner {
     /**
      * Clean up any resources not previously released.

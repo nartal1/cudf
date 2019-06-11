@@ -149,7 +149,7 @@ public final class Table implements AutoCloseable {
    * @param columnNames       names of all of the columns, even the ones filtered out
    * @param dTypes            types of all of the columns as strings.  Why strings? who knows.
    * @param filterColumnNames name of the columns to read, or an empty array if we want to read
-   *                         all of them
+   *                          all of them
    * @param filePath          the path of the file to read, or null if no path should be read.
    * @param address           the address of the buffer to read from or 0 if we should not.
    * @param length            the length of the buffer to read from.
@@ -171,7 +171,7 @@ public final class Table implements AutoCloseable {
   /**
    * Read in Parquet formatted data.
    * @param filterColumnNames name of the columns to read, or an empty array if we want to read
-   *                         all of them
+   *                          all of them
    * @param filePath          the path of the file to read, or null if no path should be read.
    * @param address           the address of the buffer to read from or 0 if we should not.
    * @param length            the length of the buffer to read from.
