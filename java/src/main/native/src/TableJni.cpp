@@ -450,12 +450,12 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfPartition(
 }
 
 JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfGroupByCount(JNIEnv *env,
-        jclass clazz, jlong input_table, jlongArray j_group_by_columns) {
+        jclass clazz, jlong input_table, jintArray j_group_by_columns) {
     JNI_NULL_CHECK(env, input_table, "input table is null", NULL);
 
     try {
         cudf::table* n_input_table = reinterpret_cast<cudf::table*>(input_table);
-        cudf::jni::native_jlongArray n_group_by_columns(env, j_group_by_columns);
+        cudf::jni::native_jintArray n_group_by_columns(env, j_group_by_columns);
         std::vector<gdf_column*> group_by_vector;
         for (int i = 0 ; i < n_group_by_columns.size() ; i++) {
             group_by_vector.push_back(n_input_table->get_column(n_group_by_columns[i]));

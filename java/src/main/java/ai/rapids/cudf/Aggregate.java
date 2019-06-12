@@ -21,5 +21,22 @@ package ai.rapids.cudf;
 /**
  * Parent class for all the aggregate functions like count, max etc
  */
-public abstract class Aggregate {
+public final class Aggregate {
+  enum AggregateType {
+    COUNT
+  }
+
+  private AggregateType type;
+
+  private Aggregate(AggregateType type) {
+    this.type = type;
+  }
+
+  static Aggregate count() {
+    return new Aggregate(AggregateType.COUNT);
+  }
+
+  public boolean isCount() {
+    return type == AggregateType.COUNT;
+  }
 }
