@@ -407,6 +407,16 @@ public final class Table implements AutoCloseable {
      * Aggregates the group of columns represented by indices
      * Usage:
      *      aggregate(count(), max(2),...);
+     *      example:
+     *        input : 1, 1, 1
+     *                1, 2, 1
+     *                2, 4, 5
+     *
+     *        table.groupBy(0, 2).count()
+     *
+     *        output: 1, 1 => grouped col0
+     *                1, 2 => grouped col1
+     *                2, 1 ==> aggregated count
      * @param aggregates
      * @return
      */
@@ -437,14 +447,15 @@ public final class Table implements AutoCloseable {
       long[] finalAggregateTable = Arrays.copyOf(aggregateTables[0], operation.indices.length + aggregates.length);
       // now copy the aggregated columns from each one of the aggregated tables to the end of the final table that
       // has all the grouped columns
-      IntStream.range(1, aggregateTables.length).forEach(index -> {
-        Arrays.stream(aggregateTables[index]).forEach(e -> {
+      IntStream.range(1, aggregateTables.length).forEach(i -> {
+        IntStream.range(0, operation.indices.length).forEach(j -> {
           //Being defensive
+          long e = aggregateTables[i][j];
           if (e != 0) {
             ColumnVector.freeCudfColumn(e, true);
           }
         });
-        finalAggregateTable[index + operation.indices.length] = aggregateTables[index][operation.indices.length];
+        finalAggregateTable[i + operation.indices.length] = aggregateTables[i][operation.indices.length];
       });
       return new Table(finalAggregateTable);
     }
