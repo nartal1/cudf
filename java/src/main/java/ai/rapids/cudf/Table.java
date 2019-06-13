@@ -414,9 +414,10 @@ public final class Table implements AutoCloseable {
      *
      *        table.groupBy(0, 2).count()
      *
-     *        output: 1, 1 => grouped col0
-     *                1, 2 => grouped col1
-     *                2, 1 ==> aggregated count
+     *                col0, col1
+     *        output:   1,   1
+     *                  1,   2
+     *                  2,   1 ==> aggregated count
      * @param aggregates
      * @return
      */
