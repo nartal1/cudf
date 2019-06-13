@@ -656,19 +656,31 @@ public class TableTest {
 
   @Test
   void testGroupByCount() {
-    try (Table t1 = new Table.TestBuilder().column(  1,    1,    1,    1,    1,    1)
-                                          .column(   1,    3,    3,    5,    5,    0)
-                                          .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
-                                          .build()) {
+    try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
+                                           .column(   1,    3,    3,    5,    5,    0)
+                                           .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+                                           .build()) {
       try (Table t2 = t1.groupBy(0, 1, 2).aggregate(count(), count());
            Table t3 = t1.groupBy(0, 1).aggregate(count())) {
         // verify t2
         assertEquals(5, t2.getRowCount());
 
         HashMap<Object, Integer>[] expectedTable = new HashMap[3];
-        expectedTable[0] = new HashMap<Object, Integer>(){{put(1,5);}};
-        expectedTable[1] = new HashMap<Object, Integer>(){{put(1,1);put(3,2);put(5,1);put(0,1);}};
-        expectedTable[2] = new HashMap<Object, Integer>(){{put(12.0, 1);put(14.0, 1);put(13.0, 1);put(17.0, 2);}};
+        expectedTable[0] = new HashMap<Object, Integer>() {{
+          put(1, 5);
+        }};
+        expectedTable[1] = new HashMap<Object, Integer>() {{
+          put(1, 1);
+          put(3, 2);
+          put(5, 1);
+          put(0, 1);
+        }};
+        expectedTable[2] = new HashMap<Object, Integer>() {{
+          put(12.0, 1);
+          put(14.0, 1);
+          put(13.0, 1);
+          put(17.0, 2);
+        }};
 
         //verify grouped columns
         ColumnVector[] cv = new ColumnVector[3];
