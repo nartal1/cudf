@@ -19,6 +19,7 @@
 #include "cudf/copying.hpp"
 #include "cudf/table.hpp"
 #include "cudf/types.hpp"
+
 #include "jni_utils.hpp"
 
 namespace cudf {

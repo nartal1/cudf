@@ -47,11 +47,9 @@ cpp/thirdparty/googletest/
 *.iml
 *.ipr
 *.iws
-out/
 
 ## Doxygen
 cpp/doxygen/html
 
-#Java 
+#Java
 target
-*.log
