@@ -235,7 +235,7 @@ public final class Table implements AutoCloseable {
     }
   }
 
-  private static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
+  public static Table readCSV(Schema schema, CSVOptions opts, HostMemoryBuffer buffer, long len) {
     assert len > 0;
     assert len <= buffer.getLength();
     return new Table(gdfReadCSV(schema.getColumnNames(), schema.getTypesAsStrings(),
@@ -279,7 +279,7 @@ public final class Table implements AutoCloseable {
     }
   }
 
-  static Table readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
+  public static Table readParquet(ParquetOptions opts, HostMemoryBuffer buffer, long len) {
     return new Table(gdfReadParquet(opts.getIncludeColumnNames(),
         null, buffer.getAddress(), len));
   }
