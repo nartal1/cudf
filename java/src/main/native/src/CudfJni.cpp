@@ -16,10 +16,11 @@
 
 #include <memory>
 
-#include "jni_utils.hpp"
 #include "cudf/binaryop.hpp"
 #include "cudf/reduction.hpp"
 #include "cudf/stream_compaction.hpp"
+
+#include "jni_utils.hpp"
 
 using unique_nvcat_ptr = std::unique_ptr<NVCategory, decltype(&NVCategory::destroy)>;
 using unique_nvstr_ptr = std::unique_ptr<NVStrings, decltype(&NVStrings::destroy)>;

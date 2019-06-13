@@ -22,13 +22,12 @@
 
 #include <nvstrings/NVCategory.h>
 #include <nvstrings/NVStrings.h>
-
-#include "rmm/rmm.h"
-#include "utilities/column_utils.hpp"
-#include "utilities/error_utils.hpp"
+#include <rmm/rmm.h>
 
 #include "cudf/cudf.h"
 #include "cudf/table.hpp"
+#include "utilities/column_utils.hpp"
+#include "utilities/error_utils.hpp"
 
 namespace cudf {
 namespace jni {
