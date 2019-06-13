@@ -19,7 +19,7 @@
 package ai.rapids.cudf;
 
 /**
- * Parent class for all the aggregate functions like count, max etc
+ * Class for all the aggregate functions like count, max etc
  */
 public final class Aggregate {
   enum AggregateType {
@@ -36,7 +36,7 @@ public final class Aggregate {
     return new Aggregate(AggregateType.COUNT);
   }
 
-  public boolean isCount() {
+  boolean isCount() {
     return type == AggregateType.COUNT;
   }
 }
