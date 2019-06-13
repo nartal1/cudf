@@ -139,6 +139,9 @@ public class TableTest {
           }
         })
     );
+    for (int i = 0 ; i < expectedTable.length ; i++) {
+      assertTrue(expectedTable[i].isEmpty());
+    }
   }
 
   public static void assertTableTypes(DType[] expectedTypes, Table t) {
