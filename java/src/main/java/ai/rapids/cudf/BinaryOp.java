@@ -28,17 +28,18 @@ public enum BinaryOp {
   TRUE_DIV(4), // divide after promoting to FLOAT64 point
   FLOOR_DIV(5), // divide after promoting to FLOAT64 and flooring the result
   MOD(6),
-  POW(7),
-  EQUAL(8),
-  NOT_EQUAL(9),
-  LESS(10),
-  GREATER(11),
-  LESS_EQUAL(12), // <=
-  GREATER_EQUAL(13), // >=
-  BITWISE_AND(14),
-  BITWISE_OR(15),
-  BITWISE_XOR(16);
-  //NOT IMPLEMENTED YET COALESCE(17); // x == null ? y : x
+  PYMOD(7), // mod operator % follow by python's sign rules for negatives
+  POW(8),
+  EQUAL(9),
+  NOT_EQUAL(10),
+  LESS(11),
+  GREATER(12),
+  LESS_EQUAL(13), // <=
+  GREATER_EQUAL(14), // >=
+  BITWISE_AND(15),
+  BITWISE_OR(16),
+  BITWISE_XOR(17);
+  //NOT IMPLEMENTED YET COALESCE(18); // x == null ? y : x
 
   static final EnumSet<BinaryOp> COMPARISON = EnumSet.of(
       EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL);

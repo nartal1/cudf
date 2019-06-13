@@ -30,6 +30,7 @@ from cudf.comm.serialize import register_distributed_serializer
 from cudf.dataframe.categorical import CategoricalColumn
 from cudf.dataframe.buffer import Buffer
 from cudf.bindings.nvtx import nvtx_range_push, nvtx_range_pop
+from cudf.bindings import copying as cpp_copying
 from cudf._sort import get_sorted_inds
 from cudf.dataframe import columnops
 from cudf.indexing import _DataFrameLocIndexer, _DataFrameIlocIndexer
@@ -879,10 +880,17 @@ class DataFrame(object):
             return df
 
     def reset_index(self, drop=False):
+        out = DataFrame()
         if not drop:
-            name = self.index.name or 'index'
-            out = DataFrame()
-            out[name] = self.index
+            if isinstance(self.index, cudf.dataframe.multiindex.MultiIndex):
+                framed = self.index.to_frame()
+                for c in framed.columns:
+                    out[c] = framed[c]
+            else:
+                name = 'index'
+                if self.index.name is not None:
+                    name = self.index.name
+                out[name] = self.index
             for c in self.columns:
                 out[c] = self[c]
         else:
@@ -890,9 +898,20 @@ class DataFrame(object):
         return out.set_index(RangeIndex(len(self)))
 
     def take(self, positions, ignore_index=False):
+        positions = columnops.as_column(positions).astype("int32").data.mem
         out = DataFrame()
-        for col in self.columns:
-            out[col] = self[col].take(positions, ignore_index=ignore_index)
+        cols = [s._column for s in self._cols.values()]
+
+        result_cols = cpp_copying.apply_gather(cols, positions)
+
+        out = DataFrame()
+        for i, col_name in enumerate(self._cols):
+            out[col_name] = result_cols[i]
+
+        if ignore_index:
+            out.index = RangeIndex(len(out))
+        else:
+            out.index = self.index.take(positions)
         return out
 
     def copy(self, deep=True):
@@ -994,10 +1013,13 @@ class DataFrame(object):
         series = self._sanitize_values(series, SCALAR)
 
         empty_index = len(self._index) == 0
-        if forceindex or empty_index or self._index.equals(series.index):
+
+        if not self._cols:
+            self._size = len(series)
+
+        if forceindex or empty_index or self.index is series.index:
             if empty_index:
                 self._index = series.index
-            self._size = len(series)
             return series
         else:
             return series.set_index(self._index)
@@ -1850,6 +1872,8 @@ class DataFrame(object):
                                                  ordered=False)
 
         df = df.set_index(idx_col_name)
+        # change random number index to None to better reflect pandas behavior
+        df.index.name = None
 
         if sort and len(df):
             return df.sort_index()
@@ -2784,6 +2808,16 @@ class DataFrame(object):
             result = result.set_index(self._cols.keys())
         return result
 
+    def _columns_view(self, columns):
+        """
+        Return a subset of the DataFrame's columns as a view.
+        """
+        columns = as_index(columns)
+        result_columns = OrderedDict({})
+        for col in columns:
+            result_columns[col] = self[col]
+        return DataFrame(result_columns)
+
     def select_dtypes(self, include=None, exclude=None):
         """Return a subset of the DataFrame’s columns based on the column dtypes.
 
@@ -2895,6 +2929,14 @@ class DataFrame(object):
         """{docstring}"""
         import cudf.io.dlpack as dlpack
         return dlpack.to_dlpack(self)
+
+    @ioutils.doc_to_csv()
+    def to_csv(self, path=None, sep=',', na_rep='',
+               columns=None, header=True, index=True, line_terminator='\n'):
+        """{docstring}"""
+        import cudf.io.csv as csv
+        return csv.to_csv(self, path, sep, na_rep, columns,
+                          header, index, line_terminator)
 
 
 def from_pandas(obj):
