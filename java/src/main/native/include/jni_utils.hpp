@@ -45,8 +45,8 @@ public:
 /**
  * @brief throw a java exception and a C++ one for flow control.
  */
-inline void throw_java_exception(JNIEnv *const env, const char *clazz_name, const char *message) {
-  jclass ex_class = env->FindClass(clazz_name);
+inline void throw_java_exception(JNIEnv *const env, const char *class_name, const char *message) {
+  jclass ex_class = env->FindClass(class_name);
   if (ex_class != NULL) {
     env->ThrowNew(ex_class, message);
   }
@@ -57,7 +57,7 @@ inline void throw_java_exception(JNIEnv *const env, const char *clazz_name, cons
  * @brief check if an java exceptions have been thrown and if so throw a C++
  * exception so the flow control stop processing.
  */
-inline void checkJavaException(JNIEnv *const env) {
+inline void check_java_exception(JNIEnv *const env) {
   if (env->ExceptionOccurred()) {
     // Not going to try to get the message out of the Exception, too complex and
     // might fail.
@@ -65,64 +65,124 @@ inline void checkJavaException(JNIEnv *const env) {
   }
 }
 
+
+class native_jlongArray_accessor {
+public:
+  jlong * getArrayElements(JNIEnv *const env, jlongArray arr) const {
+    return env->GetLongArrayElements(arr, NULL);
+  }
+
+  jlongArray newArray(JNIEnv *const env, int len) const {
+    return env->NewLongArray(len);
+  }
+
+  void setArrayRegion(JNIEnv *const env, jlongArray jarr, int start, int len, jlong * arr) const {
+    env->SetLongArrayRegion(jarr, start, len, arr);
+  }
+
+  void releaseArrayElements(JNIEnv *const env, jlongArray jarr, jlong * arr, jint mode) const {
+    env->ReleaseLongArrayElements(jarr, arr, mode);
+  }
+};
+
+class native_jintArray_accessor {
+public:
+  jint * getArrayElements(JNIEnv *const env, jintArray arr) const {
+    return env->GetIntArrayElements(arr, NULL);
+  }
+
+  jintArray newArray(JNIEnv *const env, int len) const {
+    return env->NewIntArray(len);
+  }
+
+  void setArrayRegion(JNIEnv *const env, jintArray jarr, int start, int len, jint * arr) const {
+    env->SetIntArrayRegion(jarr, start, len, arr);
+  }
+
+  void releaseArrayElements(JNIEnv *const env, jintArray jarr, jint * arr, jint mode) const {
+    env->ReleaseIntArrayElements(jarr, arr, mode);
+  }
+};
+
+class native_jbooleanArray_accessor {
+public:
+  jboolean * getArrayElements(JNIEnv *const env, jbooleanArray arr) const {
+    return env->GetBooleanArrayElements(arr, NULL);
+  }
+
+  jbooleanArray newArray(JNIEnv *const env, int len) const {
+    return env->NewBooleanArray(len);
+  }
+
+  void setArrayRegion(JNIEnv *const env, jbooleanArray jarr, int start, int len, jboolean * arr) const {
+    env->SetBooleanArrayRegion(jarr, start, len, arr);
+  }
+
+  void releaseArrayElements(JNIEnv *const env, jbooleanArray jarr, jboolean * arr, jint mode) const {
+    env->ReleaseBooleanArrayElements(jarr, arr, mode);
+  }
+};
+
 /**
- * @brief RAII for jlongArray to be sure it is handled correctly.
+ * @brief RAII for java arrays to be sure it is handled correctly.
  *
  * By default any changes to the array will be committed back when
  * the destructor is called unless cancel is called first.
  */
-class native_jlongArray {
+template <typename N_TYPE, typename J_ARRAY_TYPE, typename ACCESSOR>
+class native_jArray {
 private:
+  ACCESSOR access {};
   JNIEnv *const env;
-  jlongArray orig;
+  J_ARRAY_TYPE orig;
   int len;
-  mutable jlong *data_ptr;
+  mutable N_TYPE *data_ptr;
 
   void init_data_ptr() const {
-    if (orig != NULL && data_ptr == NULL) {
-      data_ptr = env->GetLongArrayElements(orig, NULL);
-      checkJavaException(env);
+    if (orig != nullptr && data_ptr == nullptr) {
+      data_ptr = access.getArrayElements(env, orig);
+      check_java_exception(env);
     }
   }
 
 public:
-  native_jlongArray(native_jlongArray const &) = delete;
-  native_jlongArray &operator=(native_jlongArray const &) = delete;
+  native_jArray(native_jArray const &) = delete;
+  native_jArray &operator=(native_jArray const &) = delete;
 
-  native_jlongArray(JNIEnv *const env, jlongArray orig)
+  native_jArray(JNIEnv *const env, J_ARRAY_TYPE orig)
       : env(env), orig(orig), len(0), data_ptr(NULL) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
-      checkJavaException(env);
+      check_java_exception(env);
     }
   }
 
-  native_jlongArray(JNIEnv *const env, int len)
-      : env(env), orig(env->NewLongArray(len)), len(len), data_ptr(NULL) {
-    checkJavaException(env);
+  native_jArray(JNIEnv *const env, int len)
+      : env(env), orig(access.newArray(env, len)), len(len), data_ptr(NULL) {
+    check_java_exception(env);
   }
 
-  native_jlongArray(JNIEnv *const env, jlong *arr, int len)
-      : env(env), orig(env->NewLongArray(len)), len(len), data_ptr(NULL) {
-    checkJavaException(env);
-    env->SetLongArrayRegion(orig, 0, len, arr);
-    checkJavaException(env);
+  native_jArray(JNIEnv *const env, N_TYPE *arr, int len)
+      : env(env), orig(access.newArray(env, len)), len(len), data_ptr(NULL) {
+    check_java_exception(env);
+    access.setArrayRegion(env, orig, 0, len, arr);
+    check_java_exception(env);
   }
 
-  native_jlongArray(JNIEnv *const env, const std::vector<long> & arr)
-      : env(env), orig(env->NewLongArray(arr.size())), len(arr.size()), data_ptr(NULL) {
-    checkJavaException(env);
-    env->SetLongArrayRegion(orig, 0, len, arr.data());
-    checkJavaException(env);
+  native_jArray(JNIEnv *const env, const std::vector<N_TYPE> & arr)
+      : env(env), orig(access.newArray(env, arr.size())), len(arr.size()), data_ptr(NULL) {
+    check_java_exception(env);
+    access.setArrayRegion(env, orig, 0, len, arr.data());
+    check_java_exception(env);
   }
 
   bool is_null() const noexcept { return orig == NULL; }
 
   int size() const noexcept { return len; }
 
-  jlong operator[](int index) const {
+  N_TYPE operator[](int index) const {
     if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "pointer is NULL");
     }
     if (index < 0 || index >= len) {
       throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
@@ -130,9 +190,9 @@ public:
     return data()[index];
   }
 
-  jlong &operator[](int index) {
+  N_TYPE &operator[](int index) {
     if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jlongArray pointer is NULL");
+      throw_java_exception(env, "java/lang/NullPointerException", "pointer is NULL");
     }
     if (index < 0 || index >= len) {
       throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
@@ -140,19 +200,19 @@ public:
     return data()[index];
   }
 
-  const jlong *const data() const {
+  const N_TYPE *const data() const {
     init_data_ptr();
     return data_ptr;
   }
 
-  jlong *data() {
+  N_TYPE *data() {
     init_data_ptr();
     return data_ptr;
   }
 
-  const jlongArray get_jlongArray() const { return orig; }
+  const J_ARRAY_TYPE get_jArray() const { return orig; }
 
-  jlongArray get_jlongArray() { return orig; }
+  J_ARRAY_TYPE get_jArray() { return orig; }
 
   /**
    * @brief if data has been written back into this array, don't commit
@@ -160,20 +220,26 @@ public:
    */
   void cancel() {
     if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseLongArrayElements(orig, data_ptr, JNI_ABORT);
+      access.releaseArrayElements(env, orig, data_ptr, JNI_ABORT);
       data_ptr = NULL;
     }
   }
 
   void commit() {
     if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseLongArrayElements(orig, data_ptr, 0);
+      access.releaseArrayElements(env, orig, data_ptr, 0);
       data_ptr = NULL;
     }
   }
 
-  ~native_jlongArray() { commit(); }
+  ~native_jArray() {
+      commit();
+  }
 };
+
+typedef native_jArray<jlong, jlongArray, native_jlongArray_accessor> native_jlongArray;
+typedef native_jArray<jint, jintArray, native_jintArray_accessor> native_jintArray;
+typedef native_jArray<jboolean, jbooleanArray, native_jbooleanArray_accessor> native_jbooleanArray;
 
 /**
  * @brief wrapper around native_jlongArray to make it take pointers instead.
@@ -207,9 +273,9 @@ public:
 
   T **data() { return reinterpret_cast<T **>(wrapped.data()); }
 
-  const jlongArray get_jlongArray() const { return wrapped.get_jlongArray(); }
+  const jlongArray get_jArray() const { return wrapped.get_jArray(); }
 
-  jlongArray get_jlongArray() { return wrapped.get_jlongArray(); }
+  jlongArray get_jArray() { return wrapped.get_jArray(); }
 
   /**
    * @brief if data has been written back into this array, don't commit
@@ -288,7 +354,7 @@ public:
       return NULL;
     }
     wrapped->commit();
-    jlongArray ret = wrapped->get_jlongArray();
+    jlongArray ret = wrapped->get_jArray();
     wrapped.reset(NULL);
     return ret;
   }
@@ -300,180 +366,6 @@ public:
       }
     }
   }
-};
-
-/**
- * @brief RAII for jintArray to be sure it is handled correctly.
- *
- * By default any changes to the array will be committed back when
- * the destructor is called unless cancel is called first.
- */
-class native_jintArray {
-private:
-  JNIEnv *const env;
-  jintArray orig;
-  int len;
-  mutable jint *data_ptr;
-
-  void init_data_ptr() const {
-    if (orig != NULL && data_ptr == NULL) {
-      data_ptr = env->GetIntArrayElements(orig, NULL);
-      checkJavaException(env);
-    }
-  }
-
-public:
-  native_jintArray(native_jintArray const &) = delete;
-  native_jintArray &operator=(native_jintArray const &) = delete;
-
-  native_jintArray(JNIEnv *const env, jintArray orig)
-      : env(env), orig(orig), len(0), data_ptr(NULL) {
-    if (orig != NULL) {
-      len = env->GetArrayLength(orig);
-      checkJavaException(env);
-    }
-  }
-
-  bool is_null() const noexcept { return orig == NULL; }
-
-  int size() const noexcept { return len; }
-
-  jint operator[](int index) const {
-    if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
-    }
-    if (index < 0 || index >= len) {
-      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
-    }
-    return data()[index];
-  }
-
-  jint &operator[](int index) {
-    if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jintArray pointer is NULL");
-    }
-    if (index < 0 || index >= len) {
-      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
-    }
-    return data()[index];
-  }
-
-  const jint *const data() const {
-    init_data_ptr();
-    return data_ptr;
-  }
-
-  jint *data() {
-    init_data_ptr();
-    return data_ptr;
-  }
-
-  /**
-   * @brief if data has been written back into this array, don't commit
-   * it.
-   */
-  void cancel() {
-    if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseIntArrayElements(orig, data_ptr, JNI_ABORT);
-      data_ptr = NULL;
-    }
-  }
-
-  void commit() {
-    if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseIntArrayElements(orig, data_ptr, 0);
-      data_ptr = NULL;
-    }
-  }
-
-  ~native_jintArray() { commit(); }
-};
-
-/**
- * @brief RAII for jbooleanArray to be sure it is handled correctly.
- *
- * By default any changes to the array will be committed back when
- * the destructor is called unless cancel is called first.
- */
-class native_jbooleanArray {
-private:
-  JNIEnv *const env;
-  jbooleanArray orig;
-  int len;
-  mutable jboolean *data_ptr;
-
-  void init_data_ptr() const {
-    if (orig != NULL && data_ptr == NULL) {
-      data_ptr = env->GetBooleanArrayElements(orig, NULL);
-      checkJavaException(env);
-    }
-  }
-
-public:
-  native_jbooleanArray(native_jbooleanArray const &) = delete;
-  native_jbooleanArray &operator=(native_jbooleanArray const &) = delete;
-
-  native_jbooleanArray(JNIEnv *const env, jbooleanArray orig)
-      : env(env), orig(orig), len(0), data_ptr(NULL) {
-    if (orig != NULL) {
-      len = env->GetArrayLength(orig);
-      checkJavaException(env);
-    }
-  }
-
-  bool is_null() const noexcept { return orig == NULL; }
-
-  int size() const noexcept { return len; }
-
-  jboolean operator[](int index) const {
-    if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
-    }
-    if (index < 0 || index >= len) {
-      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
-    }
-    return data()[index];
-  }
-
-  jboolean &operator[](int index) {
-    if (orig == NULL) {
-      throw_java_exception(env, "java/lang/NullPointerException", "jbooleanArray pointer is NULL");
-    }
-    if (index < 0 || index >= len) {
-      throw_java_exception(env, "java/lang/ArrayIndexOutOfBoundsException", "NOT IN BOUNDS");
-    }
-    return data()[index];
-  }
-
-  const jboolean *const data() const {
-    init_data_ptr();
-    return data_ptr;
-  }
-
-  jboolean *data() {
-    init_data_ptr();
-    return data_ptr;
-  }
-
-  /**
-   * @brief if data has been written back into this array, don't commit
-   * it.
-   */
-  void cancel() {
-    if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseBooleanArrayElements(orig, data_ptr, JNI_ABORT);
-      data_ptr = NULL;
-    }
-  }
-
-  void commit() {
-    if (data_ptr != NULL && orig != NULL) {
-      env->ReleaseBooleanArrayElements(orig, data_ptr, 0);
-      data_ptr = NULL;
-    }
-  }
-
-  ~native_jbooleanArray() { commit(); }
 };
 
 /**
@@ -490,7 +382,7 @@ private:
     if (orig != NULL && cstr == NULL) {
       cstr_length = env->GetStringUTFLength(orig);
       cstr = env->GetStringUTFChars(orig, 0);
-      checkJavaException(env);
+      check_java_exception(env);
     }
   }
 
@@ -534,7 +426,7 @@ public:
       return cstr_length <= 0;
     } else if (orig != NULL) {
       jsize len = env->GetStringLength(orig);
-      checkJavaException(env);
+      check_java_exception(env);
       return len <= 0;
     }
     return true;
@@ -562,7 +454,7 @@ public:
   native_jobjectArray(JNIEnv *const env, jobjectArray orig) : env(env), orig(orig), len(0) {
     if (orig != NULL) {
       len = env->GetArrayLength(orig);
-      checkJavaException(env);
+      check_java_exception(env);
     }
   }
 
@@ -577,7 +469,7 @@ public:
       throw_java_exception(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
     }
     T ret = static_cast<T>(env->GetObjectArrayElement(orig, index));
-    checkJavaException(env);
+    check_java_exception(env);
     return ret;
   }
 
@@ -586,7 +478,7 @@ public:
       throw_java_exception(env, "java/lang/NullPointerException", "jobjectArray pointer is NULL");
     }
     env->SetObjectArrayElement(orig, index, val);
-    checkJavaException(env);
+    check_java_exception(env);
   }
 };
 
@@ -689,7 +581,7 @@ public:
 
   void set(int index, const char *val) {
     jstring str = env->NewStringUTF(val);
-    checkJavaException(env);
+    check_java_exception(env);
     arr.set(index, str);
     update_caches(index, str);
   }
@@ -825,7 +717,7 @@ public:
     for (int i = 0; i < wrappers.size(); i++) {
       wrappers[i].release();
     }
-    return native_handles.get_jlongArray();
+    return native_handles.get_jArray();
   }
 };
 
@@ -1001,9 +893,9 @@ inline void jni_cudf_check(JNIEnv *const env, gdf_error gdf_status) {
 } // namespace jni
 } // namespace cudf
 
-#define JNI_THROW_NEW(env, clazz_name, message, ret_val)                                           \
+#define JNI_THROW_NEW(env, class_name, message, ret_val)                                           \
   {                                                                                                \
-    jclass ex_class = env->FindClass(clazz_name);                                                  \
+    jclass ex_class = env->FindClass(class_name);                                                  \
     if (ex_class == NULL) {                                                                        \
       return ret_val;                                                                              \
     }                                                                                              \
