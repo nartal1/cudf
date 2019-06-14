@@ -93,9 +93,9 @@ cd $WORKSPACE/python
 py.test --cache-clear --junitxml=${WORKSPACE}/junit-cudf.xml -v --cov-config=.coveragerc --cov=cudf --cov-report=xml:${WORKSPACE}/cudf-coverage.xml --cov-report term
 
 ################################################################################
-# BUILD and TEST libcudfjni
+# TEST libcudfjni
 ################################################################################
 
-logger "Build cudfjni"
+logger "Test cudfjni"
 cd $WORKSPACE/java
 mvn -Dmaven.repo.local=$WORKSPACE/.m2 clean test
