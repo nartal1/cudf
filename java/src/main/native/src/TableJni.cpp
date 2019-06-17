@@ -167,7 +167,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
     cudf::csv_reader_args read_arg{};
 
     if (read_buffer) {
-      read_arg.filepath_or_buffer = std::string(reinterpret_cast<const char *>(buffer), buffer_length);
+      read_arg.filepath_or_buffer =
+          std::string(reinterpret_cast<const char *>(buffer), buffer_length);
       read_arg.input_data_form = HOST_BUFFER;
     } else {
       read_arg.filepath_or_buffer = filename.get();
@@ -207,7 +208,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
 
     cudf::CsvReader reader(read_arg);
     cudf::table result = reader.read();
-    std::vector<gdf_column*> ptrs(result.begin(), result.end());
+    std::vector<gdf_column *> ptrs(result.begin(), result.end());
 
     cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(ptrs.data()),
                                                 ptrs.size());
