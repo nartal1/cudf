@@ -655,27 +655,26 @@ public class TableTest {
   }
 
   @Test
-  void testGroupByCount() {
+  void testGroupByCountMulti() {
     try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
                                            .column(   1,    3,    3,    5,    5,    0)
                                            .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
                                            .build()) {
-      try (Table t2 = t1.groupBy(0, 1, 2).aggregate(count(), count());
-           Table t3 = t1.groupBy(0, 1).aggregate(count())) {
+      try (Table t2 = t1.groupBy(0, 1, 2).aggregate(count(), count())) {
         // verify t2
         assertEquals(5, t2.getRowCount());
 
-        HashMap<Object, Integer>[] expectedTable = new HashMap[3];
-        expectedTable[0] = new HashMap<Object, Integer>() {{
+        HashMap<Object, Integer>[] expectedResults = new HashMap[3];
+        expectedResults[0] = new HashMap<Object, Integer>() {{
           put(1, 5);
         }};
-        expectedTable[1] = new HashMap<Object, Integer>() {{
+        expectedResults[1] = new HashMap<Object, Integer>() {{
           put(1, 1);
           put(3, 2);
           put(5, 1);
           put(0, 1);
         }};
-        expectedTable[2] = new HashMap<Object, Integer>() {{
+        expectedResults[2] = new HashMap<Object, Integer>() {{
           put(12.0, 1);
           put(14.0, 1);
           put(13.0, 1);
@@ -691,7 +690,7 @@ public class TableTest {
         });
 
         try (Table t4 = new Table(cv)) {
-          assertTablesHaveSameValues(expectedTable, t4);
+          assertTablesHaveSameValues(expectedResults, t4);
         }
 
         ColumnVector[] aggOut = new ColumnVector[2];
@@ -700,7 +699,7 @@ public class TableTest {
         aggOut[0].ensureOnHost();
         aggOut[1].ensureOnHost();
 
-        Map<Integer, Integer> expectedAggOut = new HashMap() {
+        Map<Integer, Integer> expectedAggregateResult = new HashMap() {
           {
             // value, count
             put(1, 4);
@@ -710,20 +709,30 @@ public class TableTest {
         for (int i = 0; i < 4; ++i) {
           int key = aggOut[0].getInt(i);
           assertEquals(key, aggOut[1].getInt(i));
-          assertTrue(expectedAggOut.containsKey(key));
-          Integer count = expectedAggOut.get(key);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
           if (count == 1) {
-            expectedAggOut.remove(key);
+            expectedAggregateResult.remove(key);
           } else {
-            expectedAggOut.put(key, count - 1);
+            expectedAggregateResult.put(key, count - 1);
           }
         }
+      }
+    }
+  }
 
+  @Test
+  void testGroupByCount() {
+    try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
+        .column(   1,    3,    3,    5,    5,    0)
+        .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+        .build()) {
+      try (Table t3 = t1.groupBy(0, 1).aggregate(count())) {
         // verify t3
         assertEquals(4, t3.getRowCount());
         ColumnVector aggOut1 = t3.getColumn(2);
         aggOut1.ensureOnHost();
-        expectedAggOut = new HashMap() {
+        Map<Object, Integer> expectedAggregateResult = new HashMap() {
           {
             // value, count
             put(1, 2);
@@ -732,12 +741,12 @@ public class TableTest {
         };
         for (int i = 0; i < 4; ++i) {
           int key = aggOut1.getInt(i);
-          assertTrue(expectedAggOut.containsKey(key));
-          Integer count = expectedAggOut.get(key);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
           if (count == 1) {
-            expectedAggOut.remove(key);
+            expectedAggregateResult.remove(key);
           } else {
-            expectedAggOut.put(key, count - 1);
+            expectedAggregateResult.put(key, count - 1);
           }
         }
       }
