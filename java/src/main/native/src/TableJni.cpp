@@ -483,7 +483,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfGroupByCount(
                                                 cols.size());
     n_output_table.get_native_handles_and_release();
     output_agg_column.release();
-    return native_handles.get_jlongArray();
+
+    return native_handles.get_jArray();
   }
   CATCH_STD(env, NULL);
 }
