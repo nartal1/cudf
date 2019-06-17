@@ -724,9 +724,9 @@ public class TableTest {
   @Test
   void testGroupByCount() {
     try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
-        .column(   1,    3,    3,    5,    5,    0)
-        .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
-        .build()) {
+                                           .column(   1,    3,    3,    5,    5,    0)
+                                           .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+                                           .build()) {
       try (Table t3 = t1.groupBy(0, 1).aggregate(count())) {
         // verify t3
         assertEquals(4, t3.getRowCount());
