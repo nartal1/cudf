@@ -112,7 +112,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfOrderBy(
     context.flag_sort_result = 1;
     context.flag_sort_inplace = 0;
     context.flag_groupby_include_nulls = true;
-    // There is also a MULTI COLUMN VERSION, that we may want to support in the future.
+    // There is also a MULTI COLUMN VERSION, that we may want to support in the
+    // future.
     context.flag_null_sort_behavior =
         j_are_nulls_smallest ? GDF_NULL_AS_SMALLEST : GDF_NULL_AS_LARGEST;
 
@@ -166,7 +167,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
     cudf::csv_reader_args read_arg{};
 
     if (read_buffer) {
-      read_arg.filepath_or_buffer = std::string(reinterpret_cast<const char *>(buffer), buffer_length);
+      read_arg.filepath_or_buffer =
+          std::string(reinterpret_cast<const char *>(buffer), buffer_length);
       read_arg.input_data_form = HOST_BUFFER;
     } else {
       read_arg.filepath_or_buffer = filename.get();
@@ -206,7 +208,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfReadCSV(
 
     cudf::CsvReader reader(read_arg);
     cudf::table result = reader.read();
-    std::vector<gdf_column*> ptrs(result.begin(), result.end());
+    std::vector<gdf_column *> ptrs(result.begin(), result.end());
 
     cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(ptrs.data()),
                                                 ptrs.size());
@@ -368,7 +370,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_concatenate(JNIEnv *env, 
   try {
     cudf::jni::native_jpointerArray<cudf::table> tables(env, table_handles);
 
-    // calculate output table size and whether each column needs a validity vector
+    // calculate output table size and whether each column needs a validity
+    // vector
     int num_columns = tables[0]->num_columns();
     std::vector<bool> need_validity(num_columns);
     size_t total_size = 0;
@@ -376,7 +379,8 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_concatenate(JNIEnv *env, 
       total_size += tables[table_idx]->num_rows();
       for (int col_idx = 0; col_idx < num_columns; ++col_idx) {
         gdf_column const *col = tables[table_idx]->get_column(col_idx);
-        // Should be checking for null_count != 0 but libcudf is checking valid != nullptr
+        // Should be checking for null_count != 0 but libcudf is checking valid
+        // != nullptr
         if (col->valid != nullptr) {
           need_validity[col_idx] = true;
         }
@@ -445,6 +449,43 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfPartition(
                                    n_cudf_hash_function));
 
     return output.get_native_handles_and_release();
+  }
+  CATCH_STD(env, NULL);
+}
+
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_Table_gdfGroupByCount(
+    JNIEnv *env, jclass clazz, jlong input_table, jintArray j_group_by_columns) {
+  JNI_NULL_CHECK(env, input_table, "input table is null", NULL);
+
+  try {
+    cudf::table *n_input_table = reinterpret_cast<cudf::table *>(input_table);
+    cudf::jni::native_jintArray n_group_by_columns(env, j_group_by_columns);
+    std::vector<gdf_column *> group_by_vector;
+    for (int i = 0; i < n_group_by_columns.size(); i++) {
+      group_by_vector.push_back(n_input_table->get_column(n_group_by_columns[i]));
+    }
+
+    cudf::table n_group_by_table(group_by_vector);
+    cudf::jni::output_table n_output_table(env, &n_group_by_table);
+    // with count the agg_column doesn't mean much, grab the first column as
+    // agg_column
+    gdf_column *agg_column = n_input_table->get_column(0);
+    cudf::jni::gdf_column_wrapper output_agg_column(agg_column->size, GDF_INT32, false);
+    gdf_context ctxt{0, GDF_SORT, 0, 0};
+    std::vector<gdf_column *> cols = n_output_table.get_gdf_columns();
+    JNI_GDF_TRY(env, NULL,
+                gdf_group_by_count(n_group_by_table.num_columns(), n_group_by_table.begin(),
+                                   agg_column, nullptr, cols.data(), output_agg_column.get(),
+                                   &ctxt));
+
+    cols.push_back(output_agg_column.get());
+
+    cudf::jni::native_jlongArray native_handles(env, reinterpret_cast<jlong *>(cols.data()),
+                                                cols.size());
+    n_output_table.get_native_handles_and_release();
+    output_agg_column.release();
+
+    return native_handles.get_jArray();
   }
   CATCH_STD(env, NULL);
 }
