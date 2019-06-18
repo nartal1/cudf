@@ -172,7 +172,8 @@
                                       failonerror="true"
                                       executable="cmake">
                                     <arg value="${basedir}/src/main/native"/>
-                                    <arg value="-DCMAKE_CXX11_ABI=ON"/>
+                                    <arg value="-DCMAKE_CXX11_ABI=OFF"/>
+                                    <arg value="-DCMAKE_INSTALL_PREFIX=/usr/local/rapids"/>
                                     <!--<arg value="-DUSE_NVTX"/>-->
                                 </exec>
                                 <exec dir="${native.build.path}"

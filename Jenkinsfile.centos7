@@ -1,0 +1,29 @@
+pipeline {
+
+    agent {
+        docker {
+            label 'docker'
+            image 'mycudf-centos7:cuda10'
+            args '--runtime=nvidia'
+        }
+    }
+
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 1, unit: 'HOURS')
+    }
+
+    stages {
+        stage('Compile') {
+            steps {
+                sh 'scl enable devtoolset-7 ci/gpu/build-centos7.sh'
+            }
+        }
+    }
+    post {
+        cleanup {
+            sh "chown -R \$(id -u):\$(id -g) \${WORKSPACE}"
+        }
+    }
+}
