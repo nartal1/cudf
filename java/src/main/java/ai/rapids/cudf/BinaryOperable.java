@@ -287,70 +287,70 @@ public interface BinaryOperable {
   }
 
   /**
-   * Bit wise and & with the given output type. this & rhs
+   * Bit wise and (&) with the given output type. this & rhs
    */
   default ColumnVector bitAnd(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.BITWISE_AND, rhs, outType);
   }
 
   /**
-   * Bit wise and &. this & rhs
+   * Bit wise and (&). this & rhs
    */
   default ColumnVector bitAnd(BinaryOperable rhs) {
     return bitAnd(rhs, implicitConversion(this, rhs));
   }
 
   /**
-   * Bit wise or | with the given output type. this | rhs
+   * Bit wise or (|) with the given output type. this | rhs
    */
   default ColumnVector bitOr(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.BITWISE_OR, rhs, outType);
   }
 
   /**
-   * Bit wise or |. this | rhs
+   * Bit wise or (|). this | rhs
    */
   default ColumnVector bitOr(BinaryOperable rhs) {
     return bitOr(rhs, implicitConversion(this, rhs));
   }
 
   /**
-   * Bit wise xor ^ with the given output type. this ^ rhs
+   * Bit wise xor (^) with the given output type. this ^ rhs
    */
   default ColumnVector bitXor(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.BITWISE_XOR, rhs, outType);
   }
 
   /**
-   * Bit wise xor ^. this ^ rhs
+   * Bit wise xor (^). this ^ rhs
    */
   default ColumnVector bitXor(BinaryOperable rhs) {
     return bitXor(rhs, implicitConversion(this, rhs));
   }
 
   /**
-   * Logical and && with the given output type. this && rhs
+   * Logical and (&&) with the given output type. this && rhs
    */
   default ColumnVector and(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.LOGICAL_AND, rhs, outType);
   }
 
   /**
-   * Logical and &&. this && rhs
+   * Logical and (&&). this && rhs
    */
   default ColumnVector and(BinaryOperable rhs) {
     return and(rhs, implicitConversion(this, rhs));
   }
 
   /**
-   * Logical or || with the given output type. this || rhs  
+   * Logical or (||) with the given output type. this || rhs  
    */
   default ColumnVector or(BinaryOperable rhs, DType outType) {
     return binaryOp(BinaryOp.LOGICAL_OR, rhs, outType);
   }
 
   /**
-   * Logical or ||. this || rhs
+   * Logical or (||). this || rhs
    */
   default ColumnVector or(BinaryOperable rhs) {
     return or(rhs, implicitConversion(this, rhs));
