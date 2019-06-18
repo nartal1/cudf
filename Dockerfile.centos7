@@ -1,5 +1,5 @@
 ###
-# Build the image for xgboost development environment.
+# Build the image for cudf development environment.
 # 
 # Arguments: CUDA_VERSION=9.2 or 10.0
 # 
