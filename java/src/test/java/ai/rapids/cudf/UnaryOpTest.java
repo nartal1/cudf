@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class UnaryOpTest {
   private static final Double[] DOUBLES_1 = new Double[]{1.0, 10.0, -100.1, 5.3, 50.0, 100.0, null};
   private static final Integer[] INTS_1 = new Integer[]{1, 10, -100, 5, 50, 100, null};
+  private static final Boolean[] BOOLEANS_1 = new Boolean[]{true, false, true, false, true, false, null};
   private static final String[] STRINGS_1 = new String[]{"1", "10", "-100", "5", "50", "100", null};
 
   interface CpuOp {
@@ -72,6 +73,27 @@ public class UnaryOpTest {
     @Override
     public void computeNullSafe(ColumnVector.Builder ret, ColumnVector input, int index) {
       ret.append(fun.apply(input.getInt(index)));
+    }
+  }
+
+  interface BoolFun {
+    boolean apply(boolean val);
+  }
+
+  static BoolCpuOp boolFun(BoolFun fun) {
+    return new BoolCpuOp(fun);
+  }
+
+  static class BoolCpuOp implements CpuOp {
+    private final BoolFun fun;
+
+    BoolCpuOp(BoolFun fun) {
+      this.fun = fun;
+    }
+
+    @Override
+    public void computeNullSafe(ColumnVector.Builder ret, ColumnVector input, int index) {
+      ret.append(fun.apply(input.getBoolean(index)));
     }
   }
 
@@ -218,6 +240,16 @@ public class UnaryOpTest {
     try (ColumnVector icv = ColumnVector.fromBoxedInts(INTS_1);
          ColumnVector answer = icv.bitInvert();
          ColumnVector expected = forEach(icv, intFun((i) -> ~i))) {
+      assertColumnsAreEqual(expected, answer);
+    }
+  }
+
+  @Test
+  public void testNot() {
+    assumeTrue(Cuda.isEnvCompatibleForTesting());
+    try (ColumnVector icv = ColumnVector.fromBoxedBooleans(BOOLEANS_1);
+         ColumnVector answer = icv.not();
+         ColumnVector expected = forEach(icv, boolFun((i) -> !i))) {
       assertColumnsAreEqual(expected, answer);
     }
   }

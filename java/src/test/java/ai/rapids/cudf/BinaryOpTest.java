@@ -34,6 +34,8 @@ public class BinaryOpTest {
   private static final Long[] LONGS_2 = new Long[]{10L, 20L, 30L, 40L, 50L, 60L, 100L};
   private static final Double[] DOUBLES_1 = new Double[]{1.0, 10.0, 100.0, 5.3, 50.0, 100.0, null};
   private static final Double[] DOUBLES_2 = new Double[]{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 100.0};
+  private static final Boolean[] BOOLEANS_1 = new Boolean[]{true, true, false, false, null};
+  private static final Boolean[] BOOLEANS_2 = new Boolean[]{true, false, true, false, true};
 
   interface CpuOpVV {
     void computeNullSafe(ColumnVector.Builder ret, ColumnVector lhs, ColumnVector rhs, int index);
@@ -761,6 +763,80 @@ public class BinaryOpTest {
            ColumnVector expected = forEachS(DType.INT32, (short) 100,  icv1,
                    (b, l, r, i) -> b.append(l ^ r.getInt(i)))) {
         assertColumnsAreEqual(expected, answer, "scalar short ^ int32");
+      }
+    }
+  }
+
+  @Test
+  public void testAnd() {
+    assumeTrue(Cuda.isEnvCompatibleForTesting());
+    try (ColumnVector icv1 = ColumnVector.fromBoxedBooleans(BOOLEANS_1); 
+         ColumnVector icv2 = ColumnVector.fromBoxedBooleans(BOOLEANS_2)) {
+      try (ColumnVector answer = icv1.and(icv2);
+           ColumnVector expected = forEach(DType.BOOL8, icv1, icv2,
+                   (b, l, r, i) -> b.append(l.getBoolean(i) && r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "boolean AND boolean");
+      }
+
+      try (ColumnVector answer = icv1.and(Scalar.fromBool(true));
+           ColumnVector expected = forEachS(DType.BOOL8, icv1, true,
+               (b, l, r, i) -> b.append(l.getBoolean(i) && r))) {
+        assertColumnsAreEqual(expected, answer, "boolean AND true");
+      }
+
+      try (ColumnVector answer = icv1.and(Scalar.fromBool(false));
+           ColumnVector expected = forEachS(DType.BOOL8, icv1, false,
+                   (b, l, r, i) -> b.append(l.getBoolean(i) && r))) {
+        assertColumnsAreEqual(expected, answer, "boolean AND false");
+      }
+
+      try (ColumnVector answer = icv1.and(Scalar.fromBool(true));
+           ColumnVector expected = forEachS(DType.BOOL8, true, icv1,
+               (b, l, r, i) -> b.append(l && r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "true AND boolean");
+      }
+
+      try (ColumnVector answer = icv1.and(Scalar.fromBool(false));
+           ColumnVector expected = forEachS(DType.BOOL8, false, icv1,
+                   (b, l, r, i) -> b.append(l && r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "false AND boolean");
+      }
+    }
+  }
+
+  @Test
+  public void testOr() {
+    assumeTrue(Cuda.isEnvCompatibleForTesting());
+    try (ColumnVector icv1 = ColumnVector.fromBoxedBooleans(BOOLEANS_1); 
+         ColumnVector icv2 = ColumnVector.fromBoxedBooleans(BOOLEANS_2)) {
+      try (ColumnVector answer = icv1.or(icv2);
+           ColumnVector expected = forEach(DType.BOOL8, icv1, icv2,
+                   (b, l, r, i) -> b.append(l.getBoolean(i) || r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "boolean OR boolean");
+      }
+
+      try (ColumnVector answer = icv1.or(Scalar.fromBool(true));
+           ColumnVector expected = forEachS(DType.BOOL8, icv1, true,
+                   (b, l, r, i) -> b.append(l.getBoolean(i) || r))) {
+        assertColumnsAreEqual(expected, answer, "boolean OR true");
+      }
+
+      try (ColumnVector answer = icv1.or(Scalar.fromBool(false));
+           ColumnVector expected = forEachS(DType.BOOL8, icv1, false,
+               (b, l, r, i) -> b.append(l.getBoolean(i) || r))) {
+        assertColumnsAreEqual(expected, answer, "boolean OR false");
+      }
+
+      try (ColumnVector answer = icv1.or(Scalar.fromBool(true));
+           ColumnVector expected = forEachS(DType.BOOL8, true, icv1,
+                   (b, l, r, i) -> b.append(l || r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "true OR boolean");
+      }
+
+      try (ColumnVector answer = icv1.or(Scalar.fromBool(false));
+           ColumnVector expected = forEachS(DType.BOOL8, false, icv1,
+               (b, l, r, i) -> b.append(l || r.getBoolean(i)))) {
+        assertColumnsAreEqual(expected, answer, "false OR boolean");
       }
     }
   }
