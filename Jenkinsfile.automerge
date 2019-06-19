@@ -9,9 +9,14 @@ pipeline {
         string(name: 'REF', defaultValue: 'nv-branch-0.8')
     }
 
+    options {
+        gitLabConnection('Gitlab Master')
+    }
+
     stages {
         stage('Update Branch') {
             steps {
+                updateGitlabCommitStatus(name: 'Jenkins CI', state: 'running')
                 withCredentials([sshUserPrivateKey(credentialsId:'svcngcc_pubpriv', keyFileVariable: 'SSH_KEY_FILE_PATH')]) {
                     withEnv(["GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -i ${env.SSH_KEY_FILE_PATH}"]) {
                         script {
@@ -37,6 +42,16 @@ pipeline {
     post {
         always {
             deleteDir() /* clean up our workspace */
+            script {
+                def status = "failed"
+                if (currentBuild.currentResult == "SUCCESS") {
+                    status = "success"
+                }
+                else {
+                    emailext body: "Please review logs: ${env.BUILD_URL}", to: 'spark-dev@exchange.nvidia.com', subject: "Auto-merge to nv-branch-0.8 failed"
+                }
+                updateGitlabCommitStatus(name: 'Jenkins CI', state: status)
+            }
         }
     }
 }
