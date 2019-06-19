@@ -44,11 +44,13 @@ pipeline {
             deleteDir() /* clean up our workspace */
             script {
                 def status = "failed"
-                    if (currentBuild.currentResult == "SUCCESS")
-                        status = "success"
-                    else
-                        emailext body: "Please review logs: ${env.BUILD_URL}", to: 'spark-dev@exchange.nvidia.com', subject: "Auto-merge to nv-branch-0.8 failed"
-                    updateGitlabCommitStatus(name: 'Jenkins CI', state: status)
+                if (currentBuild.currentResult == "SUCCESS") {
+                    status = "success"
+                }
+                else {
+                    emailext body: "Please review logs: ${env.BUILD_URL}", to: 'spark-dev@exchange.nvidia.com', subject: "Auto-merge to nv-branch-0.8 failed"
+                }
+                updateGitlabCommitStatus(name: 'Jenkins CI', state: status)
             }
         }
     }
