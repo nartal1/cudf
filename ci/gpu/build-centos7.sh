@@ -33,5 +33,5 @@ cmake .. -DCMAKE_CXX11_ABI=OFF
 make -j4 install
 
 cd $WORKDIR/java
-mvn package
+mvn -P abiOff package
 
