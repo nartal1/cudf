@@ -40,9 +40,4 @@ pipeline {
             }
         }
     }
-    post {
-        cleanup {
-            sh "chown -R \$(id -u):\$(id -g) \${WORKSPACE}"
-        }
-    }
 }
