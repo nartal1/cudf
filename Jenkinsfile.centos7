@@ -36,7 +36,7 @@ pipeline {
             }
 
             steps {
-                sh 'scl enable devtoolset-7 ci/gpu/build-centos7.sh 9.2'
+                sh 'scl enable devtoolset-7 "ci/gpu/build-centos7.sh 9.2"'
             }
         }
     }
