@@ -4,6 +4,10 @@
 
 set -e
 
+CUDA_VERSION=10.0
+if [ $# > 1 ]; then
+   CUDA_VERSION=$1
+fi
 WORKDIR=`pwd`
 
 export GIT_COMMITTER_NAME="ci"
@@ -37,4 +41,7 @@ make -j4 install DESTDIR=$INSTALL_PREFIX
 
 cd $WORKDIR/java
 mvn -P abiOff package
+
+mkdir -p ../dist/cuda$CUDA_VERSION
+cp target/*.jar ../dist/cuda$CUDA_VERSION
 

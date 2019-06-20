@@ -1,21 +1,40 @@
 pipeline {
 
-    agent {
-        docker {
-            label 'docker'
-            image 'mycudf-centos7:cuda10'
-            args '--runtime=nvidia'
-        }
-    }
+    agent none
 
     options {
         ansiColor('xterm')
         timestamps()
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 2, unit: 'HOURS')
     }
 
     stages {
-        stage('Compile') {
+        stage('Compile for cuda10.0 on centos7') {
+            agent {
+                dockerfile {
+                    label 'docker'
+                    filename 'Dockerfile.centos7'
+                    dir './'
+                    args '--runtime=nvidia'
+                    additionalBuildArgs  '--build-arg CUDA_VERSION=10.0'
+                }
+            }
+
+            steps {
+                sh 'scl enable devtoolset-7 ci/gpu/build-centos7.sh'
+            }
+        }
+        stage('Compile for cuda9.2 on centos7') {
+            agent {
+                dockerfile {
+                    label 'docker'
+                    filename 'Dockerfile.centos7'
+                    dir './'
+                    args '--runtime=nvidia'
+                    additionalBuildArgs  '--build-arg CUDA_VERSION=9.2'
+                }
+            }
+
             steps {
                 sh 'scl enable devtoolset-7 ci/gpu/build-centos7.sh'
             }
