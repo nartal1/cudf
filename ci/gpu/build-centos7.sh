@@ -40,6 +40,7 @@ cmake .. -DCMAKE_CXX11_ABI=OFF
 make -j4 install DESTDIR=$INSTALL_PREFIX
 
 cd $WORKDIR/java
+mvn clean
 mvn -P abiOff package
 
 mkdir -p "../dist/cuda$CUDA_VERSION"
