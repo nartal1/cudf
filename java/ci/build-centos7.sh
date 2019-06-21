@@ -14,8 +14,8 @@ export GIT_COMMITTER_NAME="ci"
 export GIT_COMMITTER_EMAIL="ci@nvidia.com"
 
 cd /rapids/
-git clone --recurse-submodules https://github.com/rapidsai/rmm.git
-git clone --recurse-submodules https://github.com/rapidsai/custrings.git
+git clone --recurse-submodules https://github.com/rapidsai/rmm.git -b branch-0.8
+git clone --recurse-submodules https://github.com/rapidsai/custrings.git -b branch-0.8
 
 gcc --version
 
@@ -41,8 +41,10 @@ make -j4 install DESTDIR=$INSTALL_PREFIX
 
 cd $WORKDIR/java
 mvn clean
-mvn -P abiOff package
+mvn -Dmaven.repo.local=$WORKSPACE/.m2 -P abiOff clean install -DskipTests
 
 mkdir -p "../dist/cuda$CUDA_VERSION"
 cp target/*.jar "../dist/cuda$CUDA_VERSION"
 
+##Deploy
+##mvn -Dmaven.repo.local=$WORKSPACE/.m2 -P abiOff deploy -DskipTests
