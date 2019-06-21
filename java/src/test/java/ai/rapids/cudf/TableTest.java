@@ -30,7 +30,8 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
-import static ai.rapids.cudf.Table.count;
+import static ai.rapids.cudf.Aggregate.max;
+import static ai.rapids.cudf.Table.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -749,6 +750,188 @@ public class TableTest {
             expectedAggregateResult.put(key, count - 1);
           }
         }
+      }
+    }
+  }
+
+  @Test
+  void testGroupByMax() {
+    try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
+                                           .column(   1,    3,    3,    5,    5,    0)
+                                           .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+                                           .build()) {
+      try (Table t3 = t1.groupBy(0, 1).aggregate(max(2))) {
+        // verify t3
+        assertEquals(4, t3.getRowCount());
+        ColumnVector aggOut1 = t3.getColumn(2);
+        aggOut1.ensureOnHost();
+        Map<Double, Integer> expectedAggregateResult = new HashMap() {
+          {
+            // value, count
+            put(12.0, 1);
+            put(14.0, 1);
+            put(17.0, 2);
+          }
+        };
+        for (int i = 0; i < 4; ++i) {
+          Double key = aggOut1.getDouble(i);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
+          if (count == 1) {
+            expectedAggregateResult.remove(key);
+          } else {
+            expectedAggregateResult.put(key, count - 1);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void testGroupByMin() {
+    try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
+                                           .column(   1,    3,    3,    5,    5,    0)
+                                           .column(  12,   14,   13,   17,   17,   17)
+                                           .build()) {
+      try (Table t3 = t1.groupBy(0, 1).aggregate(min(2))) {
+        // verify t3
+        assertEquals(4, t3.getRowCount());
+        ColumnVector aggOut0 = t3.getColumn(2);
+        aggOut0.ensureOnHost();
+        Map<Integer, Integer> expectedAggregateResult = new HashMap() {
+          {
+            // value, count
+            put(12, 1);
+            put(13, 1);
+            put(17, 2);
+          }
+        };
+        // check to see the aggregate column type depends on the source column
+        // in this case the source column is Integer, therefore the result should be Integer type
+        assertEquals(DType.INT32, aggOut0.getType());
+        for (int i = 0; i < 4; ++i) {
+          int key = aggOut0.getInt(i);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
+          if (count == 1) {
+            expectedAggregateResult.remove(key);
+          } else {
+            expectedAggregateResult.put(key, count - 1);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void testGroupBySum() {
+    try (Table t1 = new Table.TestBuilder().column(   1,    1,    1,    1,    1,    1)
+                                           .column(   1,    3,    3,    5,    5,    0)
+                                           .column(12.0, 14.0, 13.0, 17.0, 17.0, 17.0)
+                                           .build()) {
+      try (Table t3 = t1.groupBy(0, 1).aggregate(sum(2))) {
+        // verify t3
+        assertEquals(4, t3.getRowCount());
+        ColumnVector aggOut1 = t3.getColumn(2);
+        aggOut1.ensureOnHost();
+        Map<Double, Integer> expectedAggregateResult = new HashMap() {
+          {
+            // value, count
+            put(12.0, 1);
+            put(27.0, 1);
+            put(34.0, 1);
+            put(17.0, 1);
+          }
+        };
+        for (int i = 0; i < 4; ++i) {
+          Double key = aggOut1.getDouble(i);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
+          if (count == 1) {
+            expectedAggregateResult.remove(key);
+          } else {
+            expectedAggregateResult.put(key, count - 1);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void testGroupByAvg() {
+    try (Table t1 = new Table.TestBuilder().column( 1,  1,  1,  1,  1,  1)
+                                           .column( 1,  3,  3,  5,  5,  0)
+                                           .column(12, 14, 13,  1, 17, 17)
+                                           .build()) {
+      try (Table t3 = t1.groupBy(0, 1).aggregate(avg(2))) {
+        // verify t3
+        assertEquals(4, t3.getRowCount());
+        ColumnVector aggOut1 = t3.getColumn(2);
+        aggOut1.ensureOnHost();
+        Map<Double, Integer> expectedAggregateResult = new HashMap() {
+          {
+            // value, count
+            put(12.0, 1);
+            put(13.5, 1);
+            put(17.0, 1);
+            put(9.0, 1);
+          }
+        };
+        for (int i = 0; i < 4; ++i) {
+          Double key = aggOut1.getDouble(i);
+          assertTrue(expectedAggregateResult.containsKey(key));
+          Integer count = expectedAggregateResult.get(key);
+          if (count == 1) {
+            expectedAggregateResult.remove(key);
+          } else {
+            expectedAggregateResult.put(key, count - 1);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void testMultiAgg() {
+    try (Table t1 = new Table.TestBuilder().column(  1,   1,   1,   1,   1,    1)
+                                           .column(  2,   2,   2,   3,   3,    3)
+                                           .column(5.0, 2.3, 3.4, 2.3, 1.3, 12.2)
+                                           .column(  3,   1,   7,  -1,   9,    0)
+                                           .build()) {
+      try (Table t2 = t1.groupBy(0, 1).aggregate(count(), max(3), min(2), avg(2), sum(2))) {
+        assertEquals(2, t2.getRowCount());
+        ColumnVector countOut = t2.getColumn(2);
+        ColumnVector maxOut = t2.getColumn(3);
+        ColumnVector minOut = t2.getColumn(4);
+        ColumnVector avgOut = t2.getColumn(5);
+        ColumnVector sumOut = t2.getColumn(6);
+
+        // bring output to host
+        countOut.ensureOnHost();
+        maxOut.ensureOnHost();
+        minOut.ensureOnHost();
+        avgOut.ensureOnHost();
+        sumOut.ensureOnHost();
+
+        // verify count
+        assertEquals(3, countOut.getInt(0));
+        assertEquals(3, countOut.getInt(1));
+
+        // verify avg
+        assertEquals(3.5666f, avgOut.getDouble(0), 0.0001);
+        assertEquals(5.2666f, avgOut.getDouble(1), 0.0001);
+
+        // verify sum
+        assertEquals(10.7f, sumOut.getDouble(0), 0.0001);
+        assertEquals(15.8f, sumOut.getDouble(1), 0.0001);
+
+        // verify min
+        assertEquals(2.3f, minOut.getDouble(0), 0.0001);
+        assertEquals(1.3f, minOut.getDouble(1), 0.0001);
+
+        // verify max
+        assertEquals(7, maxOut.getInt(0));
+        assertEquals(9, maxOut.getInt(1));
       }
     }
   }
