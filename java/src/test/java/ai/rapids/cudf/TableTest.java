@@ -368,7 +368,7 @@ public class TableTest {
         "6,true,126,\"six\"\n" +
         "7,NULL,127,NULL\n" +
         "8,false,128,\"eight\"\n" +
-        "9,false,129,\"nine\"").getBytes(StandardCharsets.UTF_8);
+        "9,false,129,\"nine\uD80C\uDC3F\"").getBytes(StandardCharsets.UTF_8);
 
     final Schema CSV_DATA_WITH_TYPES_SCHEMA = Schema.builder()
         .column(DType.INT32, "A")
@@ -389,7 +389,7 @@ public class TableTest {
     try (Table expected = new Table.TestBuilder()
         .column(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         .column(true, true, false, false, true, true, true, null, false, false)
-        .column("zero", "one", "two", "three", "four", "five", "six", null, "eight", "nine")
+        .column("zero", "one", "two", "three", "four", "five", "six", null, "eight", "nine\uD80C\uDC3F")
         .build();
          Table table = Table.readCSV(CSV_DATA_WITH_TYPES_SCHEMA, opts, CSV_DATA_WITH_TYPES)) {
       assertTablesAreEqual(expected, table);
@@ -403,11 +403,13 @@ public class TableTest {
         .column(DType.INT32, "A")
         .column(DType.FLOAT64, "B")
         .column(DType.INT64, "C")
+        .column(DType.STRING, "D")
         .build();
     try (Table expected = new Table.TestBuilder()
         .column(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         .column(110.0, 111.0, 112.0, 113.0, 114.0, 115.0, 116.0, 117.0, 118.2, 119.8)
         .column(120L, 121L, 122L, 123L, 124L, 125L, 126L, 127L, 128L, 129L)
+        .column("one", "two", "three", "four", "five", "six", "seven\ud801\uddb8", "eight\uBF68", "nine\u03E8", "ten")
         .build();
          Table table = Table.readCSV(schema, new File("./src/test/resources/simple.csv"))) {
       assertTablesAreEqual(expected, table);
