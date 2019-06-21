@@ -71,6 +71,6 @@ public class Rmm {
   /**
    * If logging is enabled get the log as a String.
    */
-  static native String getLog() throws RmmException;
+  public static native String getLog() throws RmmException;
 
 }
