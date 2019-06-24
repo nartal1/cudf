@@ -7,16 +7,15 @@ pipeline {
     }
 
     stages {
-        stage("Build"){
-            parallel {
+        //stage("Build"){
+            //parallel {
                 stage("Compile for cuda9.2 on centos7") {
                     agent {
-                        dockerfile {
+                        docker {
+                            image 'gpuci/java-base:centos7-cuda9.2'
                             label 'cpu'
-                            filename 'java/ci/Dockerfile.centos7'
-                            dir './'
-                            additionalBuildArgs  "--build-arg CUDA_VERSION=9.2"
                             registryUrl 'https://docker.io'
+                            args '-u root'
                         }
                     }
 
@@ -24,18 +23,18 @@ pipeline {
                         withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
                             usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONTATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
                             string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
-                            sh "scl enable devtoolset-7 java/ci/build-centos7.sh 9.2"
+                            sh 'gpg --import $GPG_FILE'
+                            sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 9.2"'
                         }
                     }
                 }
                 stage("Compile for cuda10.0 on centos7") {
                     agent {
-                        dockerfile {
+                        docker {
+                            image 'gpuci/java-base:centos7-cuda10.0'
                             label 'cpu'
-                            filename 'java/ci/Dockerfile.centos7'
-                            dir './'
-                            additionalBuildArgs  "--build-arg CUDA_VERSION=10.0"
                             registryUrl 'https://docker.io'
+                            args '-u root'
                         }
                     }
 
@@ -43,11 +42,12 @@ pipeline {
                         withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
                             usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONTATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
                             string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
-                            sh "scl enable devtoolset-7 java/ci/build-centos7.sh 10.0"
+                            sh 'gpg --import $GPG_FILE'
+                            sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 10.0"'
                         }
                     }
                 }
-            }
-        }
+            //}
+        //}
     }
 }

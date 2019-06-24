@@ -4,8 +4,6 @@
 
 set -e
 
-gpg --import $GPG_FILE
-
 CUDA_VERSION=10.0
 if [ $# == 1 ]; then
    CUDA_VERSION=$1
