@@ -13,9 +13,9 @@ pipeline {
                     agent {
                         dockerfile {
                             label 'cpu'
-                            filename 'Dockerfile.centos7'
+                            filename 'java/ci/Dockerfile.centos7'
                             dir './'
-                            additionalBuildArgs  "--build-arg CUDA_VERSION=${cudaVersion}"
+                            additionalBuildArgs  "--build-arg CUDA_VERSION=9.2"
                             registryUrl 'https://docker.io'
                         }
                     }
@@ -32,9 +32,9 @@ pipeline {
                     agent {
                         dockerfile {
                             label 'cpu'
-                            filename 'Dockerfile.centos7'
+                            filename 'java/ci/Dockerfile.centos7'
                             dir './'
-                            additionalBuildArgs  "--build-arg CUDA_VERSION=${cudaVersion}"
+                            additionalBuildArgs  "--build-arg CUDA_VERSION=10.0"
                             registryUrl 'https://docker.io'
                         }
                     }
