@@ -181,7 +181,8 @@ public final class Table implements AutoCloseable {
                                               String filePath, long address, long length) throws CudfException;
 
 
-  private static native long[] gdfGroupByAggregate(long inputTable, int[] indices, int aggColumn, int aggType) throws CudfException;
+  private static native long[] gdfGroupByAggregate(long inputTable, int[] indices, int aggColumn, 
+                                                   int aggType) throws CudfException;
 
   private static native long[] gdfOrderBy(long inputTable, long[] sortKeys, boolean[] isDescending,
                                           boolean areNullsSmallest) throws CudfException;
