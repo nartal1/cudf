@@ -46,4 +46,4 @@ mvn -Dmaven.repo.local=$WORKSPACE/.m2 -P abiOff clean install -DskipTests
 mkdir -p "../dist/cuda$CUDA_VERSION"
 cp target/*.jar "../dist/cuda$CUDA_VERSION"
 
-mvn -Dmaven.repo.local=$WORKSPACE/.m2 -P abiOff deploy -DskipTests -Dcuda.classifier=$CUDA_VERSION-centos7
+mvn -Dmaven.repo.local=$WORKSPACE/.m2 -P abiOff,release -s $WORKSPACE/java/ci/settings.xml deploy -DskipTests -Dcuda.classifier=$CUDA_VERSION-centos7

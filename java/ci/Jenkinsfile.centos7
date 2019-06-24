@@ -1,7 +1,27 @@
+def buildStage(cudaVersion) {
+    stage("Compile for cuda${cudaVersion} on centos7") {
+        agent {
+            dockerfile {
+                label 'cpu'
+                filename 'Dockerfile.centos7'
+                dir './'
+                additionalBuildArgs  "--build-arg CUDA_VERSION=${cudaVersion}"
+                registryUrl 'https://docker.io'
+            }
+        }
+
+        steps {
+            withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
+                usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONTATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
+                string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
+                sh "scl enable devtoolset-7 java/ci/build-centos7.sh ${cudaVersion}"
+            }
+        }
+    }
+}
+
 pipeline {
-
-    agent { label 'cpu' }
-
+    agent none
     options {
         ansiColor('xterm')
         timestamps()
@@ -9,33 +29,9 @@ pipeline {
     }
 
     stages {
-        stage('Compile for cuda10.0 on centos7') {
-            agent {
-                dockerfile {
-                    label 'docker'
-                    filename 'Dockerfile.centos7'
-                    dir './'
-                    additionalBuildArgs  '--build-arg CUDA_VERSION=10.0'
-                }
-            }
-
-            steps {
-                sh 'scl enable devtoolset-7 java/ci/build-centos7.sh'
-            }
-        }
-        stage('Compile for cuda9.2 on centos7') {
-            agent {
-                dockerfile {
-                    label 'docker'
-                    filename 'Dockerfile.centos7'
-                    dir './'
-                    additionalBuildArgs  '--build-arg CUDA_VERSION=9.2'
-                }
-            }
-
-            steps {
-                sh 'scl enable devtoolset-7 "java/ci/build-centos7.sh 9.2"'
-            }
+        parallel {
+            buildStage("9.2")
+            buildStage("10.0")
         }
     }
 }
