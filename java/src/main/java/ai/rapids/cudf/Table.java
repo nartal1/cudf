@@ -347,7 +347,6 @@ public final class Table implements AutoCloseable {
     return Aggregate.count();
   }
 
-<<<<<<< HEAD
   public static Aggregate max(int index) {
     return Aggregate.max(index);
   }
@@ -364,8 +363,6 @@ public final class Table implements AutoCloseable {
     return Aggregate.avg(index);
   }
 
-=======
->>>>>>> db223f3f86eb197a29c174e3c5d6e91e8a28539a
   public AggregateOperation groupBy(int... indices) {
     int[] operationIndicesArray = copyAndValidate(indices);
     return new AggregateOperation(this, operationIndicesArray);
@@ -444,7 +441,6 @@ public final class Table implements AutoCloseable {
     public Table aggregate(Aggregate... aggregates) {
       assert aggregates != null && aggregates.length > 0;
       long[][] aggregateTables = new long[aggregates.length][];
-<<<<<<< HEAD
       for (int aggregateIndex = 0 ; aggregateIndex < aggregates.length ; aggregateIndex++) {
         try {
           aggregateTables[aggregateIndex] = gdfGroupByAggregate(operation.table.nativeHandle, operation.indices, aggregates[aggregateIndex].getIndex(), aggregates[aggregateIndex].getNativeId());
@@ -460,21 +456,6 @@ public final class Table implements AutoCloseable {
             }
           }
           throw t;
-=======
-      for (int i = 0 ; i < aggregates.length ; i++) {
-        if (aggregates[i].isCount()) {
-          aggregateTables[i] = gdfGroupByCount(operation.table.nativeHandle, operation.indices);
-        } else {
-          IntStream.rangeClosed(0, i).forEach(index -> {
-            Arrays.stream(aggregateTables[index]).forEach(e -> {
-              //Being defensive
-              if (e != 0) {
-                ColumnVector.freeCudfColumn(e, true);
-              }
-            });
-          });
-          throw new UnsupportedOperationException("Invalid aggregate function");
->>>>>>> db223f3f86eb197a29c174e3c5d6e91e8a28539a
         }
       }
 
