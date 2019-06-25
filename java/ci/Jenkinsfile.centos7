@@ -23,7 +23,7 @@ pipeline {
                         checkout scm
                         sh 'git submodule update --init --recursive --remote'
                         withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
-                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONTATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
+                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
                             string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
                             sh 'gpg --import $GPG_FILE'
                             sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 9.2"'
@@ -44,7 +44,7 @@ pipeline {
                         checkout scm
                         sh 'git submodule update --init --recursive --remote'
                         withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
-                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONTATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
+                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
                             string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
                             sh 'gpg --import $GPG_FILE'
                             sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 10.0"'
