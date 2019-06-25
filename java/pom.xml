@@ -24,7 +24,82 @@
     <version>0.8-SNAPSHOT</version>
 
     <name>cudfjni</name>
+    <description>
+        This project provides java bindings for cudf, to be able to process large amounts of data on a GPU.
+        This is still a work in progress so some APIs may change until the 1.0 release.
+    </description>
     <url>http://ai.rapids</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:https://github.com/rapidsai/cudf.git</connection>
+        <developerConnection>scm:git:git@github.com:rapidsai/cudf.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/rapidsai/cudf</url>
+    </scm>
+    <developers>
+        <developer>
+            <id>revans2</id>
+            <name>Robert Evans</name>
+            <email>bobby@apache.org</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-6</timezone>
+        </developer>
+        <developer>
+            <id>jlowe</id>
+            <name>Jason Lowe</name>
+            <email>jlowe@nvidia.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-6</timezone>
+        </developer>
+        <developer>
+            <id>abellina</id>
+            <name>Alessandro Bellina</name>
+            <email>abellina@nvidia.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-6</timezone>
+        </developer>
+        <developer>
+            <id>tgraves</id>
+            <name>Thomas Graves</name>
+            <email>tgraves@nvidia.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-6</timezone>
+        </developer>
+        <developer>
+            <id>rjafri</id>
+            <name>Raza Jafri</name>
+            <email>rjafri@nvidia.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-8</timezone>
+        </developer>
+        <developer>
+            <id>nartal</id>
+            <name>Niranjan Artal</name>
+            <email>nartal@nvidia.com</email>
+            <roles>
+                <role>Committer</role>
+            </roles>
+            <timezone>-8</timezone>
+        </developer>
+    </developers>
 
     <repositories>
         <repository>
