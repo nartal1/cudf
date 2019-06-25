@@ -108,17 +108,6 @@
             <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven</url>
         </repository>
     </repositories>
-    <distributionManagement>
-        <repository>
-            <id>spark.sw.nvidia.com</id>
-            <name>gpuwa.nvidia.com-releases</name>
-            <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven-local</url>
-        </repository>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
 
     <dependencies>
         <dependency>
@@ -166,6 +155,19 @@
 
     <profiles>
         <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>spark.sw.nvidia.com</id>
+                    <name>gpuwa.nvidia.com-releases</name>
+                    <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven-local</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+        <profile>
             <id>abiOff</id>
             <properties>
                 <cxx11.abi.value>OFF</cxx11.abi.value>
@@ -173,6 +175,12 @@
         </profile>
         <profile>
             <id>release</id>
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>ossrh</id>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+                </snapshotRepository>
+            </distributionManagement>
             <properties>
                 <gpg.passphrase>${GPG_PASSPHRASE}</gpg.passphrase>
             </properties>
