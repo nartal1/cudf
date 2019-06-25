@@ -21,10 +21,26 @@
 
     <groupId>ai.rapids</groupId>
     <artifactId>cudf</artifactId>
-    <version>0.8</version>
+    <version>0.8-SNAPSHOT</version>
 
     <name>cudfjni</name>
     <url>http://ai.rapids</url>
+
+    <repositories>
+        <repository>
+            <id>spark.sw.nvidia.com</id>
+            <name>sw-spark-maven</name>
+            <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>spark.sw.nvidia.com</id>
+            <name>gpuwa.nvidia.com-releases</name>
+            <url>https://gpuwa.nvidia.com/artifactory/sw-spark-maven-local</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
@@ -67,7 +83,17 @@
         <ai.rapids.refcount.debug>false</ai.rapids.refcount.debug>
         <native.build.path>${basedir}/target/cmake-build</native.build.path>
         <skipNativeCopy>false</skipNativeCopy>
+        <cxx11.abi.value>ON</cxx11.abi.value>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>abiOff</id>
+            <properties>
+                <cxx11.abi.value>OFF</cxx11.abi.value>
+            </properties>
+        </profile>
+    </profiles>
 
     <build>
         <resources>
@@ -156,7 +182,7 @@
                                       failonerror="true"
                                       executable="cmake">
                                     <arg value="${basedir}/src/main/native"/>
-                                    <arg value="-DCMAKE_CXX11_ABI=ON"/>
+                                    <arg value="-DCMAKE_CXX11_ABI=${cxx11.abi.value}"/>
                                     <!--<arg value="-DUSE_NVTX"/>-->
                                 </exec>
                                 <exec dir="${native.build.path}"
