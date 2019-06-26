@@ -1,7 +1,5 @@
 pipeline {
-
-    agent { label 'cpu' }
-
+    agent none
     options {
         ansiColor('xterm')
         timestamps()
@@ -9,32 +7,50 @@ pipeline {
     }
 
     stages {
-        stage('Compile for cuda10.0 on centos7') {
-            agent {
-                dockerfile {
-                    label 'docker'
-                    filename 'Dockerfile.centos7'
-                    dir './'
-                    additionalBuildArgs  '--build-arg CUDA_VERSION=10.0'
-                }
-            }
+        stage("Build"){
+            parallel {
+                stage("Compile for cuda9.2 on centos7") {
+                    agent {
+                        docker {
+                            image 'gpuci/java-base:centos7-cuda9.2'
+                            label 'cpu'
+                            registryUrl 'https://docker.io'
+                            args '-u root'
+                        }
+                    }
 
-            steps {
-                sh 'scl enable devtoolset-7 java/ci/build-centos7.sh'
-            }
-        }
-        stage('Compile for cuda9.2 on centos7') {
-            agent {
-                dockerfile {
-                    label 'docker'
-                    filename 'Dockerfile.centos7'
-                    dir './'
-                    additionalBuildArgs  '--build-arg CUDA_VERSION=9.2'
+                    steps {
+                        checkout scm
+                        sh 'git submodule update --init --recursive --remote'
+                        withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
+                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
+                            string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
+                            sh 'gpg --import $GPG_FILE'
+                            sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 9.2"'
+                        }
+                    }
                 }
-            }
+                stage("Compile for cuda10.0 on centos7") {
+                    agent {
+                        docker {
+                            image 'gpuci/java-base:centos7-cuda10.0'
+                            label 'cpu'
+                            registryUrl 'https://docker.io'
+                            args '-u root'
+                        }
+                    }
 
-            steps {
-                sh 'scl enable devtoolset-7 "java/ci/build-centos7.sh 9.2"'
+                    steps {
+                        checkout scm
+                        sh 'git submodule update --init --recursive --remote'
+                        withCredentials([file(credentialsId: 'rapids-gpg-private-key', variable: 'GPG_FILE'),
+                            usernamePassword(credentialsId: 'sonatype-username-password', passwordVariable: 'SONATYPE_PASSWORD', usernameVariable: 'SONATYPE_USERNAME'),
+                            string(credentialsId: 'rapids-gpg-passphrase', variable: 'GPG_PASSPHRASE')]) {
+                            sh 'gpg --import $GPG_FILE'
+                            sh 'scl enable devtoolset-7 "$WORKSPACE/java/ci/build-centos7.sh 10.0"'
+                        }
+                    }
+                }
             }
         }
     }
