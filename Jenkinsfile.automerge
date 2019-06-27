@@ -4,9 +4,9 @@ pipeline {
     triggers { cron('H 3 * * *') }
 
     parameters {
-        string(name: 'SOURCE_BRANCH', defaultValue: 'branch-0.8')
-        string(name: 'TARGET_BRANCH', defaultValue: 'nv-branch-0.8')
-        string(name: 'REF', defaultValue: 'nv-branch-0.8')
+        string(name: 'SOURCE_BRANCH', defaultValue: 'branch-0.9')
+        string(name: 'TARGET_BRANCH', defaultValue: 'nv-branch-0.9')
+        string(name: 'REF', defaultValue: 'nv-branch-0.9')
     }
 
     options {
