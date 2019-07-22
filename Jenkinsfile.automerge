@@ -48,7 +48,7 @@ pipeline {
                     status = "success"
                 }
                 else {
-                    emailext body: "Please review logs: ${env.BUILD_URL}", to: 'spark-dev@exchange.nvidia.com', subject: "Auto-merge to nv-branch-0.8 failed"
+                    emailext body: "Please review logs: ${env.BUILD_URL}", to: 'spark-dev@exchange.nvidia.com', subject: "Auto-merge to nv-branch-0.9 failed"
                 }
                 updateGitlabCommitStatus(name: 'Jenkins CI', state: status)
             }
