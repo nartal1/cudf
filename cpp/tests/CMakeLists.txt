@@ -81,12 +81,12 @@ link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}" # CMAKE_CUDA_IMPLICIT
 ###################################################################################################
 
 ###################################################################################################
-# - column tests ----------------------------------------------------------------------------------
+# - legacy column tests ----------------------------------------------------------------------------------
 
-set(COLUMN_TEST_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/column/column_test.cu")
+set(LEGACY_COLUMN_TEST_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/column/legacy/column_test.cu")
 
-ConfigureTest(COLUMN_TEST "${COLUMN_TEST_SRC}")
+ConfigureTest(LEGACY_COLUMN_TEST "${LEGACY_COLUMN_TEST_SRC}")
 
 ###################################################################################################
 # - cudf tests ------------------------------------------------------------------------------------
@@ -98,11 +98,6 @@ ConfigureTest(ERROR_TEST "${ERROR_TEST_SRC}")
 
 ###################################################################################################
 # - groupby tests ---------------------------------------------------------------------------------
-
-set(GROUPBY_TEST_SRC 
-    "${CMAKE_CURRENT_SOURCE_DIR}/groupby/groupby_test.cu")
-
-ConfigureTest(GROUPBY_TEST "${GROUPBY_TEST_SRC}")
 
 set(HASH_GROUPBY_TEST_SRC 
     "${CMAKE_CURRENT_SOURCE_DIR}/groupby/hash/single_column_count.cu"
@@ -135,20 +130,20 @@ set(ORDERBY_TEST_SRC
 ConfigureTest(ORDERBY_TEST "${ORDERBY_TEST_SRC}")
 
 ###################################################################################################
-# - bitmask tests ---------------------------------------------------------------------------------
+# - legacy bitmask tests ---------------------------------------------------------------------------------
 
-set(BITMASK_TEST_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/bitmask/bitmask_ops_test.cu")
+set(LEGACY_BITMASK_TEST_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/bitmask/legacy/bitmask_ops_test.cu")
 
-ConfigureTest(BITMASK_TEST "${BITMASK_TEST_SRC}")
+ConfigureTest(LEGACY_BITMASK_TEST "${LEGACY_BITMASK_TEST_SRC}")
 
 ###################################################################################################
-# - bit_mask tests --------------------------------------------------------------------------------
+# - legacy bit_mask tests --------------------------------------------------------------------------------
 
-set(BIT_MASK_TEST_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/bitmask/bit_mask_test.cu")
+set(LEGACY_BIT_MASK_TEST_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/bitmask/legacy/bit_mask_test.cu")
 
-ConfigureTest(BIT_MASK_TEST "${BIT_MASK_TEST_SRC}")
+ConfigureTest(LEGACY_BIT_MASK_TEST "${LEGACY_BIT_MASK_TEST_SRC}")
 
 ###################################################################################################
 # - datetime tests --------------------------------------------------------------------------------
@@ -349,6 +344,14 @@ set(DEVICE_TABLE_TEST_SRC
 ConfigureTest(DEVICE_TABLE_TEST "${DEVICE_TABLE_TEST_SRC}")
 
 ###################################################################################################
+# - sorted-merge tests -------------------------------------------------------------------------------------
+
+set(MERGE_TEST_SRC
+    "${CMAKE_CURRENT_SOURCE_DIR}/merge/merge-test.cu")
+
+ConfigureTest(MERGE_TEST "${MERGE_TEST_SRC}")
+
+###################################################################################################
 # - stream compaction tests -----------------------------------------------------------------------
 
 set(STREAM_COMPACTION_TEST_SRC
@@ -411,4 +414,3 @@ set(ITERATOR_BENCH_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/iterator/iterator_bench.cu")
 
 ConfigureBench(ITERATOR_BENCH "${ITERATOR_BENCH_SRC}")
-
