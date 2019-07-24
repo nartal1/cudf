@@ -87,7 +87,7 @@ source ci/cpu/dask-cudf/build_dask_cudf.sh
 logger "Build cudfjni"
 conda create -n java-cudf --clone gdf
 conda activate java-cudf
-conda install -c /conda/envs/gdf/conda-bld -y cudf=$MINOR_VERSION
+conda install -c /conda/conda-bld -y cudf=$MINOR_VERSION
 cd $WORKSPACE/java
 mvn -Dmaven.repo.local=$WORKSPACE/.m2 clean install -DskipTests
 conda deactivate
