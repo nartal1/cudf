@@ -260,17 +260,16 @@ link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}" # CMAKE_CUDA_IMPLICIT
 
 add_library(cudf SHARED
             src/comms/ipc/ipc.cu
-            src/column/column.cpp
-            src/column/context.cpp
+            src/column/legacy/column.cpp
+            src/column/legacy/context.cpp
             src/table/table.cpp
             src/string/nvcategory_util.cpp
             src/join/joining.cu
             src/orderby/orderby.cu
             src/sort/digitize.cu
             src/sort/segmented_sorting.cu
-            src/groupby/groupby.cu
-            src/groupby/new_groupby.cu
             src/groupby/hash/groupby.cu
+            src/groupby/groupby_without_aggregation.cu
             src/groupby/hash/aggregation_requests.cpp
             src/rolling/rolling.cu
             src/binaryop/binaryop.cpp
@@ -283,15 +282,24 @@ add_library(cudf SHARED
             src/binaryop/jit/core/cache.cpp
             src/binaryop/jit/util/operator.cpp
             src/binaryop/jit/util/type.cpp
-            src/bitmask/bitmask_ops.cu
+            src/bitmask/legacy/bitmask_ops.cu
             src/stream_compaction/stream_compaction.cu
             src/datetime/datetime_ops.cu
             src/hash/hashing.cu
             src/quantiles/quantiles.cu
             src/reductions/reductions.cu
+            src/reductions/min.cu
+            src/reductions/max.cu
+            src/reductions/sum.cu
+            src/reductions/product.cu
+            src/reductions/sum_of_squares.cu
+            src/reductions/mean.cu
+            src/reductions/var.cu
+            src/reductions/std.cu
             src/replace/replace.cu
             src/reductions/scan.cu
             src/transpose/transpose.cu
+            src/merge/merge.cu
             src/unary/math_ops.cu
             src/unary/cast_ops.cu
             src/io/cuio_common.cpp
@@ -327,7 +335,7 @@ add_library(cudf SHARED
             src/copying/scatter.cu
             src/copying/slice.cu
             src/copying/split.cu
-            src/bitmask/legacy_bitmask.cpp
+            src/bitmask/legacy/legacy_bitmask.cpp
             src/gis/point_in_polygon.cu
             src/copying/copy_range.cu
             src/filling/fill.cu)
