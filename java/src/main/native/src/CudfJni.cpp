@@ -443,8 +443,8 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_Cudf_gdfCast(JNIEnv *env, jclass, jl
       std::unique_ptr<gdf_column, decltype(free) *> ret(
               static_cast<gdf_column *>(malloc(sizeof(gdf_column))), free);
       info.time_unit = c_time_unit;
-      *ret.get() = cudf::col_cast(*input, c_dtype, info);
-      return reinterpret_cast<jlong>(output.release());
+      *ret.get() = cudf::cast(*input, c_dtype, info);
+      return reinterpret_cast<jlong>(ret.release());
     }
   }
   CATCH_STD(env, 0);
