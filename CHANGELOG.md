@@ -4,9 +4,11 @@
 
 - PR #2111 IO Readers: Support memory buffer, file-like object, and URL inputs
 - PR #2012 Add `reindex()` to DataFrame and Series
+- PR #2097 Add GPU-accelerated AVRO reader
 - PR #2098 Align DataFrame and Series indices before executing binary ops
 - PR #2160 Merge `dask-cudf` codebase into `cudf` repo
 - PR #2149 CSV Reader: Add `hex` dtype for explicit hexadecimal parsing
+- PR #2156 Add `upper_bound()` and `lower_bound()` for libcudf tables and `searchsorted()` for cuDF Series
 - PR #2158 CSV Reader: Support single, non-list/dict argument for `dtype`
 - PR #2177 CSV Reader: Add `parse_dates` parameter for explicit date inference
 - PR #2171 Add CodeCov integration, fix doc version, make --skip-tests work when invoking with source
@@ -20,8 +22,12 @@
 - PR #2316 Unique, nunique, and value_counts for datetime columns
 - PR #2337 Add Java support for slicing a ColumnVector
 - PR #2049 Implemented merge functionality
+- PR #2380 New cudf::is_sorted checks whether cudf::table is sorted
 - PR #2356 Java column vector standard deviation support
+- PR #2429 Java column vector: added support for getting length of strings in a ColumnVector 
 - PR #2415 Revamp `value_counts` to use groupby count series of any type
+- PR #2437 ORC reader: Add 'use_np_dtypes' option
+- PR #2382 Add CategoricalAccessor add, remove, rename, and ordering methods
 
 ## Improvements
 
@@ -105,6 +111,7 @@
 - PR #2361 Fixed issue with `codes` of CategoricalIndex
 - PR #2357 Fixed inconsistent type of index created with from_pandas vs direct construction
 - PR #2389 Fixed Rolling __getattr__ and __getitem__ for offset based windows
+- PR #2402 Fixed bug in valid mask computation in cudf::copy_if (apply_boolean_mask)
 - PR #2401 Fix to a scalar datetime(of type Days) issue
 - PR #2386 Correctly allocate output valids in groupby
 - PR #2411 Fixed failures on binary op on single element string column
@@ -143,8 +150,9 @@
 - PR #1995 Add Java API
 - PR #1998 Add google benchmark to cudf
 - PR #1845 Add cudf::drop_duplicates, DataFrame.drop_duplicates
-- PR #1652 Added `Series.where()` feature
-- PR #2074 Java Aggregates, logical ops, and better RMM support
+- PR #1652 Added `Series.where()` feature 
+- PR #2074 Java Aggregates, logical ops, and better RMM support 
+- PR #2140 Add a `cudf::transform` function
 
 ## Improvements
 
