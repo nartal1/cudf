@@ -47,6 +47,7 @@ class Column(object):
         from cudf.dataframe.series import Series
         from cudf.dataframe.string import StringColumn
         from cudf.dataframe.categorical import CategoricalColumn
+        from cudf.dataframe.numerical import NumericalColumn
 
         if len(objs) == 0:
             dtype = pd.api.types.pandas_dtype(dtype)
@@ -60,6 +61,28 @@ class Column(object):
                 )
             else:
                 return Column(Buffer.null(dtype))
+
+        # If all columns are `NumericalColumn` with different dtypes,
+        # we cast them to a common dtype.
+        # Notice, we can always cast pure null columns
+        not_null_cols = list(filter(lambda o: len(o) != o.null_count, objs))
+        if len(not_null_cols) > 0 and (
+            len(
+                [
+                    o
+                    for o in not_null_cols
+                    if not isinstance(o, NumericalColumn)
+                    or np.issubdtype(o.dtype, np.datetime64)
+                ]
+            )
+            == 0
+        ):
+            col_dtypes = [o.dtype for o in not_null_cols]
+            # Use NumPy to find a common dtype
+            common_dtype = np.find_common_type(col_dtypes, [])
+            # Cast all columns to the common dtype
+            for i in range(len(objs)):
+                objs[i] = objs[i].astype(common_dtype)
 
         # Find the first non-null column:
         head = objs[0]
@@ -121,7 +144,7 @@ class Column(object):
         return col
 
     @staticmethod
-    def from_mem_views(data_mem, mask_mem=None, null_count=None):
+    def from_mem_views(data_mem, mask_mem=None, null_count=None, name=None):
         """Create a Column object from a data device array (or nvstrings
            object), and an optional mask device array
         """
@@ -129,6 +152,7 @@ class Column(object):
 
         if isinstance(data_mem, nvstrings.nvstrings):
             return columnops.build_column(
+                name=name,
                 buffer=data_mem,
                 dtype=np.dtype("object"),
                 null_count=null_count,
@@ -139,6 +163,7 @@ class Column(object):
             if mask_mem is not None:
                 mask = Buffer(mask_mem)
             return columnops.build_column(
+                name=name,
                 buffer=data_buf,
                 dtype=data_mem.dtype,
                 mask=mask,
@@ -390,6 +415,7 @@ class Column(object):
         params = {
             "data": self.data,
             "mask": self.mask,
+            "name": self.name,
             "null_count": self.null_count,
         }
         return params
