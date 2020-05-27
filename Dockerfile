@@ -10,7 +10,7 @@ ENV NUMBAPRO_LIBDEVICE=/usr/local/cuda/nvvm/libdevice/
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG CC=5
-ARG CXX=5
+
 RUN apt update -y --fix-missing && \
     apt upgrade -y && \
     apt install -y \
