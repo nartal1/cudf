@@ -82,7 +82,6 @@ struct id_to_type_impl {
 template <cudf::type_id Id>
 using id_to_type = typename id_to_type_impl<Id>::type;
 
-// clang-format off
 /**
  * @brief "Returns" the corresponding type that is stored on the device when using `cudf::column`
  *
@@ -93,6 +92,7 @@ using id_to_type = typename id_to_type_impl<Id>::type;
  *
  * @tparam T The literal type that is stored on the host
  */
+// clang-format off
 template <typename T>
 using get_column_stored_type =
   std::conditional_t<std::is_same<numeric::decimal32, T>::value, int32_t,
@@ -100,7 +100,7 @@ using get_column_stored_type =
 // clang-format on
 
 /**
- * @brief Checks if `fixed_point`-like types have template type `T` matching the to the columns
+ * @brief Checks if `fixed_point`-like types have template type `T` matching the column's
  * stored type id
  *
  * @tparam T The type that is stored on the device
