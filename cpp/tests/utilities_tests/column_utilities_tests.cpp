@@ -68,15 +68,15 @@ TYPED_TEST(ColumnUtilitiesTest, NonNullableToHostWithOffset)
   auto sequence = cudf::test::make_counting_transform_iterator(
     0, [](auto i) { return cudf::test::make_type_param_scalar<TypeParam>(i); });
 
-  auto size  = this->size();
-  auto split = 2;
+  auto const size  = this->size();
+  auto const split = 2;
 
-  std::vector<TypeParam> data(sequence, sequence + size);
-  std::vector<TypeParam> expected_data(sequence + split, sequence + size);
-  cudf::test::fixed_width_column_wrapper<TypeParam> col(data.begin(), data.end());
+  auto data          = std::vector<TypeParam>(sequence, sequence + size);
+  auto expected_data = std::vector<TypeParam>(sequence + split, sequence + size);
+  auto col           = cudf::test::fixed_width_column_wrapper<TypeParam>(data.begin(), data.end());
 
-  std::vector<cudf::size_type> splits{split};
-  std::vector<cudf::column_view> result = cudf::split(col, splits);
+  auto const splits = std::vector<cudf::size_type>{split};
+  auto result       = cudf::split(col, splits);
 
   auto host_data = cudf::test::to_host<TypeParam>(result.back());
 

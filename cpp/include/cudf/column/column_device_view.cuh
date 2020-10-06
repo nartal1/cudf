@@ -18,6 +18,7 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
 #include <cudf/column/column_view.hpp>
+#include <cudf/fixed_point/fixed_point.hpp>
 #include <cudf/lists/list_view.cuh>
 #include <cudf/strings/string_view.cuh>
 #include <cudf/strings/strings_column_view.hpp>
@@ -749,6 +750,26 @@ __device__ inline dictionary32 const column_device_view::element<dictionary32>(
   return dictionary32{type_dispatcher(indices.type(), index_element_fn{}, indices, index)};
 }
 
+// TODO add docs
+template <>
+__device__ inline numeric::decimal32 const column_device_view::element<numeric::decimal32>(
+  size_type element_index) const noexcept
+{
+  using namespace numeric;
+  auto const scale = scale_type{_type.scale()};
+  return decimal32{scaled_integer<int32_t>{data<int32_t>()[element_index], scale}};
+}
+
+// TODO add docs
+template <>
+__device__ inline numeric::decimal64 const column_device_view::element<numeric::decimal64>(
+  size_type element_index) const noexcept
+{
+  using namespace numeric;
+  auto const scale = scale_type{_type.scale()};
+  return decimal64{scaled_integer<int64_t>{data<int64_t>()[element_index], scale}};
+}
+
 namespace detail {
 /**
  * @brief value accessor of column without null bitmask
@@ -774,7 +795,8 @@ struct value_accessor {
    */
   value_accessor(column_device_view const& _col) : col{_col}
   {
-    CUDF_EXPECTS(data_type(type_to_id<T>()) == col.type(), "the data type mismatch");
+    CUDF_EXPECTS(column_type_id_matches_column_stored_type<T>(col.type().id()),
+                 "the data type mismatch");
   }
 
   __device__ T operator()(cudf::size_type i) const { return col.element<T>(i); }
@@ -829,7 +851,8 @@ struct mutable_value_accessor {
    */
   mutable_value_accessor(mutable_column_device_view& _col) : col{_col}
   {
-    CUDF_EXPECTS(data_type(type_to_id<T>()) == col.type(), "the data type mismatch");
+    CUDF_EXPECTS(column_type_id_matches_column_stored_type<T>(col.type().id()),
+                 "the data type mismatch");
   }
 
   __device__ T& operator()(cudf::size_type i) { return col.element<T>(i); }

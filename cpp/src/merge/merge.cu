@@ -245,15 +245,11 @@ struct column_merger {
   template <typename Element>  // required: column type
   std::unique_ptr<column> operator()(column_view const& lcol, column_view const& rcol) const
   {
-    auto lsz         = lcol.size();
-    auto merged_size = lsz + rcol.size();
-    auto type        = lcol.type();
-
-    std::unique_ptr<cudf::column> p_merged_col{nullptr};
-    if (lcol.has_nulls())
-      p_merged_col = cudf::allocate_like(lcol, merged_size);
-    else
-      p_merged_col = cudf::allocate_like(rcol, merged_size);
+    auto lsz          = lcol.size();
+    auto merged_size  = lsz + rcol.size();
+    auto type         = lcol.type();
+    auto p_merged_col = lcol.has_nulls() ? cudf::allocate_like(lcol, merged_size)
+                                         : cudf::allocate_like(rcol, merged_size);
 
     //"gather" data from lcol, rcol according to dv_row_order_ "map"
     //(directly calling gather() won't work because
@@ -274,10 +270,12 @@ struct column_merger {
     //
     p_merged_col->set_null_count(lcol.null_count() + rcol.null_count());
 
+    using Type = get_column_stored_type<Element>;
+
     // to resolve view.data()'s types use: Element
     //
-    Element const* p_d_lcol = lcol.data<Element>();
-    Element const* p_d_rcol = rcol.data<Element>();
+    auto const p_d_lcol = lcol.data<Type>();
+    auto const p_d_rcol = rcol.data<Type>();
 
     auto exe_pol = rmm::exec_policy(stream_);
 
@@ -288,13 +286,12 @@ struct column_merger {
     thrust::transform(exe_pol->on(stream_),
                       dv_row_order_.begin(),
                       dv_row_order_.end(),
-                      merged_view.begin<Element>(),
+                      merged_view.begin<Type>(),
                       [p_d_lcol, p_d_rcol] __device__(index_type const& index_pair) {
+                        // When C++17, use structure bindings
                         auto side  = thrust::get<0>(index_pair);
                         auto index = thrust::get<1>(index_pair);
-
-                        Element val = (side == side::LEFT ? p_d_lcol[index] : p_d_rcol[index]);
-                        return val;
+                        return side == side::LEFT ? p_d_lcol[index] : p_d_rcol[index];
                       });
 
     // CAVEAT: conditional call below is erroneous without

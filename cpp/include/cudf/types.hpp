@@ -24,8 +24,12 @@
 #define CUDA_DEVICE_CALLABLE inline
 #endif
 
+#include <thrust/optional.h>  // TODO no idea why this is needed ¯\_(ツ)_/¯
+
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 
 /**
  * @file
@@ -62,31 +66,21 @@ class list_view;
 class struct_view;
 
 class scalar;
-template <typename T>
-class numeric_scalar;
 
-template <typename T>
-class fixed_point_scalar;
-
+// clang-format off
+class list_scalar;
 class string_scalar;
-template <typename T>
-class timestamp_scalar;
-template <typename T>
-class duration_scalar;
-
-template <typename T>
-class numeric_scalar_device_view;
-
-template <typename T>
-class fixed_point_scalar_device_view;
+template <typename T> class numeric_scalar;
+template <typename T> class fixed_point_scalar;
+template <typename T> class timestamp_scalar;
+template <typename T> class duration_scalar;
 
 class string_scalar_device_view;
-template <typename T>
-class timestamp_scalar_device_view;
-template <typename T>
-class duration_scalar_device_view;
-
-class list_scalar;
+template <typename T> class numeric_scalar_device_view;
+template <typename T> class fixed_point_scalar_device_view;
+template <typename T> class timestamp_scalar_device_view;
+template <typename T> class duration_scalar_device_view;
+// clang-format on
 
 class struct_scalar;
 
@@ -103,6 +97,13 @@ class mutable_table_view;
 using size_type    = int32_t;
 using bitmask_type = uint32_t;
 using valid_type   = uint8_t;
+
+// TODO add docs
+template <typename T>
+size_type distance(T f, T l)
+{
+  return static_cast<size_type>(std::distance(f, l));
+}
 
 /**
  * @brief Indicates an unknown null count.
@@ -225,6 +226,18 @@ enum class type_id : int32_t {
 };
 
 /**
+ * @brief Function for determining if `type_id` is fixed_point
+ *
+ * @param id The `type_id` to check
+ * @return true If id is either DECIMAL32 or DECIMAL64
+ * @return false If id is not either DECIMAL32 or DECIMAL64
+ */
+constexpr inline bool is_fixed_point_type_id(type_id id)
+{
+  return id == type_id::DECIMAL32 || id == type_id::DECIMAL64;
+}
+
+/**
  * @brief Indicator for the logical data type of an element in a column.
  *
  * Simple types can be be entirely described by their `id()`, but some types
@@ -247,14 +260,32 @@ class data_type {
   explicit constexpr data_type(type_id id) : _id{id} {}
 
   /**
+   * @brief Construct a new `data_type` object for `numeric::fixed_point`
+   *
+   * @param id The `fixed_point`'s identifier
+   * @param scale The `fixed_point`'s scale (see `fixed_poit::_scale`)
+   **/
+  explicit data_type(type_id id, int32_t scale) : _id{id}, _fixed_point_scale{scale}
+  {
+    assert(id == type_id::DECIMAL32 || id == type_id::DECIMAL64);
+  }
+
+  /**
    * @brief Returns the type identifier
    **/
   CUDA_HOST_DEVICE_CALLABLE type_id id() const noexcept { return _id; }
 
+  /**
+   * @brief Returns the scale (for fixed_point types)
+   **/
+  CUDA_HOST_DEVICE_CALLABLE int32_t scale() const noexcept { return _fixed_point_scale; }
+
  private:
   type_id _id{type_id::EMPTY};
-  // Store additional type specific metadata, timezone, decimal precision and
-  // scale, etc.
+
+  // Below is additional type specific metadata. Currently, only _fixed_point_scale is stored.
+
+  int32_t _fixed_point_scale{};  // numeric::scale_type not available here, use int32_t
 };
 
 /**
