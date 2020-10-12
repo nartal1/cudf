@@ -181,7 +181,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
 
     long[] children = new long[] {};
     int scale = 0;
-    offHeap = new OffHeapState(type, scale, (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer, null, children);
+    offHeap = new OffHeapState(new DataType(type, scale), (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer, null, children);
     MemoryCleaner.register(this, offHeap);
     this.rows = rows;
     this.nullCount = nullCount;
@@ -203,7 +203,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
     }
 
     long[] children = new long[] {};
-    offHeap = new OffHeapState(type.typeId, type.scale, (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer, null, children);
+    offHeap = new OffHeapState(type, (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer, null, children);
     MemoryCleaner.register(this, offHeap);
     this.rows = rows;
     this.nullCount = nullCount;
@@ -232,7 +232,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
       childHandles[i] = nestedColumnVectors.get(i).getViewHandle();
     }
     int scale = 0;
-    offHeap = new OffHeapState(type, scale, (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer,
+    offHeap = new OffHeapState(new DataType(type, scale), (int) rows, nullCount, dataBuffer, validityBuffer, offsetBuffer,
         toClose, childHandles);
     MemoryCleaner.register(this, offHeap);
     this.rows = rows;
@@ -3019,6 +3019,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
   private static native long makeCudfColumnView(int type, int scale, long data, long dataSize, long offsets,
       long valid, int nullCount, int size, long[] childHandle);
 
+
   private static native long getChildCvPointer(long viewHandle, int childIndex) throws CudfException;
 
   private static native int getNativeNumChildren(long viewHandle) throws CudfException;
@@ -3048,7 +3049,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
    */
   private static native long getNativeColumnView(long cudfColumnHandle) throws CudfException;
 
-  private static native long makeEmptyCudfColumn(int type);
+  private static native long makeEmptyCudfColumn(int type, int scale);
 
   @Override
   public long getColumnViewAddress() {
@@ -3144,7 +3145,7 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
     /**
      * Create a cudf::column_view from device side data.
      */
-    public OffHeapState(DType type, int scale, int rows, Optional<Long> nullCount,
+    public OffHeapState(DataType type, int rows, Optional<Long> nullCount,
                         DeviceMemoryBuffer data, DeviceMemoryBuffer valid, DeviceMemoryBuffer offsets,
                         List<DeviceMemoryBuffer> buffers,
                         long[] childColumnViewHandles) {
@@ -3164,13 +3165,13 @@ public final class ColumnVector implements AutoCloseable, BinaryOperable, Column
         toClose.addAll(buffers);
       }
       if (rows == 0) {
-        this.columnHandle = makeEmptyCudfColumn(type.nativeId);
+        this.columnHandle = makeEmptyCudfColumn(type.typeId.nativeId, type.scale);
       } else {
         long cd = data == null ? 0 : data.address;
         long cdSize = data == null ? 0 : data.length;
         long od = offsets == null ? 0 : offsets.address;
         long vd = valid == null ? 0 : valid.address;
-        this.viewHandle = makeCudfColumnView(type.nativeId,scale, cd, cdSize, od, vd, nc, rows, childColumnViewHandles) ;
+        this.viewHandle = makeCudfColumnView(type.typeId.nativeId, type.scale, cd, cdSize, od, vd, nc, rows, childColumnViewHandles) ;
       }
     }
 

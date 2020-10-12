@@ -672,6 +672,9 @@ public class ColumnVectorTest extends CudfTestBase {
   @Test
   void testFromScalarZeroRows() {
     for (DType type : DType.values()) {
+      if (type == DType.DECIMAL32 || type == DType.DECIMAL64) {
+        continue;
+      }
       Scalar s = null;
       try {
         switch (type) {
@@ -762,6 +765,9 @@ public class ColumnVectorTest extends CudfTestBase {
   void testFromScalar() {
     final int rowCount = 4;
     for (DType type : DType.values()) {
+      if(type == DType.DECIMAL32 || type == DType.DECIMAL64) {
+        continue;
+      }
       Scalar s = null;
       ColumnVector expected = null;
       ColumnVector result = null;
@@ -925,7 +931,8 @@ public class ColumnVectorTest extends CudfTestBase {
   void testFromScalarNull() {
     final int rowCount = 4;
     for (DType type : DType.values()) {
-      if (type == DType.EMPTY || type == DType.LIST || type == DType.STRUCT) {
+      if (type == DType.EMPTY || type == DType.LIST || type == DType.STRUCT
+          || type == DType.DECIMAL32 || type == DType.DECIMAL64) {
         continue;
       }
       try (Scalar s = Scalar.fromNull(type);
