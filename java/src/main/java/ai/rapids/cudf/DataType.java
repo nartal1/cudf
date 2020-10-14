@@ -17,13 +17,13 @@ package ai.rapids.cudf;
 
 public class DataType {
 
-  DType typeId;
-  int scale;
-   public DataType(DType id) {typeId = id; }
+  final DType typeId;
+  int scale = 0;
 
-   public DataType(DType id,  int fp_scale) {
-     typeId =id;
-     scale = fp_scale;
-   }
+  public DataType(DType id) { typeId = id; }
 
+  public DataType(DType id, int decimalScale) {
+    typeId = id;
+    scale = decimalScale;
+  }
 }
