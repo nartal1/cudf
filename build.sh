@@ -10,6 +10,9 @@
 # Abort script on first error
 set -e
 
+
+
+
 NUMARGS=$#
 ARGS=$*
 
