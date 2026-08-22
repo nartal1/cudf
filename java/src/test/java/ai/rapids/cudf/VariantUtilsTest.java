@@ -362,6 +362,18 @@ public class VariantUtilsTest extends CudfTestBase {
             VariantEncoder.int8(9), VariantEncoder.int8(8))));
   }
 
+  private static ColumnVector makeNestedArrayVariantColumn() {
+    VariantEncoder encoder = new VariantEncoder();
+    return ColumnVector.fromStructs(
+        VARIANT_TYPE,
+        variant(encoder.metadata(), VariantEncoder.array(
+            VariantEncoder.array(VariantEncoder.int8(2), VariantEncoder.int8(1)),
+            VariantEncoder.array(VariantEncoder.int8(5)))),
+        variant(encoder.metadata(), VariantEncoder.array(
+            VariantEncoder.array(VariantEncoder.int8(9)),
+            VariantEncoder.array(VariantEncoder.int8(8), VariantEncoder.int8(7)))));
+  }
+
   private static ColumnVector makeMixedArrayVariantColumn() {
     VariantEncoder encoder = new VariantEncoder("a", "b");
     return ColumnVector.fromStructs(VARIANT_TYPE, variant(
@@ -500,6 +512,15 @@ public class VariantUtilsTest extends CudfTestBase {
          ColumnVector valueBytes = VariantUtils.getVariantFieldValue(variant, "$[1]");
          ColumnVector result = VariantUtils.castVariantValue(valueBytes, DType.INT8);
          ColumnVector expected = ColumnVector.fromBoxedBytes((byte) 1, (byte) 8)) {
+      assertColumnsAreEqual(expected, result);
+    }
+  }
+
+  @Test
+  void extractNestedArrayElement() {
+    try (ColumnVector variant = makeNestedArrayVariantColumn();
+         ColumnVector result = VariantUtils.extractVariantField(variant, "$[0][0]", DType.INT8);
+         ColumnVector expected = ColumnVector.fromBoxedBytes((byte) 2, (byte) 9)) {
       assertColumnsAreEqual(expected, result);
     }
   }
