@@ -594,6 +594,20 @@ public class VariantUtilsTest extends CudfTestBase {
   }
 
   @Test
+  void castFloatWidthMismatchesProduceNulls() {
+    try (ColumnVector variant = makeFloatVariantColumn();
+         ColumnVector floatBytes = VariantUtils.getVariantFieldValue(variant, "f");
+         ColumnVector doubleBytes = VariantUtils.getVariantFieldValue(variant, "d");
+         ColumnVector floatsAsDoubles = VariantUtils.castVariantValue(floatBytes, DType.FLOAT64);
+         ColumnVector doublesAsFloats = VariantUtils.castVariantValue(doubleBytes, DType.FLOAT32);
+         ColumnVector expectedDoubles = ColumnVector.fromBoxedDoubles(null, null);
+         ColumnVector expectedFloats = ColumnVector.fromBoxedFloats(null, null)) {
+      assertColumnsAreEqual(expectedDoubles, floatsAsDoubles);
+      assertColumnsAreEqual(expectedFloats, doublesAsFloats);
+    }
+  }
+
+  @Test
   void castFloatNullInputIsPreserved() {
     try (ColumnVector values = ColumnVector.fromLists(
              BINARY_TYPE, VariantEncoder.float32(1.25f), null);
@@ -614,8 +628,12 @@ public class VariantUtilsTest extends CudfTestBase {
              VariantEncoder.int8(1),
              null);
          ColumnVector sliced = values.subVector(1, 6);
+         ColumnVector unslicedResult = VariantUtils.castVariantValue(values, DType.BOOL8);
          ColumnVector result = VariantUtils.castVariantValue(sliced, DType.BOOL8);
+         ColumnVector unslicedExpected = ColumnVector.fromBoxedBooleans(
+             null, true, false, null, null, null);
          ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, null, null, null)) {
+      assertColumnsAreEqual(unslicedExpected, unslicedResult);
       assertColumnsAreEqual(expected, result);
     }
   }
@@ -624,8 +642,12 @@ public class VariantUtilsTest extends CudfTestBase {
   void extractBooleanFieldFromSlice() {
     try (ColumnVector variant = makeBoolVariantColumn();
          ColumnVector sliced = variant.subVector(1, 6);
+         ColumnVector unslicedResult = VariantUtils.extractVariantField(variant, "b", DType.BOOL8);
          ColumnVector result = VariantUtils.extractVariantField(sliced, "b", DType.BOOL8);
+         ColumnVector unslicedExpected = ColumnVector.fromBoxedBooleans(
+             null, true, false, null, null, null);
          ColumnVector expected = ColumnVector.fromBoxedBooleans(true, false, null, null, null)) {
+      assertColumnsAreEqual(unslicedExpected, unslicedResult);
       assertColumnsAreEqual(expected, result);
     }
   }
