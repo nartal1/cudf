@@ -82,10 +82,11 @@ public class VariantUtils {
    * {@link DType#TIMESTAMP_MICROSECONDS}, {@link DType#TIMESTAMP_NANOSECONDS},
    * and decimal types created with {@link DType#create(DType.DTypeEnum, int)} using
    * {@link DType.DTypeEnum#DECIMAL32}, {@link DType.DTypeEnum#DECIMAL64}, or
-   * {@link DType.DTypeEnum#DECIMAL128}. Non-decimal decoding requires the encoded physical type
-   * to exactly match {@code targetType}; no numeric conversions are performed. Any encoded
-   * decimal width can be decoded to any supported decimal width. Decimal values are rescaled to
-   * the target scale, truncating toward zero when fractional digits are discarded. Input nulls,
+   * {@link DType.DTypeEnum#DECIMAL128}. Except for the timestamp encodings described below,
+   * non-decimal decoding requires the encoded physical type to exactly match {@code targetType};
+   * no numeric conversions are performed. Any encoded decimal width can be decoded to any
+   * supported decimal width. Decimal values are rescaled to the target scale, truncating toward
+   * zero when fractional digits are discarded. Input nulls,
    * encoded Variant nulls, physical-type mismatches, malformed values, and decimal overflows
    * produce null output rows.
    *
@@ -111,9 +112,10 @@ public class VariantUtils {
    * {@link DType#BOOL8}, {@link DType#TIMESTAMP_MICROSECONDS},
    * {@link DType#TIMESTAMP_NANOSECONDS}, plus decimal types created with
    * {@link DType#create(DType.DTypeEnum, int)} using {@link DType.DTypeEnum#DECIMAL32},
-   * {@link DType.DTypeEnum#DECIMAL64}, or {@link DType.DTypeEnum#DECIMAL128}. Non-decimal decoding
-   * requires the encoded physical type to exactly match {@code targetType}; no numeric conversions
-   * are performed. Any encoded decimal width can be decoded to any supported decimal width.
+   * {@link DType.DTypeEnum#DECIMAL64}, or {@link DType.DTypeEnum#DECIMAL128}. Except for the timestamp
+   * encodings described below, non-decimal decoding requires the encoded physical type to exactly
+   * match {@code targetType}; no numeric conversions are performed. Any encoded decimal width can
+   * be decoded to any supported decimal width.
    * Decimal values are rescaled to the target scale, truncating toward zero when fractional digits
    * are discarded. Missing fields, input nulls, encoded Variant nulls, physical-type mismatches,
    * malformed values, and decimal overflows produce null output rows.

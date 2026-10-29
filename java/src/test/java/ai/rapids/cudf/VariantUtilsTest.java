@@ -240,7 +240,12 @@ public class VariantUtilsTest extends CudfTestBase {
     private static List<Byte> timestamp(long value, boolean nanoseconds, boolean ntz) {
       // Parquet primitive IDs: TIMESTAMP_MICROS=12, TIMESTAMP_NTZ_MICROS=13,
       // TIMESTAMP_NANOS=18, TIMESTAMP_NTZ_NANOS=19. All have an int64 payload.
-      int primitiveType = (nanoseconds ? 18 : 12) + (ntz ? 1 : 0);
+      int primitiveType;
+      if (nanoseconds) {
+        primitiveType = ntz ? 19 : 18;
+      } else {
+        primitiveType = ntz ? 13 : 12;
+      }
       List<Byte> encoded = int64(value);
       encoded.set(0, oneByte(simple(primitiveType), "timestamp header"));
       return encoded;
@@ -1035,6 +1040,73 @@ public class VariantUtilsTest extends CudfTestBase {
                7L, -7L, null, null, null, null, null, null, null, null);
            ColumnVector expected = ticks.castTo(target)) {
         assertColumnsAreEqual(expected, result);
+      }
+    }
+  }
+
+  @Test
+  void timestampMixedRowsCrossValidityMaskBoundaries() {
+    VariantEncoder encoder = new VariantEncoder("time");
+    for (boolean nanoseconds : new boolean[] {false, true}) {
+      DType target = nanoseconds ? DType.TIMESTAMP_NANOSECONDS : DType.TIMESTAMP_MICROSECONDS;
+      List<List<Byte>> rawRows = new ArrayList<>();
+      List<StructData> variantRows = new ArrayList<>();
+      // Slice away three leading nulls to exercise an unaligned input offset as well as
+      // multiple 32-bit validity words, including a partially populated final word.
+      for (int i = 0; i < 3; i++) {
+        rawRows.add(null);
+        variantRows.add(null);
+      }
+      Long[] expectedTicks = new Long[161];
+      for (int i = 0; i < expectedTicks.length; i++) {
+        List<Byte> value;
+        switch (i % 8) {
+          case 0:
+            expectedTicks[i] = (long) i + 1;
+            value = VariantEncoder.timestamp(expectedTicks[i], nanoseconds, false);
+            break;
+          case 1:
+            expectedTicks[i] = -(long) i - 1;
+            value = VariantEncoder.timestamp(expectedTicks[i], nanoseconds, true);
+            break;
+          case 2:
+            value = VariantEncoder.timestamp(i, !nanoseconds, false);
+            break;
+          case 3:
+            value = VariantEncoder.timestamp(i, !nanoseconds, true);
+            break;
+          case 4:
+            rawRows.add(null);
+            variantRows.add(null);
+            continue;
+          case 5:
+            value = VariantEncoder.nullValue();
+            break;
+          case 6:
+            value = new ArrayList<>(VariantEncoder.timestamp(i, nanoseconds, true));
+            value.remove(value.size() - 1);
+            break;
+          default:
+            value = VariantEncoder.int64(i);
+            break;
+        }
+        rawRows.add(value);
+        variantRows.add(variant(encoder.metadata(), encoder.object(fields(field("time", value)))));
+      }
+      @SuppressWarnings("unchecked")
+      List<Byte>[] encodedRows = (List<Byte>[]) rawRows.toArray(new List<?>[0]);
+      try (ColumnVector raw = ColumnVector.fromLists(BINARY_TYPE, encodedRows);
+           ColumnVector structs = ColumnVector.fromStructs(
+               VARIANT_TYPE, variantRows.toArray(new StructData[0]));
+           CloseableArray<ColumnView> rawViews = CloseableArray.wrap(raw.splitAsViews(3));
+           CloseableArray<ColumnView> structViews = CloseableArray.wrap(structs.splitAsViews(3));
+           ColumnVector cast = VariantUtils.castVariantValue(rawViews.get(1), target);
+           ColumnVector extracted =
+               VariantUtils.extractVariantField(structViews.get(1), "time", target);
+           ColumnVector ticks = ColumnVector.fromBoxedLongs(expectedTicks);
+           ColumnVector expected = ticks.castTo(target)) {
+        assertColumnsAreEqual(expected, cast);
+        assertColumnsAreEqual(expected, extracted);
       }
     }
   }
