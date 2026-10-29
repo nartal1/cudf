@@ -5,21 +5,24 @@
 
 #include "cudf_jni_apis.hpp"
 #include "dtype_utils.hpp"
+#include "jni_utils.hpp"
 
 #include <cudf/column/column_factories.hpp>
 #include <cudf/io/experimental/variant.hpp>
-#include <cudf/table/table.hpp>
 #include <cudf/types.hpp>
 #include <cudf/utilities/default_stream.hpp>
 #include <cudf/utilities/error.hpp>
 #include <cudf/utilities/memory_resource.hpp>
 
+#include <rmm/resource_ref.hpp>
+
+#include <cuda/stream>
 #include <cuda_runtime_api.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <utility>
-#include <vector>
 
 namespace {
 
@@ -42,12 +45,12 @@ jlongArray release_variant_result(JNIEnv* env,
                                   std::unique_ptr<cudf::column> value,
                                   std::unique_ptr<cudf::column> status)
 {
-  std::vector<std::unique_ptr<cudf::column>> columns;
-  columns.reserve(2);
-  columns.push_back(std::move(value));
-  columns.push_back(std::move(status));
-  return cudf::jni::convert_table_for_return(env,
-                                             std::make_unique<cudf::table>(std::move(columns)));
+  cudf::jni::native_jlongArray result(env, 2);
+  // Complete all fallible JNI allocation/acquisition before transferring either column.
+  auto handles = result.data();
+  handles[0]   = reinterpret_cast<jlong>(value.release());
+  handles[1]   = reinterpret_cast<jlong>(status.release());
+  return result.get_jArray();
 }
 
 }  // namespace
@@ -66,7 +69,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_VariantUtils_getVariantFieldValue(
     cudf::jni::native_jstring path(env, j_path);
     return cudf::jni::release_as_jlong(
       cudf::io::parquet::experimental::get_variant_field(variant_struct,
-                                                         path.get(),
+                                                         path,
                                                          std::nullopt,
                                                          cudf::get_default_stream(),
                                                          cudf::get_current_device_resource_ref()));
@@ -119,7 +122,7 @@ JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_VariantUtils_extractVariantField(
     cudf::jni::native_jstring path(env, j_path);
     return cudf::jni::release_as_jlong(cudf::io::parquet::experimental::extract_variant_field(
       variant_struct,
-      path.get(),
+      path,
       cudf::jni::make_data_type(cudf_type_id, scale),
       std::nullopt,
       cudf::get_default_stream(),
@@ -143,7 +146,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_VariantUtils_getVariantFieldVal
     auto status      = make_status_column(variant_struct.size(), false, stream, mr);
     auto status_view = status->mutable_view();
     auto value       = cudf::io::parquet::experimental::get_variant_field(
-      variant_struct, path.get(), status_view, stream, mr);
+      variant_struct, path, status_view, stream, mr);
     return release_variant_result(env, std::move(value), std::move(status));
   }
   JNI_CATCH(env, nullptr);
@@ -197,7 +200,7 @@ JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_VariantUtils_extractVariantFiel
     auto status_view = status->mutable_view();
     auto value       = cudf::io::parquet::experimental::extract_variant_field(
       variant_struct,
-      path.get(),
+      path,
       cudf::jni::make_data_type(cudf_type_id, scale),
       status_view,
       stream,

@@ -136,7 +136,8 @@ public class VariantUtils {
    * Decode raw Variant values and return a per-row operation status.
    *
    * <p>The status distinguishes successful decoding, SQL-null input, encoded Variant null,
-   * physical-type mismatch, and malformed input. The status column is initialized to
+   * physical-type mismatch, malformed input, and decimal overflow
+   * ({@link VariantOperationStatus#OVERFLOW}). The status column is initialized to
    * {@link VariantOperationStatus#SUCCESS} before the native cast.
    *
    * <p>Supported target types and decoding semantics match
@@ -223,7 +224,8 @@ public class VariantUtils {
    * <p>The value column has the same target type and row order as
    * {@link #extractVariantField(ColumnView, String, DType)}. Status values distinguish successful
    * extraction and decoding from SQL-null input, missing paths, encoded Variant null,
-   * physical-type mismatch, and malformed input.
+   * physical-type mismatch, malformed input, and decimal overflow
+   * ({@link VariantOperationStatus#OVERFLOW}).
    *
    * @param variantStruct Variant materialization
    * @param path JSONPath-like path accepted by cuDF's Variant extractor

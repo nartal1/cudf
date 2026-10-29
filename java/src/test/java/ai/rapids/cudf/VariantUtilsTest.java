@@ -23,9 +23,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import static ai.rapids.cudf.AssertUtils.assertColumnsAreEqual;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class VariantUtilsTest extends CudfTestBase {
@@ -1012,14 +1014,16 @@ public class VariantUtilsTest extends CudfTestBase {
              VariantEncoder.nullValue(),
              VariantEncoder.int8(5),
              bytes(VariantEncoder.simple(0x05), 0x01),
+             bytes(),
              null);
          VariantOperationResult result =
              VariantUtils.castVariantValueWithStatus(values, DType.INT32);
-         ColumnVector expectedValues = ColumnVector.fromBoxedInts(42, null, null, null, null);
+         ColumnVector expectedValues = ColumnVector.fromBoxedInts(42, null, null, null, null, null);
          ColumnVector expectedStatus = ColumnVector.fromUnsignedBytes(
              statusId(VariantOperationStatus.SUCCESS),
              statusId(VariantOperationStatus.VARIANT_NULL),
              statusId(VariantOperationStatus.TYPE_MISMATCH),
+             statusId(VariantOperationStatus.MALFORMED_VARIANT),
              statusId(VariantOperationStatus.MALFORMED_VARIANT),
              statusId(VariantOperationStatus.ROW_NULL))) {
       assertColumnsAreEqual(expectedValues, result.getValue());
@@ -1188,7 +1192,8 @@ public class VariantUtilsTest extends CudfTestBase {
              VariantEncoder.int32(4),
              VariantEncoder.int32(5),
              VariantEncoder.int32(6),
-             VariantEncoder.int32(7));
+             VariantEncoder.int32(7),
+             VariantEncoder.int8(8));
          ColumnVector priorStatus = ColumnVector.fromUnsignedBytes(
              statusId(VariantOperationStatus.SUCCESS),
              statusId(VariantOperationStatus.ROW_NULL),
@@ -1197,8 +1202,9 @@ public class VariantUtilsTest extends CudfTestBase {
              statusId(VariantOperationStatus.TYPE_MISMATCH),
              statusId(VariantOperationStatus.MALFORMED_VARIANT),
              statusId(VariantOperationStatus.OVERFLOW),
-             statusId(VariantOperationStatus.INVALID_CONVERSION));
-         ColumnVector expectedStatus = ColumnVector.fromUnsignedBytes(
+             statusId(VariantOperationStatus.INVALID_CONVERSION),
+             statusId(VariantOperationStatus.SUCCESS));
+         ColumnVector expectedOriginalStatus = ColumnVector.fromUnsignedBytes(
              statusId(VariantOperationStatus.SUCCESS),
              statusId(VariantOperationStatus.ROW_NULL),
              statusId(VariantOperationStatus.MISSING_PATH),
@@ -1206,14 +1212,25 @@ public class VariantUtilsTest extends CudfTestBase {
              statusId(VariantOperationStatus.TYPE_MISMATCH),
              statusId(VariantOperationStatus.MALFORMED_VARIANT),
              statusId(VariantOperationStatus.OVERFLOW),
-             statusId(VariantOperationStatus.INVALID_CONVERSION));
+             statusId(VariantOperationStatus.INVALID_CONVERSION),
+             statusId(VariantOperationStatus.SUCCESS));
+         ColumnVector expectedFinalStatus = ColumnVector.fromUnsignedBytes(
+             statusId(VariantOperationStatus.SUCCESS),
+             statusId(VariantOperationStatus.ROW_NULL),
+             statusId(VariantOperationStatus.MISSING_PATH),
+             statusId(VariantOperationStatus.VARIANT_NULL),
+             statusId(VariantOperationStatus.TYPE_MISMATCH),
+             statusId(VariantOperationStatus.MALFORMED_VARIANT),
+             statusId(VariantOperationStatus.OVERFLOW),
+             statusId(VariantOperationStatus.INVALID_CONVERSION),
+             statusId(VariantOperationStatus.TYPE_MISMATCH));
          VariantOperationResult result =
              VariantUtils.castVariantValueWithStatus(values, DType.INT32, priorStatus);
          ColumnVector expectedValues =
-             ColumnVector.fromBoxedInts(7, null, null, null, null, null, null, null)) {
+             ColumnVector.fromBoxedInts(7, null, null, null, null, null, null, null, null)) {
       assertColumnsAreEqual(expectedValues, result.getValue());
-      assertColumnsAreEqual(expectedStatus, result.getStatus());
-      assertColumnsAreEqual(expectedStatus, priorStatus);
+      assertColumnsAreEqual(expectedFinalStatus, result.getStatus());
+      assertColumnsAreEqual(expectedOriginalStatus, priorStatus);
     }
   }
 
@@ -1414,6 +1431,159 @@ public class VariantUtilsTest extends CudfTestBase {
              statusId(VariantOperationStatus.TYPE_MISMATCH))) {
       assertColumnsAreEqual(expectedValues, direct.getValue());
       assertColumnsAreEqual(expectedStatus, direct.getStatus());
+    }
+  }
+
+  @Test
+  void variantPathsPreserveEmbeddedNulAcrossAllExtractionApis() {
+    String key = "a\0b";
+    VariantEncoder encoder = new VariantEncoder("a", key);
+    try (ColumnVector variant = ColumnVector.fromStructs(
+             VARIANT_TYPE, variant(encoder.metadata(), encoder.object(fields(
+                 field("a", VariantEncoder.int32(7)),
+                 field(key, VariantEncoder.int32(42))))));
+         ColumnVector expectedRaw = ColumnVector.fromLists(BINARY_TYPE, VariantEncoder.int32(42));
+         ColumnVector expectedValue = ColumnVector.fromInts(42);
+         ColumnVector expectedStatus = ColumnVector.fromUnsignedBytes((byte) 0)) {
+      for (String path : new String[] {key, "$." + key}) {
+        try (ColumnVector raw = VariantUtils.getVariantFieldValue(variant, path);
+             ColumnVector fused = VariantUtils.extractVariantField(variant, path, DType.INT32);
+             VariantOperationResult rawStatus =
+                 VariantUtils.getVariantFieldValueWithStatus(variant, path);
+             VariantOperationResult fusedStatus =
+                 VariantUtils.extractVariantFieldWithStatus(variant, path, DType.INT32)) {
+          assertColumnsAreEqual(expectedRaw, raw);
+          assertColumnsAreEqual(expectedValue, fused);
+          assertColumnsAreEqual(expectedRaw, rawStatus.getValue());
+          assertColumnsAreEqual(expectedStatus, rawStatus.getStatus());
+          assertColumnsAreEqual(expectedValue, fusedStatus.getValue());
+          assertColumnsAreEqual(expectedStatus, fusedStatus.getStatus());
+        }
+      }
+    }
+  }
+
+  @Test
+  void variantResultCloseAttemptsBothColumnsWhenCallbacksThrow() {
+    RuntimeException shared = new IllegalStateException("shared close failure");
+    // The CUDA exception below is only a Java callback failure; it does not poison the GPU.
+    Throwable[][] failures = {
+        {new IllegalStateException("value close"), new IllegalArgumentException("status close")},
+        {new AssertionError("value close"), new AssertionError("status close")},
+        {new CudaFatalException("callback failure", 719), new IllegalStateException("status close")},
+        {shared, shared}
+    };
+    for (Throwable[] failure : failures) {
+      try (ColumnVector values = ColumnVector.fromLists(BINARY_TYPE, VariantEncoder.int32(7))) {
+        VariantOperationResult result = VariantUtils.castVariantValueWithStatus(values, DType.INT32);
+        ColumnVector value = result.getValue();
+        ColumnVector status = result.getStatus();
+        try {
+          ColumnVector[] columns = {value, status};
+          for (int i = 0; i < columns.length; i++) {
+            Throwable callbackFailure = failure[i];
+            columns[i].setEventHandler((column, refCount) -> {
+              if (callbackFailure instanceof Error) {
+                throw (Error) callbackFailure;
+              }
+              throw (RuntimeException) callbackFailure;
+            });
+          }
+          Throwable thrown = assertThrows(Throwable.class, result::close);
+          assertSame(failure[0], thrown);
+          assertEquals(0, value.getRefCount());
+          assertEquals(0, status.getRefCount());
+          if (failure[0] == failure[1]) {
+            assertEquals(0, thrown.getSuppressed().length);
+          } else {
+            assertEquals(1, thrown.getSuppressed().length);
+            assertSame(failure[1], thrown.getSuppressed()[0]);
+          }
+          assertDoesNotThrow(result::close);
+        } finally {
+          // Also clean up correctly if this regression test is run against the old implementation.
+          value.setEventHandler(null);
+          status.setEventHandler(null);
+          if (value.getRefCount() > 0) {
+            value.close();
+          }
+          if (status.getRefCount() > 0) {
+            status.close();
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void variantStructStatusExtractionSupportsNonzeroOffsets() {
+    VariantEncoder encoder = new VariantEncoder("x");
+    try (ColumnVector variant = ColumnVector.fromStructs(
+             VARIANT_TYPE,
+             variant(encoder.metadata(), encoder.object(fields())),
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.int32(7))))),
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.int8(8))))),
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.nullValue())))),
+             null,
+             variant(encoder.metadata(), encoder.object(fields())));
+         CloseableArray<ColumnView> views = CloseableArray.wrap(variant.splitAsViews(1));
+         VariantOperationResult raw = VariantUtils.getVariantFieldValueWithStatus(views.get(1), "x");
+         VariantOperationResult fused =
+             VariantUtils.extractVariantFieldWithStatus(views.get(1), "x", DType.INT32);
+         ColumnVector expectedRaw = ColumnVector.fromLists(BINARY_TYPE,
+             VariantEncoder.int32(7), VariantEncoder.int8(8), VariantEncoder.nullValue(), null, null);
+         ColumnVector expectedValues = ColumnVector.fromBoxedInts(7, null, null, null, null);
+         ColumnVector expectedRawStatus = ColumnVector.fromUnsignedBytes(
+             statusId(VariantOperationStatus.SUCCESS), statusId(VariantOperationStatus.SUCCESS),
+             statusId(VariantOperationStatus.VARIANT_NULL), statusId(VariantOperationStatus.ROW_NULL),
+             statusId(VariantOperationStatus.MISSING_PATH));
+         ColumnVector expectedFusedStatus = ColumnVector.fromUnsignedBytes(
+             statusId(VariantOperationStatus.SUCCESS), statusId(VariantOperationStatus.TYPE_MISMATCH),
+             statusId(VariantOperationStatus.VARIANT_NULL), statusId(VariantOperationStatus.ROW_NULL),
+             statusId(VariantOperationStatus.MISSING_PATH))) {
+      assertColumnsAreEqual(expectedRaw, raw.getValue());
+      assertColumnsAreEqual(expectedRawStatus, raw.getStatus());
+      assertColumnsAreEqual(expectedValues, fused.getValue());
+      assertColumnsAreEqual(expectedFusedStatus, fused.getStatus());
+    }
+  }
+
+  @Test
+  void decimalStatusUsesPositiveScaleWithExplicitExpectedValues() {
+    VariantEncoder encoder = new VariantEncoder("x");
+    try (ColumnVector variant = ColumnVector.fromStructs(VARIANT_TYPE,
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.decimal4(12345, 0))))),
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.decimal8(-12345, 0))))),
+             variant(encoder.metadata(), encoder.object(fields(
+                 field("x", VariantEncoder.decimal16(BigInteger.valueOf(12345), 2))))));
+         VariantOperationResult raw = VariantUtils.getVariantFieldValueWithStatus(variant, "x");
+         ColumnVector expected32 = ColumnVector.decimalFromInts(2, 123, -123, 1);
+         ColumnVector expected64 = ColumnVector.decimalFromLongs(2, 123, -123, 1);
+         ColumnVector expected128 = ColumnVector.decimalFromBigInt(
+             2, BigInteger.valueOf(123), BigInteger.valueOf(-123), BigInteger.ONE);
+         ColumnVector expectedStatus = ColumnVector.fromUnsignedBytes((byte) 0, (byte) 0, (byte) 0)) {
+      for (ColumnVector expected : new ColumnVector[] {expected32, expected64, expected128}) {
+        DType target = expected.getType();
+        try (VariantOperationResult direct =
+                 VariantUtils.castVariantValueWithStatus(raw.getValue(), target);
+             VariantOperationResult staged =
+                 VariantUtils.castVariantValueWithStatus(raw.getValue(), target, raw.getStatus());
+             VariantOperationResult fused =
+                 VariantUtils.extractVariantFieldWithStatus(variant, "x", target)) {
+          assertColumnsAreEqual(expected, direct.getValue());
+          assertColumnsAreEqual(expected, staged.getValue());
+          assertColumnsAreEqual(expected, fused.getValue());
+          assertColumnsAreEqual(expectedStatus, direct.getStatus());
+          assertColumnsAreEqual(expectedStatus, staged.getStatus());
+          assertColumnsAreEqual(expectedStatus, fused.getStatus());
+          assertColumnsAreEqual(expectedStatus, raw.getStatus());
+        }
+      }
     }
   }
 

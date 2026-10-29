@@ -14,19 +14,21 @@ package ai.rapids.cudf;
  * columns separately unless they first increment their reference counts with
  * {@link ColumnVector#incRefCount()}. A retained reference must then be closed separately.
  * Closing this result more than once has no effect.
+ * Both columns are closed even if a close callback throws. The first failure is rethrown and
+ * subsequent distinct failures are suppressed.
  */
 @Experimental
 public final class VariantOperationResult implements AutoCloseable {
   private static final int VALUE_COLUMN_INDEX = 0;
   private static final int STATUS_COLUMN_INDEX = 1;
 
-  private final Table table;
+  private ColumnVector[] columns;
 
   VariantOperationResult(long[] columnHandles) {
     if (columnHandles == null || columnHandles.length != 2) {
       throw new IllegalArgumentException("a Variant operation result must contain two columns");
     }
-    table = new Table(columnHandles);
+    columns = ColumnVector.getColumnVectorsFromPointers(columnHandles);
   }
 
   /**
@@ -35,7 +37,7 @@ public final class VariantOperationResult implements AutoCloseable {
    * @return the value column, owned by this result
    */
   public ColumnVector getValue() {
-    return table.getColumn(VALUE_COLUMN_INDEX);
+    return columns[VALUE_COLUMN_INDEX];
   }
 
   /**
@@ -44,11 +46,33 @@ public final class VariantOperationResult implements AutoCloseable {
    * @return the status column, owned by this result
    */
   public ColumnVector getStatus() {
-    return table.getColumn(STATUS_COLUMN_INDEX);
+    return columns[STATUS_COLUMN_INDEX];
   }
 
   @Override
   public void close() {
-    table.close();
+    // Detach first so failed or reentrant closes cannot close either column twice.
+    ColumnVector[] toClose = columns;
+    columns = null;
+    if (toClose == null) {
+      return;
+    }
+    Throwable error = null;
+    for (ColumnVector column : toClose) {
+      try {
+        column.close();
+      } catch (RuntimeException | Error failure) {
+        if (error == null) {
+          error = failure;
+        } else if (error != failure) {
+          error.addSuppressed(failure);
+        }
+      }
+    }
+    if (error instanceof RuntimeException) {
+      throw (RuntimeException) error;
+    } else if (error != null) {
+      throw (Error) error;
+    }
   }
 }
