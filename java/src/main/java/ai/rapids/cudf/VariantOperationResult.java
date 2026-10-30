@@ -13,7 +13,9 @@ package ai.rapids.cudf;
  * are owned by this result and remain valid until it is closed. Callers must not close the returned
  * columns separately unless they first increment their reference counts with
  * {@link ColumnVector#incRefCount()}. A retained reference must then be closed separately.
- * Closing this result more than once has no effect.
+ * Repeated or concurrent closes do not release either column more than once. A concurrent close
+ * can return before another caller finishes cleanup. Reading or retaining columns must not race
+ * with closing this result.
  * Both columns are closed even if a close callback throws. The first failure is rethrown and
  * subsequent distinct failures are suppressed.
  */
@@ -51,9 +53,12 @@ public final class VariantOperationResult implements AutoCloseable {
 
   @Override
   public void close() {
-    // Detach first so failed or reentrant closes cannot close either column twice.
-    ColumnVector[] toClose = columns;
-    columns = null;
+    // Detach atomically, but never hold the result monitor while invoking column callbacks.
+    ColumnVector[] toClose;
+    synchronized (this) {
+      toClose = columns;
+      columns = null;
+    }
     if (toClose == null) {
       return;
     }

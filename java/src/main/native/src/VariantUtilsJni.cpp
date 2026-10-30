@@ -5,9 +5,12 @@
 
 #include "cudf_jni_apis.hpp"
 #include "dtype_utils.hpp"
+#include "error.hpp"
 #include "jni_utils.hpp"
 
+#include <cudf/column/column.hpp>
 #include <cudf/column/column_factories.hpp>
+#include <cudf/column/column_view.hpp>
 #include <cudf/io/experimental/variant.hpp>
 #include <cudf/types.hpp>
 #include <cudf/utilities/default_stream.hpp>
@@ -18,6 +21,8 @@
 
 #include <cuda/stream>
 #include <cuda_runtime_api.h>
+
+#include <jni.h>
 
 #include <cstdint>
 #include <memory>
@@ -48,8 +53,8 @@ jlongArray release_variant_result(JNIEnv* env,
   cudf::jni::native_jlongArray result(env, 2);
   // Complete all fallible JNI allocation/acquisition before transferring either column.
   auto handles = result.data();
-  handles[0]   = reinterpret_cast<jlong>(value.release());
-  handles[1]   = reinterpret_cast<jlong>(status.release());
+  handles[0]   = cudf::jni::release_as_jlong(value);
+  handles[1]   = cudf::jni::release_as_jlong(status);
   return result.get_jArray();
 }
 
