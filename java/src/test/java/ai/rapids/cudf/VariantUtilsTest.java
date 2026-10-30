@@ -238,7 +238,7 @@ public class VariantUtilsTest extends CudfTestBase {
     }
 
     private static List<Byte> timestamp(long value, boolean nanoseconds, boolean ntz) {
-      // Parquet primitive IDs: TIMESTAMP_MICROS=12, TIMESTAMP_NTZ_MICROS=13,
+      // Variant primitive type IDs: TIMESTAMP_MICROS=12, TIMESTAMP_NTZ_MICROS=13,
       // TIMESTAMP_NANOS=18, TIMESTAMP_NTZ_NANOS=19. All have an int64 payload.
       int primitiveType;
       if (nanoseconds) {
@@ -1118,7 +1118,8 @@ public class VariantUtilsTest extends CudfTestBase {
       try (ColumnVector emptyValues = ColumnVector.fromLists(BINARY_TYPE);
            ColumnVector emptyVariant = ColumnVector.fromStructs(VARIANT_TYPE);
            ColumnVector emptyCast = VariantUtils.castVariantValue(emptyValues, target);
-           ColumnVector emptyExtract = VariantUtils.extractVariantField(emptyVariant, "time", target);
+           ColumnVector emptyExtract =
+               VariantUtils.extractVariantField(emptyVariant, "time", target);
            ColumnVector nullValues = ColumnVector.fromLists(BINARY_TYPE, null, null);
            ColumnVector nullVariant = ColumnVector.fromStructs(VARIANT_TYPE, null, null);
            ColumnVector nullCast = VariantUtils.castVariantValue(nullValues, target);
