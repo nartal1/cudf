@@ -198,7 +198,7 @@ std::unique_ptr<column> cast_variant_integer_to_long(column_view const& values,
     status.data<uint8_t>(),
     values.size());
   CUDF_CUDA_TRY(cudaGetLastError());
-  auto const null_count = cudf::null_count(output_view.null_mask(), 0, values.size(), stream, mr);
+  auto const null_count = cudf::null_count(output_view.null_mask(), 0, values.size(), stream);
   if (null_count == 0) {
     output->set_null_mask(cudf::create_null_mask(0, mask_state::UNALLOCATED, stream, mr), 0);
   } else {
