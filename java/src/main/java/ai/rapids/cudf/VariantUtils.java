@@ -53,6 +53,58 @@ public class VariantUtils {
   }
 
   /**
+   * Check coverage without allocating a boolean column for every status comparison.
+   *
+   * <p>A row is covered exactly when its original extraction status is ROW_NULL or at least one
+   * decoder status is SUCCESS. The statuses are never modified. An empty input is covered.
+   * Each status must be UINT8, have no validity buffer, and have the same row count.
+   *
+   * @param extractionStatus original extraction status, before decoding
+   * @param decodedStatuses decoder statuses, one column per attempted physical decoder
+   * @return whether every input row is covered
+   */
+  public static boolean allVariantRowsCovered(
+      ColumnView extractionStatus, ColumnView[] decodedStatuses) {
+    Objects.requireNonNull(extractionStatus, "extractionStatus");
+    Objects.requireNonNull(decodedStatuses, "decodedStatuses");
+    validatePriorStatus(extractionStatus, extractionStatus);
+    long[] handles = new long[decodedStatuses.length];
+    for (int index = 0; index < decodedStatuses.length; index++) {
+      validatePriorStatus(extractionStatus, decodedStatuses[index]);
+      handles[index] = decodedStatuses[index].getNativeView();
+    }
+    return allVariantRowsCovered(extractionStatus.getNativeView(), handles);
+  }
+
+  /**
+   * Decode any signed integer physical width into INT64, preserving prior operation statuses.
+   *
+   * <p>INT8, INT16, INT32 and INT64 encodings are accepted and sign extended. This method performs
+   * no string, floating point or decimal conversions. Other recognized physical types report
+   * TYPE_MISMATCH; truncated integer payloads and unrecognized primitive headers report
+   * MALFORMED_VARIANT. Encoded Variant null reports VARIANT_NULL. As with exact-width decoding,
+   * trailing bytes after a complete integer payload are accepted.
+   *
+   * <p>The prior status is copied and never modified. Non-SUCCESS prior statuses propagate
+   * unchanged, with null values. A raw null with prior SUCCESS reports ROW_NULL.
+   *
+   * @param valueBytes LIST&lt;UINT8&gt; raw Variant values
+   * @param priorStatus UINT8 extraction statuses, without a validity buffer
+   * @return owning INT64 values and final statuses
+   */
+  public static VariantOperationResult castVariantIntegerToLongWithStatus(
+      ColumnView valueBytes, ColumnView priorStatus) {
+    Objects.requireNonNull(valueBytes, "valueBytes");
+    validatePriorStatus(valueBytes, priorStatus);
+    return new VariantOperationResult(castVariantIntegerToLongWithStatus(
+        valueBytes.getNativeView(), priorStatus.getNativeView()));
+  }
+
+  private static native boolean allVariantRowsCovered(long extractionStatus, long[] decodedStatuses);
+
+  private static native long[] castVariantIntegerToLongWithStatus(long values, long priorStatus);
+
+  /**
    * Extract raw Variant-encoded value bytes at {@code path} from a Variant struct column.
    *
    * @param variantStruct Variant materialization: STRUCT(metadata LIST&lt;UINT8&gt;,

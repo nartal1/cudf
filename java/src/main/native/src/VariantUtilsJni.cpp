@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "VariantUtilsNative.hpp"
 #include "cudf_jni_apis.hpp"
 #include "dtype_utils.hpp"
 #include "error.hpp"
@@ -61,6 +62,51 @@ jlongArray release_variant_result(JNIEnv* env,
 }  // namespace
 
 extern "C" {
+
+JNIEXPORT jboolean JNICALL Java_ai_rapids_cudf_VariantUtils_allVariantRowsCovered(
+  JNIEnv* env, jclass, jlong extraction_status_handle, jlongArray decoded_status_handles)
+{
+  JNI_NULL_CHECK(env, extraction_status_handle, "extraction status is null", false);
+  JNI_NULL_CHECK(env, decoded_status_handles, "decoded statuses are null", false);
+  JNI_TRY
+  {
+    cudf::jni::auto_set_device(env);
+    auto const& extraction = *reinterpret_cast<cudf::column_view const*>(extraction_status_handle);
+    cudf::jni::native_jlongArray handles(env, decoded_status_handles);
+    std::vector<cudf::column_view> decoded;
+    for (auto handle : handles) {
+      CUDF_EXPECTS(handle != 0, "decoded status is null", std::invalid_argument);
+      decoded.push_back(*reinterpret_cast<cudf::column_view const*>(handle));
+    }
+    return cudf::jni::all_variant_rows_covered(
+      extraction, decoded, cudf::get_default_stream(), cudf::get_current_device_resource_ref());
+  }
+  JNI_CATCH(env, false);
+}
+
+JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_VariantUtils_castVariantIntegerToLongWithStatus(
+  JNIEnv* env, jclass, jlong values_handle, jlong prior_status_handle)
+{
+  JNI_NULL_CHECK(env, values_handle, "values are null", nullptr);
+  JNI_NULL_CHECK(env, prior_status_handle, "prior status is null", nullptr);
+  JNI_TRY
+  {
+    cudf::jni::auto_set_device(env);
+    auto const stream  = cudf::get_default_stream();
+    auto const mr      = cudf::get_current_device_resource_ref();
+    auto const& values = *reinterpret_cast<cudf::column_view const*>(values_handle);
+    auto const& prior  = *reinterpret_cast<cudf::column_view const*>(prior_status_handle);
+    CUDF_EXPECTS(prior.type().id() == cudf::type_id::UINT8 && !prior.nullable() &&
+                   prior.size() == values.size(),
+                 "invalid prior Variant status",
+                 std::invalid_argument);
+    auto status = std::make_unique<cudf::column>(prior, stream, mr);
+    auto value =
+      cudf::jni::cast_variant_integer_to_long(values, status->mutable_view(), stream, mr);
+    return release_variant_result(env, std::move(value), std::move(status));
+  }
+  JNI_CATCH(env, nullptr);
+}
 
 JNIEXPORT jlong JNICALL Java_ai_rapids_cudf_VariantUtils_getVariantFieldValue(
   JNIEnv* env, jclass, jlong variant_struct_handle, jstring j_path)
