@@ -123,8 +123,8 @@ public class VariantNativeUtilsTest extends CudfTestBase {
     try (ColumnVector values = ColumnVector.fromLists(BINARY, encoded);
          ColumnVector prior = ColumnVector.fromUnsignedBytes(priorBytes)) {
       assertIntegerDifferential(values, prior);
-      try (CloseableArray<ColumnView> valueViews = CloseableArray.wrap(values.splitAsViews(1, 253));
-           CloseableArray<ColumnView> statusViews = CloseableArray.wrap(prior.splitAsViews(1, 253))) {
+      try (CloseableArray<ColumnView> valueViews = CloseableArray.wrap(values.splitAsViews(3, 253));
+           CloseableArray<ColumnView> statusViews = CloseableArray.wrap(prior.splitAsViews(3, 253))) {
         assertIntegerDifferential(valueViews.get(1), statusViews.get(1));
       }
     }
@@ -189,6 +189,26 @@ public class VariantNativeUtilsTest extends CudfTestBase {
          ColumnVector expected = ColumnVector.fromBoxedLongs()) {
       assertColumnsAreEqual(expected, decoded.getValue());
       assertColumnsAreEqual(prior, decoded.getStatus());
+    }
+  }
+
+  @Test
+  void nativeOutputAllocationsUseTheExistingRmmTracker() {
+    int rowCount = 4096;
+    @SuppressWarnings("unchecked")
+    List<Byte>[] rows = new List[rowCount];
+    Arrays.fill(rows, integer(8, Long.MIN_VALUE));
+    try (ColumnVector values = ColumnVector.fromLists(BINARY, rows);
+         ColumnVector prior = ColumnVector.fromUnsignedBytes(new byte[rowCount])) {
+      long before = Rmm.getTotalBytesAllocated();
+      try (VariantOperationResult decoded =
+               VariantUtils.castVariantIntegerToLongWithStatus(values, prior)) {
+        // Both live output buffers must be visible through the tracker initialized by Java.
+        assertTrue(Rmm.getTotalBytesAllocated() - before >= rowCount * (Long.BYTES + 1L));
+        assertNull(decoded.getValue().getValid());
+        assertNull(decoded.getStatus().getValid());
+      }
+      assertEquals(before, Rmm.getTotalBytesAllocated());
     }
   }
 
