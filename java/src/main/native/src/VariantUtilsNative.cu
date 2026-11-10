@@ -20,8 +20,8 @@
 
 #include <rmm/exec_policy.hpp>
 
+#include <cuda/std/functional>
 #include <cuda_runtime_api.h>
-#include <thrust/functional.h>
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/transform_reduce.h>
 
@@ -158,7 +158,7 @@ bool all_variant_rows_covered(column_view const& extraction_status,
     rmm::exec_policy(stream, mr),
     begin,
     begin + rows,
-    [view] __device__(size_type row) {
+    [view] __device__(size_type row) -> bool {
       if (view.column(0).element<uint8_t>(row) == static_cast<uint8_t>(op_status::ROW_NULL)) {
         return true;
       }
@@ -170,7 +170,7 @@ bool all_variant_rows_covered(column_view const& extraction_status,
       return false;
     },
     true,
-    thrust::logical_and<bool>{});
+    cuda::std::logical_and<bool>{});
 }
 
 std::unique_ptr<column> cast_variant_integer_to_long(column_view const& values,
