@@ -77,6 +77,47 @@ public class VariantUtils {
   }
 
   /**
+   * Certify Spark-compatible path coverage on every original Variant row.
+   *
+   * <p>The raw struct is STRUCT(metadata LIST&lt;UINT8&gt;, value LIST&lt;UINT8&gt;), retaining its
+   * original parent validity. Supply fresh extraction and decoder statuses from these same raw
+   * rows and this exact path. The size limit must be the actual selected Spark runtime's
+   * VariantUtil.SIZE_LIMIT. This method is an experimental Spark try_variant_get path certificate,
+   * not a full canonical-payload validator or a general cast evaluator.
+   *
+   * <p>Every accepted nonnull row validates metadata, visited path containers and the selected
+   * exact primitive/string payload. Missing/encoded-null outcomes must agree with the original
+   * status; a SUCCESS row also needs a successful exact decoder. Only original parent SQL null
+   * may ignore its children. Any unproved encoding/status returns false and must retain the
+   * original whole-batch CPU fallback. Statuses and buffers are never modified. An empty batch
+   * with a supported path is covered; this method has no original all-covered shortcut.
+   *
+   * <p>Only Spark's existing ASCII dot identifiers and nonnegative Int bracket indexes after $
+   * are supported. Other nonnull path strings return false. Invalid column/status shapes,
+   * nullable status masks, absent decoders and nonpositive size limits are argument errors.
+   * All borrowed buffers must remain alive until this synchronous boolean call returns.
+   */
+  public static boolean allVariantRowsCoveredWithPathValidation(
+      ColumnView rawVariantStruct, String path, ColumnView extractionStatus,
+      ColumnView[] decodedStatuses, int sparkVariantSizeLimit) {
+    Objects.requireNonNull(rawVariantStruct, "rawVariantStruct");
+    Objects.requireNonNull(path, "path");
+    Objects.requireNonNull(extractionStatus, "extractionStatus");
+    Objects.requireNonNull(decodedStatuses, "decodedStatuses");
+    if (sparkVariantSizeLimit <= 0 || decodedStatuses.length == 0) {
+      throw new IllegalArgumentException("Variant size limit and decoder count must be positive");
+    }
+    validatePriorStatus(rawVariantStruct, extractionStatus);
+    long[] handles = new long[decodedStatuses.length];
+    for (int index = 0; index < decodedStatuses.length; index++) {
+      validatePriorStatus(rawVariantStruct, decodedStatuses[index]);
+      handles[index] = decodedStatuses[index].getNativeView();
+    }
+    return allVariantRowsCoveredWithPathValidation(rawVariantStruct.getNativeView(), path,
+        extractionStatus.getNativeView(), handles, sparkVariantSizeLimit);
+  }
+
+  /**
    * Decode any signed integer physical width into INT64, preserving prior operation statuses.
    *
    * <p>INT8, INT16, INT32 and INT64 encodings are accepted and sign extended. This method performs
@@ -101,6 +142,10 @@ public class VariantUtils {
   }
 
   private static native boolean allVariantRowsCovered(long extractionStatus, long[] decodedStatuses);
+
+  private static native boolean allVariantRowsCoveredWithPathValidation(
+      long rawVariantStruct, String path, long extractionStatus, long[] decodedStatuses,
+      int sparkVariantSizeLimit);
 
   private static native long[] castVariantIntegerToLongWithStatus(long values, long priorStatus);
 

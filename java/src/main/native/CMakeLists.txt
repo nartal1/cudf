@@ -186,6 +186,7 @@ add_library(
   src/TableJni.cpp
   src/VariantUtilsJni.cpp
   src/VariantUtilsNative.cu
+  src/VariantPathValidation.cu
   src/aggregation128_utils.cu
   src/check_nvcomp_output_sizes.cu
   src/maps_column_view.cu
@@ -219,6 +220,11 @@ endif()
 target_include_directories(
   cudfjni PUBLIC "${CMAKE_BINARY_DIR}/include" "${CMAKE_SOURCE_DIR}/include"
                  "${CMAKE_SOURCE_DIR}/src" "${JNI_INCLUDE_DIRS}"
+)
+
+# Only the pinned private readers are added; installed SDK ABI headers keep precedence.
+target_include_directories(
+  cudfjni PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../../../cpp/src/io/parquet/experimental"
 )
 
 # ##################################################################################################

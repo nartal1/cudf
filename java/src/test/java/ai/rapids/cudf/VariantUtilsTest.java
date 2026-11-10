@@ -2264,4 +2264,405 @@ public class VariantUtilsTest extends CudfTestBase {
       assertColumnsAreEqual(expected, result);
     }
   }
+  // The contract uses the selected runtime's value. Native tests also exercise
+  // small exact boundaries without allocating a runtime-sized payload.
+  private static final int CERTIFICATE_TEST_LIMIT = 128 * 1024 * 1024;
+
+  private static void assertPathCertificate(
+      boolean expected, String path, DType target, StructData... rows) {
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE, rows);
+         VariantOperationResult extracted = VariantUtils.getVariantFieldValueWithStatus(raw, path);
+         VariantOperationResult decoded = target.equals(DType.INT64) ?
+             VariantUtils.castVariantIntegerToLongWithStatus(extracted.getValue(), extracted.getStatus()) :
+             VariantUtils.castVariantValueWithStatus(extracted.getValue(), target, extracted.getStatus())) {
+      assertEquals(expected, VariantUtils.allVariantRowsCoveredWithPathValidation(
+          raw, path, extracted.getStatus(), new ColumnView[]{decoded.getStatus()},
+          CERTIFICATE_TEST_LIMIT));
+    }
+  }
+
+  private static void appendUnsigned(List<Byte> output, long value, int width) {
+    if (width < 1 || width > 4 || value < 0 || (width < 4 && value >= (1L << (8 * width)))) {
+      throw new IllegalArgumentException("unsigned test field does not fit");
+    }
+    for (int i = 0; i < width; i++) output.add((byte) (value >>> (8 * i)));
+  }
+
+  private static List<Byte> wideMetadata(int width, String... keys) {
+    List<Byte> output = bytes(1 | ((width - 1) << 6));
+    appendUnsigned(output, keys.length, width);
+    List<Byte> characters = new ArrayList<>();
+    for (String key : keys) {
+      appendUnsigned(output, characters.size(), width);
+      characters.addAll(VariantEncoder.box(key.getBytes(StandardCharsets.UTF_8)));
+    }
+    appendUnsigned(output, characters.size(), width);
+    output.addAll(characters);
+    return output;
+  }
+
+  @SafeVarargs
+  private static List<Byte> wideObject(
+      int idWidth, int offsetWidth, boolean large, boolean reverseValues,
+      int[] ids, List<Byte>... values) {
+    if (ids.length != values.length) throw new IllegalArgumentException("test IDs/values differ");
+    int header = 2 | (((offsetWidth - 1) | ((idWidth - 1) << 2) | (large ? 16 : 0)) << 2);
+    List<Byte> output = bytes(header);
+    appendUnsigned(output, ids.length, large ? 4 : 1);
+    for (int id : ids) appendUnsigned(output, id, idWidth);
+    int[] offsets = new int[ids.length];
+    List<Byte> data = new ArrayList<>();
+    for (int index = 0; index < ids.length; index++) {
+      int selected = reverseValues ? ids.length - 1 - index : index;
+      offsets[selected] = data.size();
+      data.addAll(values[selected]);
+    }
+    for (int offset : offsets) appendUnsigned(output, offset, offsetWidth);
+    appendUnsigned(output, data.size(), offsetWidth);
+    output.addAll(data);
+    return output;
+  }
+
+  @SafeVarargs
+  private static List<Byte> wideArray(int offsetWidth, boolean large, List<Byte>... values) {
+    List<Byte> output = bytes(3 | (((offsetWidth - 1) | (large ? 4 : 0)) << 2));
+    appendUnsigned(output, values.length, large ? 4 : 1);
+    List<Byte> data = new ArrayList<>();
+    for (List<Byte> value : values) {
+      appendUnsigned(output, data.size(), offsetWidth);
+      data.addAll(value);
+    }
+    appendUnsigned(output, data.size(), offsetWidth);
+    output.addAll(data);
+    return output;
+  }
+
+  @Test
+  void pathCertificateAcceptsMixedFreshSuccessMissingNullAndSqlNull() {
+    VariantEncoder encoder = new VariantEncoder("id", "other");
+    assertPathCertificate(true, "$.id", DType.INT64,
+        variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.int8(7))))),
+        variant(encoder.metadata(), encoder.object(fields(field("other", VariantEncoder.int32(8))))),
+        variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.nullValue())))),
+        null);
+  }
+
+  @Test
+  void pathCertificateRejectsCoercionAndMalformedInAnyRowOrder() {
+    VariantEncoder encoder = new VariantEncoder("id", "other");
+    StructData good = variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.int8(7)))));
+    StructData missing = variant(encoder.metadata(), encoder.object(fields(field("other", VariantEncoder.int8(1)))));
+    StructData coercion = variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.string("7")))));
+    StructData badMetadata = variant(bytes(0), encoder.object(fields(field("id", VariantEncoder.int8(7)))));
+    assertPathCertificate(false, "$.id", DType.INT64, good, missing, coercion);
+    assertPathCertificate(false, "$.id", DType.INT64, badMetadata, missing, good);
+    assertPathCertificate(false, "$.id", DType.INT64, good, missing, badMetadata);
+  }
+
+  @Test
+  void pathCertificateRejectsInvalidMetadataEvenForNativeSuccessArrayPaths() {
+    assertPathCertificate(false, "$[0]", DType.INT64,
+        variant(bytes(0), VariantEncoder.array(VariantEncoder.int8(7))));
+    // Entry1 is not referenced by native's successful object lookup, but is invalid UTF8.
+    assertPathCertificate(false, "$.a", DType.INT64,
+        variant(bytes(1, 2, 0, 1, 2, 'a', 0xC0),
+            wideObject(1, 1, false, false, new int[]{0}, VariantEncoder.int8(7))));
+  }
+
+  @Test
+  void pathCertificateRejectsUnvisitedIdsUnsortedAndDuplicateNames() {
+    VariantEncoder encoder = new VariantEncoder("a", "b");
+    List<Byte> metadata = encoder.metadata();
+    assertPathCertificate(false, "$.z", DType.INT64,
+        variant(metadata, wideObject(1, 1, false, false, new int[]{99, 0, 1},
+            VariantEncoder.int8(1), VariantEncoder.int8(2), VariantEncoder.int8(3))));
+    assertPathCertificate(false, "$.a", DType.INT64,
+        variant(metadata, wideObject(1, 1, false, false, new int[]{1, 0},
+            VariantEncoder.int8(1), VariantEncoder.int8(2))));
+    assertPathCertificate(false, "$.z", DType.INT64,
+        variant(metadata, wideObject(1, 1, false, false, new int[]{0, 0},
+            VariantEncoder.int8(1), VariantEncoder.int8(2))));
+  }
+
+  @Test
+  void pathCertificateSupportsEveryMetadataIdOffsetAndCountWidth() {
+    for (int metadataWidth = 1; metadataWidth <= 4; metadataWidth++) {
+      List<Byte> metadata = wideMetadata(metadataWidth, "z", "a");
+      for (int idWidth = 1; idWidth <= 4; idWidth++) {
+        for (int offsetWidth = 1; offsetWidth <= 4; offsetWidth++) {
+          for (boolean large : new boolean[]{false, true}) {
+            // Insertion-order dictionary IDs, key-sorted fields and nonmonotone value offsets.
+            StructData row = variant(metadata, wideObject(idWidth, offsetWidth, large, true,
+                new int[]{1, 0}, VariantEncoder.int16(-257), VariantEncoder.nullValue()));
+            assertPathCertificate(true, "$.a", DType.INT64, row);
+            assertPathCertificate(true, "$.missing", DType.INT64, row);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void pathCertificateSupportsNestedArraysAndEveryArrayWidth() {
+    VariantEncoder encoder = new VariantEncoder("items", "id");
+    List<Byte> child = encoder.object(fields(field("id", VariantEncoder.int32(19))));
+    for (int width = 1; width <= 4; width++) {
+      for (boolean large : new boolean[]{false, true}) {
+        StructData raw = variant(encoder.metadata(), encoder.object(fields(field("items",
+            wideArray(width, large, child, VariantEncoder.nullValue(), VariantEncoder.int8(7))))));
+        for (String path : new String[]{"$.items[0].id", "$.items[000].id", "$.items[1]",
+            "$.items[1].id", "$.items[2].id", "$.items[3]", "$.items[2147483647]"}) {
+          assertPathCertificate(true, path, DType.INT64, raw);
+        }
+      }
+    }
+  }
+
+  @Test
+  void pathCertificateDistinguishesPathProofFromWholePayloadValidation() {
+    VariantEncoder encoder = new VariantEncoder("a", "z");
+    // The unvisited z payload is not decoded by Spark when a is selected or missing is requested.
+    StructData raw = variant(encoder.metadata(), encoder.object(fields(
+        field("a", VariantEncoder.int8(7)), field("z", bytes(0xFC)))));
+    assertPathCertificate(true, "$.a", DType.INT64, raw);
+    assertPathCertificate(true, "$.missing", DType.INT64, raw);
+    assertPathCertificate(false, "$.z", DType.INT64, raw);
+  }
+
+  @Test
+  void pathCertificateHandlesUnicodeNulAndComparatorDisagreement() {
+    VariantEncoder encoder = new VariantEncoder("id", "x\u0000z", "\u00E9", "\uD83D\uDE00");
+    StructData raw = variant(encoder.metadata(), encoder.object(fields(
+        field("id", VariantEncoder.string("\u0000\u00E9\uD83D\uDE00")),
+        field("x\u0000z", VariantEncoder.int8(1)), field("\u00E9", VariantEncoder.int8(2)),
+        field("\uD83D\uDE00", VariantEncoder.int8(3)))));
+    assertPathCertificate(true, "$.id", DType.STRING, raw);
+    assertPathCertificate(true, "$.missing", DType.STRING, raw);
+    VariantEncoder opposite = new VariantEncoder("\uE000", "\uD800\uDC00");
+    assertPathCertificate(false, "$.missing", DType.INT64,
+        variant(opposite.metadata(), opposite.object(fields(
+            field("\uE000", VariantEncoder.int8(1)), field("\uD800\uDC00", VariantEncoder.int8(2))))));
+  }
+
+  @Test
+  void pathCertificateRejectsMalformedUtf8Payloads() {
+    VariantEncoder encoder = new VariantEncoder("id");
+    for (List<Byte> bad : Arrays.asList(bytes(0xC0, 0x80), bytes(0xED, 0xA0, 0x80),
+        bytes(0xF4, 0x90, 0x80, 0x80), bytes(0xE2, 0x82), bytes(0x80))) {
+      List<Byte> string = concat(bytes((bad.size() << 2) | 1), bad);
+      assertPathCertificate(false, "$.id", DType.STRING,
+          variant(encoder.metadata(), encoder.object(fields(field("id", string)))));
+    }
+  }
+
+  @Test
+  void pathCertificateRejectsFutureHeadersBeforeScalarMissing() {
+    for (int id : new int[]{17, 18, 19, 21, 63}) {
+      assertPathCertificate(false, "$.id", DType.INT64,
+          variant(bytes(1, 0, 0), concat(bytes(id << 2), bytes(0, 0, 0, 0, 0, 0, 0, 0))));
+    }
+    for (List<Byte> scalar : Arrays.asList(VariantEncoder.nullValue(), VariantEncoder.int64(-1),
+        VariantEncoder.string("hello"))) {
+      assertPathCertificate(true, "$.id", DType.INT64, variant(bytes(1, 0, 0), scalar));
+    }
+  }
+
+  @Test
+  void pathCertificateSupportsCompleteExactScalarPayloads() {
+    VariantEncoder encoder = new VariantEncoder("id");
+    List<List<Byte>> values = Arrays.asList(VariantEncoder.int8(-128), VariantEncoder.int16(32767),
+        VariantEncoder.int32(Integer.MIN_VALUE), VariantEncoder.int64(Long.MIN_VALUE));
+    for (List<Byte> value : values) {
+      assertPathCertificate(true, "$.id", DType.INT64,
+          variant(encoder.metadata(), encoder.object(fields(field("id", value)))));
+    }
+    assertPathCertificate(true, "$.id", DType.FLOAT32,
+        variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.float32(Float.NaN))))));
+    assertPathCertificate(true, "$.id", DType.FLOAT64,
+        variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.float64(Double.POSITIVE_INFINITY))))));
+    assertPathCertificate(true, "$.id", DType.BOOL8,
+        variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.bool(false))))));
+    List<Byte> longString = bytes(16 << 2, 70, 0, 0, 0);
+    for (int i = 0; i < 70; i++) longString.add((byte) 'a');
+    assertPathCertificate(true, "$.id", DType.STRING,
+        variant(encoder.metadata(), encoder.object(fields(field("id", longString)))));
+  }
+
+  @Test
+  void pathCertificateRejectsTruncationAndInvalidDeclaredBounds() {
+    List<Byte> metadata = wideMetadata(1, "id");
+    List<Byte> object = wideObject(1, 1, false, false, new int[]{0}, VariantEncoder.int32(7));
+    for (int length = 0; length < metadata.size(); length++) {
+      assertPathCertificate(false, "$.id", DType.INT64,
+          variant(new ArrayList<>(metadata.subList(0, length)), object));
+    }
+    for (int length = 0; length < object.size(); length++) {
+      assertPathCertificate(false, "$.id", DType.INT64,
+          variant(metadata, new ArrayList<>(object.subList(0, length))));
+    }
+    assertPathCertificate(false, "$.id", DType.INT64,
+        variant(metadata, bytes(0x32, 255, 255, 255, 255)));
+    for (List<Byte> array : Arrays.asList(bytes(3, 1, 1, 2, 12, 7),
+        bytes(3, 2, 0, 2, 1, 12, 7), bytes(3, 1, 0, 255, 12, 7))) {
+      assertPathCertificate(false, "$[0]", DType.INT64, variant(bytes(1, 0, 0), array));
+    }
+  }
+
+  @Test
+  void pathCertificateChecksActualSuppliedSizeBoundary() {
+    List<Byte> metadata = wideMetadata(1, "id");
+    List<Byte> value = wideObject(1, 1, false, false, new int[]{0}, VariantEncoder.int64(7));
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE, variant(metadata, value));
+         VariantOperationResult extracted = VariantUtils.getVariantFieldValueWithStatus(raw, "$.id");
+         VariantOperationResult decoded = VariantUtils.castVariantIntegerToLongWithStatus(
+             extracted.getValue(), extracted.getStatus())) {
+      int boundary = Math.max(metadata.size(), value.size());
+      assertTrue(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id",
+          extracted.getStatus(), new ColumnView[]{decoded.getStatus()}, boundary));
+      assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id",
+          extracted.getStatus(), new ColumnView[]{decoded.getStatus()}, boundary - 1));
+    }
+  }
+
+  @Test
+  void pathCertificateRejectsNonnullChildNullEvenWithRowNullStatus() {
+    assertPathCertificate(false, "$.id", DType.INT64,
+        variant(null, VariantEncoder.int8(7)));
+    assertPathCertificate(false, "$.id", DType.INT64,
+        variant(bytes(1, 0, 0), null));
+    try (ColumnVector metadata = ColumnVector.fromLists(BINARY_TYPE, bytes(0));
+         ColumnVector value = ColumnVector.fromLists(BINARY_TYPE, bytes(0xFC));
+         ColumnVector mask = ColumnVector.fromBoxedInts((Integer) null);
+         ColumnView raw = new ColumnView(DType.STRUCT, 1, Optional.of(1L), mask.getValid(), null,
+             new ColumnView[]{metadata, value});
+         ColumnVector status = ColumnVector.fromUnsignedBytes(statusId(VariantOperationStatus.ROW_NULL))) {
+      assertTrue(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", status,
+          new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+    }
+  }
+
+  @Test
+  void pathCertificateRejectsNullableByteChildren() {
+    ListType nullableBytes = new ListType(true, new BasicType(true, DType.UINT8));
+    StructType nullableVariant = new StructType(true, Arrays.asList(nullableBytes, nullableBytes));
+    try (ColumnVector raw = ColumnVector.fromStructs(nullableVariant,
+             variant(Arrays.asList((byte) 1, (byte) 0, (byte) 0, null), VariantEncoder.int8(7)));
+         ColumnVector status = ColumnVector.fromUnsignedBytes(statusId(VariantOperationStatus.MISSING_PATH))) {
+      assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", status,
+          new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+    }
+  }
+
+  @Test
+  void pathCertificateStatusMatrixRejectsStaleAndUnknownStatuses() {
+    VariantEncoder encoder = new VariantEncoder("id");
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE,
+             variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.int8(7))))));
+         VariantOperationResult extracted = VariantUtils.getVariantFieldValueWithStatus(raw, "$.id");
+         VariantOperationResult matching = VariantUtils.castVariantValueWithStatus(
+             extracted.getValue(), DType.INT8, extracted.getStatus());
+         VariantOperationResult mismatch = VariantUtils.castVariantValueWithStatus(
+             extracted.getValue(), DType.INT16, extracted.getStatus());
+         ColumnVector missing = ColumnVector.fromUnsignedBytes(statusId(VariantOperationStatus.MISSING_PATH));
+         ColumnVector unknown = ColumnVector.fromUnsignedBytes((byte) 255);
+         ColumnVector rowNull = ColumnVector.fromUnsignedBytes(statusId(VariantOperationStatus.ROW_NULL))) {
+      assertTrue(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", extracted.getStatus(),
+          new ColumnView[]{matching.getStatus(), mismatch.getStatus()}, CERTIFICATE_TEST_LIMIT));
+      assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", extracted.getStatus(),
+          new ColumnView[]{mismatch.getStatus()}, CERTIFICATE_TEST_LIMIT));
+      for (ColumnView bad : new ColumnView[]{missing, unknown, rowNull}) {
+        assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", bad,
+            new ColumnView[]{bad}, CERTIFICATE_TEST_LIMIT));
+      }
+      assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", extracted.getStatus(),
+          new ColumnView[]{unknown}, CERTIFICATE_TEST_LIMIT));
+    }
+  }
+
+  @Test
+  void pathCertificateSupportsRealParentAndStatusOffsets() {
+    VariantEncoder encoder = new VariantEncoder("id", "other");
+    StructData good = variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.int8(7)))));
+    StructData missing = variant(encoder.metadata(), encoder.object(fields(field("other", VariantEncoder.int8(8)))));
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE, good, missing, null, good);
+         VariantOperationResult extracted = VariantUtils.getVariantFieldValueWithStatus(raw, "$.id");
+         VariantOperationResult decoded = VariantUtils.castVariantIntegerToLongWithStatus(
+             extracted.getValue(), extracted.getStatus());
+         CloseableArray<ColumnView> rawViews = CloseableArray.wrap(raw.splitAsViews(1));
+         CloseableArray<ColumnView> originalViews = CloseableArray.wrap(extracted.getStatus().splitAsViews(1));
+         CloseableArray<ColumnView> decodedViews = CloseableArray.wrap(decoded.getStatus().splitAsViews(1))) {
+      assertEquals(3, rawViews.get(1).getRowCount());
+      assertTrue(VariantUtils.allVariantRowsCoveredWithPathValidation(rawViews.get(1), "$.id",
+          originalViews.get(1), new ColumnView[]{decodedViews.get(1)}, CERTIFICATE_TEST_LIMIT));
+      assertNull(decodedViews.get(1).getValid());
+    }
+  }
+
+  @Test
+  void pathCertificateHugeCountsAreRejectedBeforeSharedLengthReads() {
+    VariantEncoder encoder = new VariantEncoder("id");
+    // Synthetic fresh-status shape deliberately avoids sending hostile counts
+    // through the pre-existing extractor before exercising this validator.
+    List<List<Byte>> hostile = Arrays.asList(
+        bytes(0x42, 0xff, 0xff, 0xff, 0x7f),
+        bytes(0x42, 0xff, 0xff, 0xff, 0xff),
+        bytes(0x5e, 0xff, 0xff, 0xff, 0x7f),
+        bytes(0x13, 0xff, 0xff, 0xff, 0x7f),
+        bytes(0x1f, 0xff, 0xff, 0xff, 0xff));
+    for (List<Byte> value : hostile) {
+      // Also exercise the shared object locator's selected child length call.
+      List<Byte> nested = encoder.object(fields(field("id", value)));
+      for (List<Byte> rawValue : Arrays.asList(value, nested)) {
+        try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE,
+                 variant(encoder.metadata(), rawValue));
+             ColumnVector status = ColumnVector.fromUnsignedBytes((byte) 0)) {
+          assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id",
+              status, new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+        }
+      }
+    }
+  }
+
+  @Test
+  void pathCertificateEmptyAndUnsupportedPaths() {
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE);
+         ColumnVector status = ColumnVector.fromUnsignedBytes()) {
+      assertTrue(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, "$.id", status,
+          new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+      for (String path : new String[]{"", "$", "id", "$id", "$.id..x", "$[-1]", "$[2147483648]",
+          "$.\u0000", "$.\uD83D\uDE00", "$['id']", "$.a\\b", "$.a]"}) {
+        assertFalse(VariantUtils.allVariantRowsCoveredWithPathValidation(raw, path, status,
+            new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+      }
+      assertThrows(NullPointerException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+          raw, null, status, new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+      assertThrows(IllegalArgumentException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+          raw, "$.id", status, new ColumnView[0], CERTIFICATE_TEST_LIMIT));
+      assertThrows(IllegalArgumentException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+          raw, "$.id", status, new ColumnView[]{status}, 0));
+    }
+  }
+
+  @Test
+  void pathCertificateRejectsInvalidShapesLengthsAndStatusMasks() {
+    VariantEncoder encoder = new VariantEncoder("id");
+    try (ColumnVector raw = ColumnVector.fromStructs(VARIANT_TYPE,
+             variant(encoder.metadata(), encoder.object(fields(field("id", VariantEncoder.int8(7))))));
+         ColumnVector status = ColumnVector.fromUnsignedBytes((byte) 0);
+         ColumnVector wrongType = ColumnVector.fromInts(0);
+         ColumnVector wrongSize = ColumnVector.fromUnsignedBytes();
+         ColumnVector maskOwner = ColumnVector.fromBoxedUnsignedBytes(null, (byte) 0);
+         ColumnView masked = new ColumnView(DType.UINT8, 1, Optional.of(0L),
+             status.getData(), maskOwner.getValid())) {
+      for (ColumnView bad : new ColumnView[]{wrongType, wrongSize, masked}) {
+        assertThrows(IllegalArgumentException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+            raw, "$.id", bad, new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+        assertThrows(IllegalArgumentException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+            raw, "$.id", status, new ColumnView[]{bad}, CERTIFICATE_TEST_LIMIT));
+      }
+      assertThrows(CudfException.class, () -> VariantUtils.allVariantRowsCoveredWithPathValidation(
+          wrongType, "$.id", status, new ColumnView[]{status}, CERTIFICATE_TEST_LIMIT));
+    }
+  }
+
 }

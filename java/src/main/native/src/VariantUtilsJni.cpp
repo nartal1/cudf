@@ -84,6 +84,39 @@ JNIEXPORT jboolean JNICALL Java_ai_rapids_cudf_VariantUtils_allVariantRowsCovere
   JNI_CATCH(env, false);
 }
 
+JNIEXPORT jboolean JNICALL
+Java_ai_rapids_cudf_VariantUtils_allVariantRowsCoveredWithPathValidation(
+  JNIEnv* env,
+  jclass,
+  jlong variants_handle,
+  jstring path_string,
+  jlong extraction_handle,
+  jlongArray decoded_handles,
+  jint limit)
+{
+  JNI_NULL_CHECK(env, variants_handle, "Variant struct is null", false);
+  JNI_NULL_CHECK(env, path_string, "path is null", false);
+  JNI_NULL_CHECK(env, extraction_handle, "extraction status is null", false);
+  JNI_NULL_CHECK(env, decoded_handles, "decoded statuses are null", false);
+  JNI_TRY
+  {
+    cudf::jni::auto_set_device(env);
+    auto const& variants = *reinterpret_cast<cudf::column_view const*>(variants_handle);
+    auto const& extraction = *reinterpret_cast<cudf::column_view const*>(extraction_handle);
+    cudf::jni::native_jstring path(env, path_string);
+    cudf::jni::native_jlongArray handles(env, decoded_handles);
+    std::vector<cudf::column_view> decoded;
+    for (auto handle : handles) {
+      CUDF_EXPECTS(handle != 0, "decoded status is null", std::invalid_argument);
+      decoded.push_back(*reinterpret_cast<cudf::column_view const*>(handle));
+    }
+    return cudf::jni::all_variant_rows_covered_with_path_validation(
+      variants, path, extraction, decoded, limit, cudf::get_default_stream(),
+      cudf::get_current_device_resource_ref());
+  }
+  JNI_CATCH(env, false);
+}
+
 JNIEXPORT jlongArray JNICALL Java_ai_rapids_cudf_VariantUtils_castVariantIntegerToLongWithStatus(
   JNIEnv* env, jclass, jlong values_handle, jlong prior_status_handle)
 {
